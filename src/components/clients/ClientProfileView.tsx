@@ -1,5 +1,5 @@
 import { Client } from "@/lib/mockData";
-import { Client } from "@/lib/mockData";
+
 import Image from "next/image";
 import { MapPin, Briefcase, Ruler, Heart, BookOpen, GraduationCap, Globe, Users, FileText } from "lucide-react";
 
