@@ -38,8 +38,8 @@ export default function ClientsPage() {
     };
 
     return (
-        <div className="flex flex-col h-full space-y-4 pb-20 md:pb-0">
-            <div className="flex items-center justify-between shrink-0">
+        <div className="flex flex-col h-[calc(100vh-65px)] space-y-4 pb-2 md:pb-0">
+            <div className="flex items-center justify-between shrink-0 px-1 pt-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
                     <p className="text-muted-foreground hidden md:block">Manage your client database.</p>
@@ -53,8 +53,8 @@ export default function ClientsPage() {
                 </Link>
             </div>
 
-            <div className="relative shrink-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <div className="relative shrink-0 px-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                     type="text"
                     placeholder="Search clients by name..."
@@ -68,10 +68,10 @@ export default function ClientsPage() {
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block rounded-md border bg-white dark:bg-gray-950 shadow-sm overflow-hidden flex-1">
-                <div className="overflow-x-auto h-full">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-b sticky top-0 z-10">
+            <div className="hidden md:block rounded-md border bg-white dark:bg-gray-950 shadow-sm overflow-hidden flex-1 min-h-0">
+                <div className="overflow-auto h-full">
+                    <table className="w-full text-sm text-left relative">
+                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-b sticky top-0 z-10 shadow-sm">
                             <tr>
                                 <th className="px-6 py-3 font-medium">Name</th>
                                 <th className="px-6 py-3 font-medium">Age/Gender</th>
@@ -80,7 +80,7 @@ export default function ClientsPage() {
                                 <th className="px-6 py-3 font-medium text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-800 overflow-y-auto">
+                        <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                             {paginatedClients.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
@@ -148,7 +148,7 @@ export default function ClientsPage() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="md:hidden flex-1 overflow-y-auto min-h-0 space-y-3">
+            <div className="md:hidden flex-1 overflow-y-auto min-h-0 space-y-3 px-1 pb-16">
                 {paginatedClients.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                         {searchTerm ? "No results found." : "No clients yet."}
@@ -200,7 +200,7 @@ export default function ClientsPage() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-2 shrink-0 border-t md:border-t-0 md:pt-0">
+                <div className="flex items-center justify-between pt-2 shrink-0 border-t md:border-t-0 md:pt-0 bg-white dark:bg-gray-950 z-20 pb-2 px-1">
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
