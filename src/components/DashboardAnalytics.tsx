@@ -12,9 +12,12 @@ import {
     LabelList,
 } from "recharts";
 import { useClients } from "@/context/ClientContext";
+import { useState } from "react";
+import { ChevronLeft, ChevronRight, Circle, CircleDot } from "lucide-react";
 
 export default function DashboardAnalytics() {
     const { clients } = useClients();
+    const [currentSlide, setCurrentSlide] = useState(0);
 
     // Calculate Total Clients
     const totalClients = clients.length;
@@ -59,53 +62,96 @@ export default function DashboardAnalytics() {
 
     const ageData = Object.entries(ageGroups).map(([name, count]) => ({ name, count }));
 
-    return (
-        <div className="space-y-6">
-            {/* Total Clients Card */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border bg-card text-card-foreground shadow p-6">
-                    <div className="text-sm font-medium text-muted-foreground">
-                        Total Clients
-                    </div>
-                    <div className="text-2xl font-bold">{totalClients}</div>
+    const charts = [
+        {
+            title: "Gender Distribution",
+            component: (
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={genderData} margin={{ top: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Legend />
+                            <Bar dataKey="count" name="Clients" fill="#8884d8" radius={[4, 4, 0, 0]}>
+                                <LabelList dataKey="count" position="insideTop" fill="white" fontSize={14} fontWeight="bold" />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
                 </div>
+            )
+        },
+        {
+            title: "Age Distribution",
+            component: (
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={ageData} margin={{ top: 20 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Legend />
+                            <Bar dataKey="count" name="Clients" fill="#82ca9d" radius={[4, 4, 0, 0]}>
+                                <LabelList dataKey="count" position="insideTop" fill="white" fontSize={14} fontWeight="bold" />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            )
+        }
+    ];
+
+    const nextSlide = () => {
+        setCurrentSlide((prev) => (prev + 1) % charts.length);
+    };
+
+    const prevSlide = () => {
+        setCurrentSlide((prev) => (prev - 1 + charts.length) % charts.length);
+    };
+
+    return (
+        <div className="flex flex-col h-full space-y-4">
+            {/* Total Clients Card - Fixed Top */}
+            <div className="shrink-0 rounded-xl border bg-card text-card-foreground shadow p-6">
+                <div className="text-sm font-medium text-muted-foreground">
+                    Total Clients
+                </div>
+                <div className="text-2xl font-bold">{totalClients}</div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-                {/* Gender Distribution Chart */}
-                <div className="rounded-xl border bg-card text-card-foreground shadow p-6">
-                    <div className="mb-4 text-lg font-medium">Gender Distribution</div>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={genderData} margin={{ top: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Legend />
-                                <Bar dataKey="count" name="Clients" fill="#8884d8" radius={[4, 4, 0, 0]}>
-                                    <LabelList dataKey="count" position="insideTop" fill="white" fontSize={14} fontWeight="bold" />
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
+            {/* Carousel Area */}
+            <div className="flex-1 min-h-0 flex flex-col rounded-xl border bg-card text-card-foreground shadow p-4 relative">
+                <div className="mb-2 text-lg font-medium text-center">{charts[currentSlide].title}</div>
+
+                <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
+                    {charts[currentSlide].component}
                 </div>
 
-                {/* Age Distribution Histogram */}
-                <div className="rounded-xl border bg-card text-card-foreground shadow p-6">
-                    <div className="mb-4 text-lg font-medium">Age Distribution</div>
-                    <div className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={ageData} margin={{ top: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Legend />
-                                <Bar dataKey="count" name="Clients" fill="#82ca9d" radius={[4, 4, 0, 0]}>
-                                    <LabelList dataKey="count" position="insideTop" fill="white" fontSize={14} fontWeight="bold" />
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                {/* Navigation Controls */}
+                <div className="mt-4 flex items-center justify-between px-4">
+                    <button onClick={prevSlide} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                        <ChevronLeft className="h-6 w-6 text-muted-foreground" />
+                    </button>
+
+                    <div className="flex gap-2">
+                        {charts.map((_, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => setCurrentSlide(idx)}
+                                className="text-primary transition-colors"
+                            >
+                                {currentSlide === idx ? (
+                                    <CircleDot className="h-4 w-4 fill-current" />
+                                ) : (
+                                    <Circle className="h-4 w-4 text-muted-foreground" />
+                                )}
+                            </button>
+                        ))}
                     </div>
+
+                    <button onClick={nextSlide} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                        <ChevronRight className="h-6 w-6 text-muted-foreground" />
+                    </button>
                 </div>
             </div>
         </div>
