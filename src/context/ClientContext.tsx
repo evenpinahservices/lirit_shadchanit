@@ -8,13 +8,16 @@ import {
     updateClient as serverUpdateClient,
     deleteClient as serverDeleteClient
 } from "@/actions/client";
+import { uploadImage as serverUploadImage } from "@/actions/upload";
 
 interface ClientContextType {
     clients: Client[];
     isLoading: boolean;
+    isUploading: boolean;
     addClient: (client: Omit<Client, "id" | "createdAt">) => Promise<Client>;
     updateClient: (id: string, client: Partial<Client>) => Promise<void>;
     deleteClient: (id: string) => Promise<void>;
+    uploadImage: (file: File) => Promise<string | null>;
     getClient: (id: string) => Client | undefined;
 }
 
@@ -23,6 +26,7 @@ const ClientContext = createContext<ClientContextType | undefined>(undefined);
 export function ClientProvider({ children }: { children: React.ReactNode }) {
     const [clients, setClients] = useState<Client[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         // Fetch from DB on mount
@@ -57,12 +61,24 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
         setClients((prev) => prev.filter((client) => client.id !== id));
     };
 
+    const uploadImage = async (file: File) => {
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const url = await serverUploadImage(formData);
+            return url;
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     const getClient = (id: string) => {
         return clients.find((client) => client.id === id);
     };
 
     return (
-        <ClientContext.Provider value={{ clients, isLoading, addClient, updateClient, deleteClient, getClient }}>
+        <ClientContext.Provider value={{ clients, isLoading, isUploading, addClient, updateClient, deleteClient, uploadImage, getClient }}>
             {children}
         </ClientContext.Provider>
     );

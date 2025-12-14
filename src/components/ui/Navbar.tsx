@@ -6,13 +6,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Users, Heart, Search, LogOut, User as UserIcon } from "lucide-react";
+import { LayoutDashboard, Users, Heart, Search, LogOut, User as UserIcon, Maximize, Minimize } from "lucide-react";
 
 export function Navbar() {
     const pathname = usePathname();
     const { user, logout } = useAuth();
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
     if (!user) return null; // Don't show navbar if not logged in
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            setIsFullscreen(true);
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+                setIsFullscreen(false);
+            }
+        }
+    };
 
     const links = [
         { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -52,6 +65,14 @@ export function Navbar() {
 
                 {/* User Menu - Visible on all screens now */}
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={toggleFullscreen}
+                        className="p-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                        title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                    >
+                        {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+                    </button>
+
                     <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
                         <UserIcon className="h-4 w-4" />
                         <span>{user.name} ({user.role})</span>

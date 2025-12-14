@@ -1,3 +1,6 @@
+
+import * as z from "zod";
+
 export interface User {
     id: string;
     username: string;
@@ -17,7 +20,7 @@ export interface Client {
     gender: "Male" | "Female";
 
     // Appearance
-    height: string; // in cm
+    height: number; // in cm
     eyeColor: string;
     hairColor: string;
     photoUrl?: string;
@@ -28,6 +31,7 @@ export interface Client {
     religiousAffiliation: string[]; // Multi-select
     learningStatus: string; // Single-select
     maritalStatus: string;
+    children?: number;
     languages: string[]; // Multi-select
     familyBackground: string;
     education: string;
@@ -36,26 +40,75 @@ export interface Client {
     headCovering: string; // Drop-down
 
     // Personal
-    hobbies: string;
+    hobbies: string | string[]; // Can be string (comma sep) or array
     personality: string;
-    medicalHistory: boolean; // Yes/No
+    medicalHistory: boolean | string; // Yes/No can be boolean or string "Yes"/"No"
     medicalHistoryDetails?: string; // Optional explanation if Yes
 
     // Preferences / Match Criteria
     lookingFor: string;
     willingToRelocate: string; // Yes/No/Maybe
-    ageGapPreference: string[]; // Multi-select: 1-2, 3-5, 5-10
-    preferredEthnicities: string[]; // Multi-select
-    preferredHashkafos: string[]; // Multi-select
-    preferredLearningStatus: string[]; // Multi-select
+    ageGapPreference: string | string[]; // Single or Multi
+    preferredEthnicities: string | string[]; // Single or Multi
+    preferredHashkafos: string | string[]; // Single or Multi
+    preferredLearningStatus: string | string[]; // Single or Multi
     preferredHeadCovering: string[]; // Multi-select
+    expectedHeadCovering?: string; // For men's preference logic if needed
 
     // Admin / Meta
     references: string;
     notes: string;
+    active?: boolean; // For form compatibility
     status?: "Active" | "Inactive" | "Matched"; // Deprecated
     createdAt: string;
 }
+
+// Zod Schema for Client Form
+export const ClientSchema = z.object({
+    fullName: z.string().min(2, "Name is required"),
+    email: z.string().email("Invalid email").or(z.literal("")),
+    phone: z.string().min(9, "Phone number is required"),
+    dob: z.string().min(1, "Date of birth is required"),
+    gender: z.enum(["Male", "Female"]),
+    location: z.string().min(2, "Location is required"),
+
+    height: z.coerce.number().min(100, "Invalid height"),
+    eyeColor: z.string(),
+    hairColor: z.string(),
+    photoUrl: z.string().optional(),
+
+    religiousAffiliation: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : [val]),
+    ethnicity: z.string(),
+    tribalStatus: z.string().optional().default(""),
+    maritalStatus: z.string(),
+    children: z.coerce.number().optional().default(0),
+    languages: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean)),
+    familyBackground: z.string().optional().default(""),
+    education: z.string().optional().default(""),
+    occupation: z.string().optional().default(""),
+    learningStatus: z.string().optional().default(""),
+    headCovering: z.string().optional().default(""),
+    smoking: z.string().optional().default(""),
+
+    personality: z.string().optional().default(""),
+    hobbies: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean)),
+    medicalHistory: z.union([z.boolean(), z.string()]).transform(val => val === true || val === "Yes"),
+    medicalHistoryDetails: z.string().optional().default(""),
+
+    lookingFor: z.string().optional().default(""),
+    ageGapPreference: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : [String(val)]),
+    willingToRelocate: z.string().optional().default(""),
+    preferredEthnicities: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean)),
+    preferredHashkafos: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean)),
+    preferredLearningStatus: z.union([z.string(), z.array(z.string())]).optional().transform(val => Array.isArray(val) ? val : typeof val === 'string' ? [val] : []),
+    preferredHeadCovering: z.array(z.string()).optional().default([]),
+    expectedHeadCovering: z.string().optional().default(""),
+
+    references: z.string().optional().default(""),
+    notes: z.string().optional().default(""),
+    active: z.boolean().optional(),
+});
+
 
 export interface Match {
     id: string;
@@ -70,22 +123,20 @@ export const MOCK_USERS: User[] = [
     { id: "1", username: "LiritAdam", name: "Lirit Adam", role: "admin", password: "Admin" },
 ];
 
-// Helper Arrays for Random Generation - STRICTLY ALIGNED WITH ClientForm.tsx
+// Helper Arrays for Random Generation
 const MALE_NAMES = ["David", "Moshe", "Yosef", "Avraham", "Yitzchak", "Yaakov", "Chaim", "Shlomo", "Menachem", "Dovid", "Ariel", "Daniel", "Michael", "Eli", "Netanel", "Yehuda", "Simcha", "Tuvia", "Gavriel", "Binyamin", "Meir", "Shimon", "Levi", "Ezra", "Natan", "Akiva", "Baruch", "Eliezer", "Hillel", "Shmuel"];
 const FEMALE_NAMES = ["Sarah", "Rivka", "Rachel", "Leah", "Chana", "Miriam", "Esther", "Devorah", "Yael", "Tamar", "Ayala", "Noa", "Shira", "Tziporah", "Elisheva", "Michal", "Avigail", "Rut", "Naomi", "Dina", "Batya", "Geula", "Hadassah", "Yehudit", "Malka", "Shoshana", "Penina", "Bracha", "Adina", "Tehilla"];
 const LAST_NAMES = ["Cohen", "Levi", "Shapiro", "Friedman", "Katz", "Goldstein", "Stern", "Rosenberg", "Klein", "Weiss", "Mizrachi", "Azoulay", "Biton", "Peretz", "Hassan", "Abutbul", "Gabai", "Amar", "Ohana", "Edri", "Schwartz", "Feldman", "Epstein", "Gottlieb", "Levin", "Green", "Brown", "Silver", "Rubin", "Segal"];
 const LOCATIONS = ["Jerusalem, Israel", "Tel Aviv, Israel", "Bnei Brak, Israel", "Lakewood, NJ", "Brooklyn, NY", "London, UK", "Manchester, UK", "Monsey, NY", "Five Towns, NY", "Chicago, IL", "Los Angeles, CA", "Miami, FL", "Efrat, Israel", "Raanana, Israel", "Bet Shemesh, Israel", "Petach Tikva, Israel", "Haifa, Israel", "Be'er Sheva, Israel", "Ashdod, Israel", "Netanya, Israel"];
 
-// Valid Options from ClientForm.tsx
 const ETHNICITIES = ["Ashkenazi", "Sephardi", "Mizrahi", "Yemenite", "Ethiopian"];
 const HASHKAFOS = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
 const PROFESSIONS = ["Accountant", "Lawyer", "Doctor", "Nurse", "Student", "Teacher", "Rebbi", "Programmer", "Engineer", "Architect", "Designer", "Social Worker", "Psychologist", "Business Owner", "Sales", "Real Estate", "Therapist", "Actuary", "Dentist", "Consultant"];
 const HOBBIES_LIST = ["Reading", "Hiking", "Music", "Cooking", "Traveling", "Learning Torah", "Sports", "Art", "Writing", "Volunteering", "Photography", "Gardening", "Chess", "History", "Swimming", "Running"];
 const LEARNING_STATUS = ["Full Time", "Half Time", "Koveah Itim", "Working", "N/A"];
 const HEAD_COVERING_FEMALE = ["Uncovered", "Wig", "Hat", "Scarf", "Flexible"];
-const PREFERRED_HEAD_COVERING_MALE = ["Uncovered", "Wig", "Hat", "Scarf", "I don't mind"]; // For what the man wants the woman to wear
+const PREFERRED_HEAD_COVERING_MALE = ["Uncovered", "Wig", "Hat", "Scarf", "I don't mind"];
 
-// Random Helper
 const getRandomElement = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const getRandomElements = <T>(arr: T[], count: number): T[] => {
     const shuffled = [...arr].sort(() => 0.5 - Math.random());
@@ -93,7 +144,6 @@ const getRandomElements = <T>(arr: T[], count: number): T[] => {
 };
 const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-// Generator Function
 const generateMockClients = (count: number): Client[] => {
     const clients: Client[] = [];
     for (let i = 0; i < count; i++) {
@@ -105,18 +155,14 @@ const generateMockClients = (count: number): Client[] => {
         const birthYear = new Date().getFullYear() - age;
         const dob = `${birthYear}-${getRandomInt(1, 12).toString().padStart(2, '0')}-${getRandomInt(1, 28).toString().padStart(2, '0')}`;
 
-        // Head Covering Logic
         let headCovering = "";
         let preferredHeadCovering: string[] = [];
 
         if (isMale) {
             headCovering = getRandomElement(["Kippah", "Black Hat", "None", "Kippah Seruga"]);
-            // Men select what they want the woman to wear
             preferredHeadCovering = Math.random() > 0.3 ? [getRandomElement(PREFERRED_HEAD_COVERING_MALE)] : ["I don't mind"];
         } else {
-            // Women select what they wear
             headCovering = getRandomElement(HEAD_COVERING_FEMALE);
-            // Women DO NOT select preferred head covering in the current form (it says Men Only), so we leave it empty.
             preferredHeadCovering = [];
         }
 
@@ -128,7 +174,7 @@ const generateMockClients = (count: number): Client[] => {
             dob: dob,
             location: getRandomElement(LOCATIONS),
             gender: gender,
-            height: getRandomInt(155, 190).toString(),
+            height: getRandomInt(155, 190), // Changed to number
             eyeColor: getRandomElement(["Brown", "Blue", "Green", "Hazel", "Grey", "Other"]),
             hairColor: getRandomElement(["Black", "Brown", "Blond", "Red", "Bald"]),
             ethnicity: getRandomElement(ETHNICITIES),
@@ -136,15 +182,16 @@ const generateMockClients = (count: number): Client[] => {
             religiousAffiliation: getRandomElements(HASHKAFOS, 1),
             learningStatus: getRandomElement(LEARNING_STATUS) || "Working",
             maritalStatus: getRandomElement(["Single", "Divorced", "Widowed"]),
+            children: getRandomInt(0, 5), // Added children
             languages: getRandomElements(["English", "Hebrew", "French", "Spanish", "Yiddish"], getRandomInt(1, 3)),
             familyBackground: getRandomElement(["Baal Teshuva", "FFB", "Modern", "Traditional"]),
             education: getRandomElement(["High School", "Seminary", "Yeshiva", "Bachelor's", "Master's", "PhD"]),
             occupation: getRandomElement(PROFESSIONS),
             smoking: Math.random() > 0.9 ? "Yes" : "No",
             headCovering: headCovering,
-            hobbies: getRandomElements(HOBBIES_LIST, getRandomInt(2, 4)).join(", "),
+            hobbies: getRandomElements(HOBBIES_LIST, getRandomInt(2, 4)), // Keep as array
             personality: getRandomElement(["Quiet", "Outgoing", "Serious", "Funny", "Intellectual", "Kind", "Energetic"]),
-            medicalHistory: Math.random() > 0.9,
+            medicalHistory: Math.random() > 0.9 ? "Yes" : "No", // String to match typical form data? Or boolean? Interface says boolean | string.
             medicalHistoryDetails: "Minor allergy",
             lookingFor: "Someone compatible with similar values",
             willingToRelocate: getRandomElement(["Yes", "No", "Maybe"]),
@@ -155,6 +202,7 @@ const generateMockClients = (count: number): Client[] => {
             preferredHeadCovering: preferredHeadCovering,
             references: `Rabbi ${getRandomElement(LAST_NAMES)}`,
             notes: "Generated mock client",
+            active: true,
             createdAt: new Date().toISOString().split("T")[0],
         };
         clients.push(client);

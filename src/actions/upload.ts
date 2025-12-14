@@ -8,17 +8,23 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export async function uploadImage(base64Data: string): Promise<string | null> {
+export async function uploadImage(formData: FormData): Promise<string | null> {
+    const file = formData.get("file") as File;
+    if (!file) {
+        console.warn("No file provided for upload");
+        return null;
+    }
+
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
         console.warn("Cloudinary env vars missing");
-        // Fallback: return the base64 string so it at least works (though bloats DB)
-        // Or return null to fail gracefully. 
-        // For now, let's return null to indicate upload failure but maybe we should allow base64 fallback for dev?
-        // Let's return null and handle it.
         return null;
     }
 
     try {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Data = `data:${file.type};base64,${buffer.toString("base64")}`;
+
         const result = await cloudinary.uploader.upload(base64Data, {
             folder: "shadchanit_clients",
             resource_type: "image",

@@ -28,8 +28,8 @@ export function BottomNav() {
                             key={link.href}
                             href={link.href}
                             className={cn(
-                                "flex flex-col items-center justify-center w-full h-full space-y-1 text-xs font-medium transition-colors hover:text-primary",
-                                isActive ? "text-primary" : "text-muted-foreground"
+                                "flex flex-col items-center justify-center w-full h-full space-y-1 text-xs font-medium transition-colors hover:text-red-600",
+                                isActive ? "text-red-600" : "text-muted-foreground"
                             )}
                         >
                             <Icon className="h-5 w-5" />
@@ -38,6 +38,6 @@ export function BottomNav() {
                     );
                 })}
             </div>
-        </div>
+        </div >
     );
 }

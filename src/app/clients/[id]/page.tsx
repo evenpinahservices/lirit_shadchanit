@@ -81,7 +81,7 @@ function ClientDetailsContent() {
                 <p className="text-muted-foreground">Update the client profile details.</p>
             </div>
             <ClientForm
-                initialData={client}
+                client={client}
                 isEditing
                 onCancel={() => setIsViewMode(true)}
             />
