@@ -11,7 +11,7 @@ const ClientSchema = new Schema<Client>(
         gender: { type: String, enum: ["Male", "Female"], required: true },
 
         // Appearance
-        height: { type: String },
+        height: { type: Number }, // Changed to Number to match interface
         eyeColor: { type: String },
         hairColor: { type: String },
         photoUrl: { type: String },
@@ -22,6 +22,7 @@ const ClientSchema = new Schema<Client>(
         religiousAffiliation: { type: [String], default: [] },
         learningStatus: { type: String },
         maritalStatus: { type: String },
+        children: { type: Number, default: 0 }, // Added missing field
         languages: { type: [String], default: [] },
         familyBackground: { type: String },
         education: { type: String },
@@ -30,7 +31,7 @@ const ClientSchema = new Schema<Client>(
         headCovering: { type: String },
 
         // Personal
-        hobbies: { type: String },
+        hobbies: { type: [String], default: [] }, // Enforce array for storage
         personality: { type: String },
         medicalHistory: { type: Boolean, default: false },
         medicalHistoryDetails: { type: String },
@@ -43,10 +44,12 @@ const ClientSchema = new Schema<Client>(
         preferredHashkafos: { type: [String], default: [] },
         preferredLearningStatus: { type: [String], default: [] },
         preferredHeadCovering: { type: [String], default: [] },
+        expectedHeadCovering: { type: String }, // Added missing field
 
         // Meta
         references: { type: String },
         notes: { type: String },
+        active: { type: Boolean, default: true }, // Added missing field
         status: { type: String }, // Deprecated but kept for type signature
         createdAt: { type: String }, // Storing as string YYYY-MM-DD
     },
@@ -58,7 +61,7 @@ const ClientSchema = new Schema<Client>(
 );
 
 // Virtual for 'id' to match our frontend interface which expects 'id' string, not '_id' object
-ClientSchema.virtual('id').get(function () {
+ClientSchema.virtual('id').get(function (this: any) {
     return this._id.toHexString();
 });
 
