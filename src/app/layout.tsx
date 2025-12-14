@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ClientProvider } from "@/context/ClientContext";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Navbar } from "@/components/ui/Navbar";
+import { BottomNav } from "@/components/ui/BottomNav";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -25,10 +26,13 @@ export default function RootLayout({
         <AuthProvider>
           <ClientProvider>
             <AuthGuard>
-              <Navbar />
-              <main className="container mx-auto py-8 px-4">
-                {children}
-              </main>
+              <div className="flex flex-col h-full max-h-dvh">
+                <Navbar />
+                <main className="flex-1 overflow-y-auto container mx-auto py-8 px-4 scroll-smooth">
+                  {children}
+                </main>
+                <BottomNav />
+              </div>
             </AuthGuard>
           </ClientProvider>
         </AuthProvider>
