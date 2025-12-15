@@ -8,6 +8,7 @@ import { Client, MOCK_CLIENTS } from "@/lib/mockData";
 import { findMatches, calculateAge } from "@/lib/matchingUtils";
 import { Heart, Sparkles, ArrowRight, Check, X } from "lucide-react";
 import Link from "next/link";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 export default function MatchingPage() {
     const { clients } = useClients();
@@ -116,22 +117,28 @@ export default function MatchingPage() {
                         <div className="rounded-xl border bg-white dark:bg-gray-950 p-4 shadow-sm flex flex-col max-h-full">
                             <h2 className="font-semibold mb-3 shrink-0">Select Client</h2>
                             <div className="space-y-3 flex flex-col min-h-0">
-                                <select
-                                    className="shrink-0 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-red-500 dark:bg-gray-900 dark:border-gray-700"
+                                import {SearchableSelect} from "@/components/ui/SearchableSelect"; // Add import at top manually if needed, but I'll add the usage here nicely.
+
+// ... inside component ...
+
+    const clientOptions = allClients.map(client => ({
+                                    label: `${client.fullName} (${client.gender})`,
+                                value: client.id
+    }));
+
+                                // ... render ...
+
+                                <SearchableSelect
+                                    options={clientOptions}
                                     value={selectedClientId}
-                                    onChange={(e) => {
-                                        setSelectedClientId(e.target.value);
+                                    onChange={(val) => {
+                                        setSelectedClientId(val);
                                         setHasSearched(false);
                                         setMatches([]);
                                     }}
-                                >
-                                    <option value="">Select a client...</option>
-                                    {allClients.map((client) => (
-                                        <option key={client.id} value={client.id}>
-                                            {client.fullName} ({client.gender})
-                                        </option>
-                                    ))}
-                                </select>
+                                    placeholder="Search by name..."
+                                    className="w-full shrink-0"
+                                />
 
                                 {selectedClient && (
                                     <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-md flex flex-col min-h-0 shrink overflow-hidden">
