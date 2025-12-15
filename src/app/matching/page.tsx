@@ -133,9 +133,7 @@ export default function MatchingPage() {
                                     placeholder="Search by name..."
                                     className="w-full shrink-0"
                                 />
-                                placeholder="Search by name..."
-                                className="w-full shrink-0"
-                                />
+
 
                                 {selectedClient && (
                                     <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-md flex flex-col min-h-0 shrink overflow-hidden">
