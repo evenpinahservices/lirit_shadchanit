@@ -18,12 +18,16 @@ export default function Home() {
   if (!user) return null;
 
   return (
-    <div className="h-full overflow-y-auto space-y-6 pr-2">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-      <p className="text-muted-foreground">Welcome back, {user.name.split(' ')[0]}. Here is an overview of your matchmaking database.</p>
+    <div className="flex flex-col h-full overflow-hidden space-y-4 pb-20 md:pb-0">
+      <div className="shrink-0 space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground">Welcome back, {user.name.split(' ')[0]}. Here is an overview of your matchmaking database.</p>
+      </div>
 
       {/* Placeholder for dashboard widgets */}
-      <DashboardAnalytics />
+      <div className="flex-1 min-h-0">
+        <DashboardAnalytics />
+      </div>
     </div>
   );
 }
