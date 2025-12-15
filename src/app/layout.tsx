@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
@@ -15,6 +15,15 @@ export const metadata: Metadata = {
   description: "Client management and matchmaking system",
 };
 
+// Lock viewport to 412x892 (Galaxy A35) for consistent rendering
+export const viewport: Viewport = {
+  width: 412,
+  height: 892,
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,7 +37,7 @@ export default function RootLayout({
             <AuthGuard>
               <div className="flex flex-col h-full max-h-dvh">
                 <Navbar />
-                <main className="flex-1 overflow-y-auto flex flex-col container mx-auto pt-2 pb-8 px-4">
+                <main className="flex-1 overflow-hidden flex flex-col container mx-auto pt-2 px-4">
                   {children}
                 </main>
                 <BottomNav />
@@ -40,3 +49,4 @@ export default function RootLayout({
     </html>
   );
 }
+
