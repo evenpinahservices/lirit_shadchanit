@@ -94,8 +94,9 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                 addClient(values);
             }
             router.push("/clients");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to submit client:", error);
+            alert("Failed to save client: " + (error.message || error));
         }
     };
 
@@ -131,16 +132,56 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const handleAutoPopulate = () => {
+        const randomStr = Math.random().toString(36).substring(7);
+        setValue("fullName", `Test Client ${randomStr}`);
+        setValue("email", `test${randomStr}@example.com`);
+        setValue("phone", "050-000-0000");
+        setValue("dob", "1995-01-01");
+        setValue("gender", Math.random() > 0.5 ? "Male" : "Female");
+        setValue("location", "Jerusalem");
+        setValue("height", 175 + Math.floor(Math.random() * 10));
+        setValue("eyeColor", "Brown");
+        setValue("hairColor", "Dark");
+        setValue("maritalStatus", "Single");
+        setValue("religiousAffiliation", "Yeshivish");
+        setValue("ethnicity", "Ashkenazi");
+        setValue("occupation", "Developer");
+        setValue("learningStatus", "Working");
+        setValue("headCovering", "None");
+        setValue("smoking", "No");
+        setValue("personality", "Auto-generated personality description for testing purposes.");
+        setValue("hobbies", "Coding, Testing");
+        setValue("medicalHistory", "No");
+        setValue("lookingFor", "Long-term");
+        setValue("ageGapPreference", "Any");
+        setValue("willingToRelocate", "Yes");
+        setValue("preferredEthnicities", "Ashkenazi");
+        setValue("preferredHashkafos", "Yeshivish");
+    };
+
     const watchedPhotoUrl = watch("photoUrl");
     const watchedMedical = watch("medicalHistory");
 
     return (
         <div className="fixed inset-x-0 bottom-0 top-[65px] z-40 bg-white dark:bg-gray-950 flex flex-col md:relative md:inset-auto md:top-auto md:h-auto md:bg-transparent md:block">
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full md:h-auto md:block md:space-y-6">
+            <form
+                onSubmit={handleSubmit(onSubmit)}
+                onKeyDown={(e) => {
+                    // Prevent implicit submission on Enter, allow inside textareas
+                    if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+                        e.preventDefault();
+                    }
+                }}
+                className="flex flex-col h-full md:h-auto md:block md:space-y-6"
+            >
                 {/* Wizard Header - Sticky on Mobile */}
                 <div className="shrink-0 bg-white dark:bg-gray-950 p-4 border-b md:border md:rounded-xl md:shadow-sm z-30">
                     <div className="flex items-center justify-between mb-2 md:mb-4">
-                        <h2 className="text-lg font-semibold">{STEPS[currentStep].title}</h2>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-lg font-semibold">{STEPS[currentStep].title}</h2>
+                            <button type="button" onClick={handleAutoPopulate} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-200">Dev Fill</button>
+                        </div>
                         <span className="text-sm text-gray-500">
                             Step {currentStep + 1} of {STEPS.length}
                         </span>
@@ -153,8 +194,8 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                     </div>
                 </div>
 
-                {/* Steps Content - Scrollable on Mobile */}
-                <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 bg-white dark:bg-gray-950 p-6 md:rounded-xl md:border md:shadow-sm space-y-6 scrollbar-hide pb-24 md:pb-6">
+                {/* Steps Content - Scrollable on Mobile with EXTRA padding for validation errors */}
+                <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 bg-white dark:bg-gray-950 p-6 md:rounded-xl md:border md:shadow-sm space-y-6 scrollbar-hide pb-40 md:pb-6">
 
                     {/* STEP 0: BASIC INFO */}
                     {currentStep === 0 && (
@@ -399,7 +440,8 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                 </div>
 
                 {/* Footer Navigation - Fixed in layout */}
-                <div className="shrink-0 p-4 bg-white dark:bg-gray-950 border-t z-50 flex items-center justify-between pb-[env(safe-area-inset-bottom)] md:pb-4 md:static fixed bottom-0 left-0 right-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:shadow-none">
+                {/* Footer Navigation - Fixed in layout */}
+                <div className="shrink-0 p-4 bg-white dark:bg-gray-950 z-50 flex items-center justify-between md:pb-4 md:static fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0">
                     <div className="flex gap-2">
                         {isEditing && onCancel && (
                             <button
@@ -412,12 +454,14 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                         )}
                         <button
                             type="button"
-                            onClick={prevStep}
-                            disabled={currentStep === 0}
-                            className={cn(
-                                "flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300",
-                                currentStep === 0 && "invisible"
-                            )}
+                            onClick={() => {
+                                if (currentStep === 0) {
+                                    router.push("/clients");
+                                } else {
+                                    prevStep();
+                                }
+                            }}
+                            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
                         >
                             <ChevronLeft className="h-4 w-4" />
                             Back

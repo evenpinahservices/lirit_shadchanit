@@ -18,7 +18,7 @@ export default function Home() {
   if (!user) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="h-full overflow-y-auto space-y-6 pr-2">
       <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
       <p className="text-muted-foreground">Welcome back, {user.name.split(' ')[0]}. Here is an overview of your matchmaking database.</p>
 

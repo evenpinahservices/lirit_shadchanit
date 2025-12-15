@@ -144,7 +144,7 @@ const getRandomElements = <T>(arr: T[], count: number): T[] => {
 };
 const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-const generateMockClients = (count: number): Client[] => {
+export const generateMockClients = (count: number): Client[] => {
     const clients: Client[] = [];
     for (let i = 0; i < count; i++) {
         const gender = Math.random() > 0.5 ? "Male" : "Female";
@@ -191,7 +191,7 @@ const generateMockClients = (count: number): Client[] => {
             headCovering: headCovering,
             hobbies: getRandomElements(HOBBIES_LIST, getRandomInt(2, 4)), // Keep as array
             personality: getRandomElement(["Quiet", "Outgoing", "Serious", "Funny", "Intellectual", "Kind", "Energetic"]),
-            medicalHistory: Math.random() > 0.9 ? "Yes" : "No", // String to match typical form data? Or boolean? Interface says boolean | string.
+            medicalHistory: Math.random() > 0.9,
             medicalHistoryDetails: "Minor allergy",
             lookingFor: "Someone compatible with similar values",
             willingToRelocate: getRandomElement(["Yes", "No", "Maybe"]),
@@ -210,6 +210,48 @@ const generateMockClients = (count: number): Client[] => {
     return clients;
 };
 
-export const MOCK_CLIENTS: Client[] = generateMockClients(100);
+
+const testClient: Client = {
+    id: "test-long-list",
+    fullName: "Test Client Long List",
+    email: "test.long@example.com",
+    phone: "555-0000",
+    dob: "1995-01-01",
+    location: "Jerusalem, Israel",
+    gender: "Female",
+    height: 165,
+    eyeColor: "Brown",
+    hairColor: "Black",
+    ethnicity: "Ashkenazi",
+    tribalStatus: "Yisrael",
+    religiousAffiliation: ["Yeshivish Litvish"],
+    learningStatus: "Working",
+    maritalStatus: "Single",
+    children: 0,
+    languages: ["English", "Hebrew"],
+    familyBackground: "FFB",
+    education: "Seminary",
+    occupation: "Teacher",
+    smoking: "No",
+    headCovering: "Wig",
+    hobbies: ["Reading"],
+    personality: "Quiet",
+    medicalHistory: false,
+    lookingFor: "Someone nice",
+    willingToRelocate: "No", // Dealbreaker 1
+    ageGapPreference: ["1-2 years", "3-5 years"], // Dealbreaker 2
+    preferredEthnicities: ["Ashkenazi", "Sephardi", "Yemenite", "Convert", "Mixed", "Ashkenazi (Strict)", "Sephardi (Strict)", "Yemenite (Strict)", "Other"],
+    preferredHashkafos: ["Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Modern Orthodox", "Hardal", "Chassidish (General)", "Chassidish (Gur)", "Chassidish (Belz)", "Chassidish (Satmar)", "Chassidish (Vizhnitz)", "Litvish (Modern)", "Litvish (Yeshivish)", "Carlebach", "Breslov"],
+    preferredLearningStatus: ["Full Time", "Working & Learning", "Working", "Student", "Retired"],
+    preferredHeadCovering: ["Kippah", "Black Hat", "None", "Kippah Sruga", "Baseball Cap", "Fedora", "Shtreimel", "Any"], // Dealbreaker 6
+    expectedHeadCovering: "Wig",
+    references: "None",
+    notes: "For testing scrolling",
+    active: true,
+    createdAt: new Date().toISOString().split("T")[0],
+};
+
+export const MOCK_CLIENTS: Client[] = [testClient, ...generateMockClients(100)];
+
 
 export const MOCK_MATCHES: Match[] = [];

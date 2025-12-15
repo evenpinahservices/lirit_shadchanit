@@ -3,13 +3,22 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useClients } from "@/context/ClientContext";
-import { Client } from "@/lib/mockData";
+import { seedTestClient } from "@/actions/client";
+import { Client, MOCK_CLIENTS } from "@/lib/mockData";
 import { findMatches, calculateAge } from "@/lib/matchingUtils";
 import { Heart, Sparkles, ArrowRight, Check, X } from "lucide-react";
 import Link from "next/link";
 
 export default function MatchingPage() {
     const { clients } = useClients();
+
+    // Force inclusions for testing
+    const testClientMock = MOCK_CLIENTS.find(c => c.id === "test-long-list");
+    const allClients = [...clients];
+    if (testClientMock && !allClients.some(c => c.id === testClientMock.id)) {
+        allClients.unshift(testClientMock); // Add to top for visibility
+    }
+
     const searchParams = useSearchParams();
     const initialClientId = searchParams.get("clientId");
 
@@ -17,13 +26,17 @@ export default function MatchingPage() {
     const [matches, setMatches] = useState<Client[]>([]);
     const [hasSearched, setHasSearched] = useState(false);
 
+    useEffect(() => {
+        seedTestClient().catch(console.error);
+    }, []);
+
     // Effect to handle deep linking
     useEffect(() => {
         if (initialClientId && clients.length > 0) {
             setSelectedClientId(initialClientId);
-            const client = clients.find(c => c.id === initialClientId);
+            const client = allClients.find(c => c.id === initialClientId);
             if (client) {
-                const suggestions = findMatches(client, clients);
+                const suggestions = findMatches(client, allClients);
                 setMatches(suggestions);
                 setHasSearched(true);
             }
@@ -33,16 +46,16 @@ export default function MatchingPage() {
     const handleMatch = () => {
         if (!selectedClientId) return;
 
-        const client = clients.find((c) => c.id === selectedClientId);
+        const client = allClients.find((c) => c.id === selectedClientId);
         if (!client) return;
 
-        const suggestions = findMatches(client, clients); // Use shared logic
+        const suggestions = findMatches(client, allClients); // Use shared logic
 
         setMatches(suggestions);
         setHasSearched(true);
     };
 
-    const selectedClient = clients.find((c) => c.id === selectedClientId);
+    const selectedClient = allClients.find((c) => c.id === selectedClientId);
 
     const getActiveDealBreakers = (client: Client) => {
         const active: { label: string, value: string }[] = [];
@@ -89,20 +102,21 @@ export default function MatchingPage() {
     const activeDealBreakers = selectedClient ? getActiveDealBreakers(selectedClient) : [];
 
     return (
-        <div className="flex flex-col h-full space-y-8">
+        <div className="flex flex-col h-full overflow-hidden space-y-4">
             <div className="shrink-0">
                 <h1 className="text-3xl font-bold tracking-tight">Smart Matching</h1>
                 <p className="text-muted-foreground">Find compatible matches based on strict deal-breakers.</p>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto pb-[env(safe-area-inset-bottom)] md:pb-0">
-                <div className="grid gap-8 md:grid-cols-[300px_1fr] pb-24">
-                    <div className="space-y-4">
-                        <div className="rounded-xl border bg-white dark:bg-gray-950 p-6 shadow-sm">
-                            <h2 className="font-semibold mb-4">Select Client</h2>
-                            <div className="space-y-4">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-24">
+                <div className="flex flex-col gap-4 h-full">
+                    {/* Search Section - Flexible Height with constraints */}
+                    <div className="flex flex-col shrink min-h-0">
+                        <div className="rounded-xl border bg-white dark:bg-gray-950 p-4 shadow-sm flex flex-col min-h-0">
+                            <h2 className="font-semibold mb-3 shrink-0">Select Client</h2>
+                            <div className="space-y-3 flex flex-col min-h-0">
                                 <select
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-red-500 dark:bg-gray-900 dark:border-gray-700"
+                                    className="shrink-0 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-red-500 dark:bg-gray-900 dark:border-gray-700"
                                     value={selectedClientId}
                                     onChange={(e) => {
                                         setSelectedClientId(e.target.value);
@@ -111,7 +125,7 @@ export default function MatchingPage() {
                                     }}
                                 >
                                     <option value="">Select a client...</option>
-                                    {clients.map((client) => (
+                                    {allClients.map((client) => (
                                         <option key={client.id} value={client.id}>
                                             {client.fullName} ({client.gender})
                                         </option>
@@ -119,26 +133,28 @@ export default function MatchingPage() {
                                 </select>
 
                                 {selectedClient && (
-                                    <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-md">
-                                        <p className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Matching based on deal breakers:</p>
-                                        {activeDealBreakers.length > 0 ? (
-                                            <ul className="list-disc pl-4 space-y-1">
-                                                {activeDealBreakers.map((item, idx) => (
-                                                    <li key={idx}>
-                                                        <span className="font-medium">{item.label}:</span> {item.value}
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        ) : (
-                                            <p className="text-gray-500 italic pl-1">No deal breakers specified.</p>
-                                        )}
+                                    <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-md flex flex-col min-h-0 shrink">
+                                        <p className="font-semibold text-gray-900 dark:text-gray-100 mb-1 shrink-0">Matching based on deal breakers:</p>
+                                        <div className="overflow-y-auto custom-scrollbar min-h-0 shrink text-left">
+                                            {activeDealBreakers.length > 0 ? (
+                                                <ul className="list-disc pl-4 space-y-0.5">
+                                                    {activeDealBreakers.map((item, idx) => (
+                                                        <li key={idx}>
+                                                            <span className="font-medium">{item.label}:</span> {item.value}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <p className="text-gray-500 italic pl-1">No deal breakers specified.</p>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
                                 <button
                                     onClick={handleMatch}
                                     disabled={!selectedClientId}
-                                    className="w-full flex items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    className="shrink-0 w-full flex items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                     <Sparkles className="h-4 w-4" />
                                     Generate Matches
@@ -147,52 +163,55 @@ export default function MatchingPage() {
                         </div>
                     </div>
 
-                    <div className="space-y-6">
+                    {/* Results Section - Fixed/Scrollable if needed */}
+                    <div className="min-h-0 overflow-y-auto custom-scrollbar shrink-0">
                         {!hasSearched ? (
-                            <div className="flex flex-col items-center justify-center h-64 text-center text-muted-foreground border-2 border-dashed rounded-xl">
-                                <Heart className="h-12 w-12 mb-4 text-gray-300" />
-                                <p>Select a client and click "Generate Matches" to see suggestions.</p>
+                            <div className="flex items-center justify-center p-6 text-center border-2 border-dashed rounded-xl bg-gray-50/50 dark:bg-gray-900/50 h-60">
+                                <div className="flex flex-col items-center gap-2">
+                                    <Heart className="h-8 w-8 text-gray-300" />
+                                    <p className="text-muted-foreground font-medium text-sm">Select a client above to start matching</p>
+                                </div>
                             </div>
                         ) : matches.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-64 text-center text-muted-foreground border rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                            <div className="flex flex-col items-center justify-center h-60 text-center text-muted-foreground border rounded-xl bg-gray-50 dark:bg-gray-900/50">
                                 <p>No matches found matching the strict criteria.</p>
                             </div>
                         ) : (
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pb-2">
                                 {matches.map((match) => (
                                     <Link
                                         key={match.id}
                                         href={`/clients/${match.id}?source=matching`}
-                                        className="group relative flex flex-col justify-between rounded-xl border bg-white dark:bg-gray-950 p-6 shadow-sm hover:shadow-md transition-all hover:border-red-200 dark:hover:border-red-900"
+                                        className="group relative flex flex-col justify-between rounded-xl border bg-white dark:bg-gray-950 p-4 shadow-sm hover:shadow-md transition-all hover:border-red-200 dark:hover:border-red-900"
                                     >
-                                        <div className="space-y-4">
+                                        <div className="space-y-3">
                                             <div className="flex items-start justify-between">
                                                 <div>
-                                                    <h3 className="font-semibold text-lg group-hover:text-red-600 transition-colors">{match.fullName}</h3>
-                                                    <p className="text-sm text-muted-foreground">{match.location} • {calculateAge(match.dob)} yo</p>
+                                                    <h3 className="font-semibold text-base group-hover:text-red-600 transition-colors">{match.fullName}</h3>
+                                                    <p className="text-xs text-muted-foreground">{match.location} • {calculateAge(match.dob)} yo</p>
                                                 </div>
-                                                <div className="rounded-full bg-green-100 p-2 text-green-600">
-                                                    <Check className="h-4 w-4" />
+                                                <div className="rounded-full bg-green-100 p-1.5 text-green-600">
+                                                    <Check className="h-3 w-3" />
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-2 text-sm">
+                                            <div className="space-y-1 text-xs">
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">Ethnicity:</span>
-                                                    <span>{Array.isArray(match.ethnicity) ? match.ethnicity.join(", ") : match.ethnicity}</span>
+                                                    <span className="text-right truncate max-w-[120px]">{Array.isArray(match.ethnicity) ? match.ethnicity.join(", ") : match.ethnicity}</span>
                                                 </div>
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">Hashkafa:</span>
-                                                    <span>{Array.isArray(match.religiousAffiliation) ? match.religiousAffiliation[0] : match.religiousAffiliation}</span>
+                                                    <span className="text-right truncate max-w-[120px]">{Array.isArray(match.religiousAffiliation) ? match.religiousAffiliation[0] : match.religiousAffiliation}</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Learning Status:</span>
-                                                    <span>{Array.isArray(match.learningStatus) ? match.learningStatus[0] : match.learningStatus}</span>
+                                                    <span className="text-muted-foreground">Learning:</span>
+                                                    <span className="text-right truncate max-w-[120px]">{Array.isArray(match.learningStatus) ? match.learningStatus[0] : match.learningStatus}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="mt-6 pt-4 border-t flex items-center justify-end">
-                                            <span className="text-sm font-medium text-red-600 group-hover:underline flex items-center gap-1">
+                                        <div className="mt-4 pt-3 border-t flex items-center justify-end">
+                                            <span className="text-xs font-medium text-red-600 group-hover:underline flex items-center gap-1">
                                                 View Profile <ArrowRight className="h-3 w-3" />
                                             </span>
                                         </div>

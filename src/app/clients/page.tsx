@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useClients } from "@/context/ClientContext";
+import { seedDatabase } from "@/actions/client";
 import { Plus, Pencil, Trash2, MapPin, Briefcase, Search, ChevronLeft, ChevronRight, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +11,8 @@ export default function ClientsPage() {
     const { clients, deleteClient } = useClients();
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 7;
+    const [itemsPerPage] = useState(4); // Fixed to 4
+    const [isSeeding, setIsSeeding] = useState(false);
 
     const filteredClients = clients.filter(client =>
         client.fullName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -38,19 +40,40 @@ export default function ClientsPage() {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-65px)] space-y-4 pb-2 md:pb-0">
+        <div className="flex flex-col h-full gap-4 overflow-hidden relative z-0">
             <div className="flex items-center justify-between shrink-0 px-1 pt-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
                     <p className="text-muted-foreground hidden md:block">Manage your client database.</p>
                 </div>
-                <Link
-                    href="/clients/new"
-                    className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors"
-                >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Client
-                </Link>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={async () => {
+                            if (isSeeding) return;
+                            setIsSeeding(true);
+                            try {
+                                await seedDatabase(10);
+                                alert("Added 10 clients!");
+                            } catch (err: any) {
+                                console.error(err);
+                                alert("Failed to seed: " + (err.message || err));
+                            } finally {
+                                setIsSeeding(false);
+                            }
+                        }}
+                        disabled={isSeeding}
+                        className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-3 py-2 border rounded-md disabled:opacity-50 disabled:cursor-wait"
+                    >
+                        {isSeeding ? "Seeding..." : "Seed 10"}
+                    </button>
+                    <Link
+                        href="/clients/new"
+                        className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors"
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Client
+                    </Link>
+                </div>
             </div>
 
             <div className="relative shrink-0 px-1">

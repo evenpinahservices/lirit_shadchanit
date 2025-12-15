@@ -2,7 +2,7 @@
 
 import dbConnect from "@/lib/db";
 import ClientModel from "@/models/Client";
-import { Client } from "@/lib/mockData";
+import { Client, MOCK_CLIENTS, generateMockClients } from "@/lib/mockData";
 import { revalidatePath } from "next/cache";
 
 // Type definition for Client Input (excluding auto-generated fields)
@@ -60,4 +60,27 @@ export async function deleteClient(id: string): Promise<void> {
     await dbConnect();
     await ClientModel.findByIdAndDelete(id);
     revalidatePath("/clients");
+}
+
+export async function seedTestClient(): Promise<void> {
+    await dbConnect();
+    const existing = await ClientModel.findOne({ email: "test.long@example.com" });
+    if (!existing) {
+        const testClient = MOCK_CLIENTS.find(c => c.email === "test.long@example.com");
+        if (testClient) {
+            const { id, createdAt, ...data } = testClient;
+            await createClient(data);
+            revalidatePath("/matching");
+        }
+    }
+}
+export async function seedDatabase(count: number = 10): Promise<void> {
+    await dbConnect();
+    const clients = generateMockClients(count);
+    for (const client of clients) {
+        const { id, createdAt, ...data } = client;
+        await createClient(data);
+    }
+    revalidatePath("/clients");
+    revalidatePath("/matching");
 }

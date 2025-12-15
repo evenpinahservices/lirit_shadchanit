@@ -111,7 +111,7 @@ export default function SearchPage() {
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(true);
 
     return (
-        <div className="flex flex-col h-[calc(100vh-65px)]">
+        <div className="flex flex-col h-full">
             <div className="shrink-0 px-4 pt-4 pb-2 md:pb-4 border-b md:border-b-0 bg-white dark:bg-gray-950 z-10 flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Advanced Search</h1>
