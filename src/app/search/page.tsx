@@ -158,7 +158,7 @@ export default function SearchPage() {
                         "w-full border-b md:border-b-0 md:static",
                         showResults ? "hidden md:block" : "block p-4"
                     )}>
-                        <div className="space-y-6 pb-24 md:pb-0">
+                        <div className="space-y-6 pb-4 md:pb-0">
                             <div className="space-y-4">
                                 <h3 className="font-semibold flex items-center text-lg">
                                     <Search className="w-5 h-5 mr-2" />
@@ -181,6 +181,7 @@ export default function SearchPage() {
                                         </div>
                                     </div>
 
+                                    {/* ... Filters Content (unchanged) ... */}
                                     <div className="grid grid-cols-2 gap-3">
                                         {/* Age Range */}
                                         <div className="space-y-1">
@@ -364,7 +365,7 @@ export default function SearchPage() {
                                     </div>
                                 ) : (
                                     <div className="flex-1 overflow-hidden p-1">
-                                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 pb-4">
                                             {paginatedClients.map(client => (
                                                 <div key={client.id} className="bg-white dark:bg-gray-950 p-4 rounded-xl border shadow-sm hover:shadow-md transition-shadow">
                                                     <Link href={`/clients/${client.id}`} className="flex gap-4 items-start">
