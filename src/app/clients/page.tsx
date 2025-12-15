@@ -223,7 +223,7 @@ export default function ClientsPage() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-2 shrink-0 border-t md:border-t-0 md:pt-0 bg-white dark:bg-gray-950 z-20 pb-2 px-1">
+                <div className="flex items-center justify-between pt-2 shrink-0 md:pt-0 bg-white dark:bg-gray-950 z-20 pb-4 px-1">
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
@@ -238,7 +238,7 @@ export default function ClientsPage() {
                     <button
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
-                        className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                        className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         Next
                         <ChevronRight className="h-4 w-4" />
