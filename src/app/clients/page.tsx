@@ -223,7 +223,7 @@ export default function ClientsPage() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-                <div className="absolute bottom-20 left-0 right-0 flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent">
+                <div className="absolute bottom-16 left-0 right-0 flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent">
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
