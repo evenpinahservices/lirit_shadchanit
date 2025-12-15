@@ -36,7 +36,7 @@ export default function MatchingPage() {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 6; // Fits well in grid (2x3 or 3x2)
+    const itemsPerPage = 2; // Reduced to 2 to avoid scrolling
 
     useEffect(() => {
         seedTestClient().catch(console.error);
@@ -230,7 +230,7 @@ export default function MatchingPage() {
                                     <button onClick={handleReset} className="mt-2 text-red-600 hover:underline">Try another client</button>
                                 </div>
                             ) : (
-                                <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
+                                <div className="flex-1 overflow-hidden p-1">
                                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                         {paginatedMatches.map((match) => (
                                             <Link
