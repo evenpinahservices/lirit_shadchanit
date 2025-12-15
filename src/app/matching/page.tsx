@@ -108,7 +108,7 @@ export default function MatchingPage() {
                 <p className="text-muted-foreground">Find compatible matches based on strict deal-breakers.</p>
             </div>
 
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-4 md:pb-0">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-24 md:pb-0">
                 <div className="flex flex-col gap-4 h-full">
 
                     {/* Search Section - Flexible Height that shrinks internally when pressed */}
