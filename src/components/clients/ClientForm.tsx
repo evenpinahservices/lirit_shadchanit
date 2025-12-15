@@ -441,7 +441,7 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
 
                 {/* Footer Navigation - Fixed in layout */}
                 {/* Footer Navigation - Fixed in layout */}
-                <div className="shrink-0 p-4 bg-white dark:bg-gray-950 z-50 flex items-center justify-between md:pb-4 md:static fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-0 right-0">
+                <div className="shrink-0 px-4 py-2 bg-white dark:bg-gray-950 z-50 flex items-center justify-between md:pb-4 md:static fixed bottom-16 left-0 right-0">
                     <div className="flex gap-2">
                         {isEditing && onCancel && (
                             <button
