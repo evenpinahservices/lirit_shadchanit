@@ -13,6 +13,11 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 export default function MatchingPage() {
     const { clients } = useClients();
 
+    const clientOptions = clients.map(client => ({
+        label: `${client.fullName} (${client.gender})`,
+        value: client.id
+    }));
+
     // Force inclusions for testing
     const testClientMock = MOCK_CLIENTS.find(c => c.id === "test-long-list");
     const allClients = [...clients];
@@ -117,17 +122,6 @@ export default function MatchingPage() {
                         <div className="rounded-xl border bg-white dark:bg-gray-950 p-4 shadow-sm flex flex-col max-h-full">
                             <h2 className="font-semibold mb-3 shrink-0">Select Client</h2>
                             <div className="space-y-3 flex flex-col min-h-0">
-                                import {SearchableSelect} from "@/components/ui/SearchableSelect"; // Add import at top manually if needed, but I'll add the usage here nicely.
-
-// ... inside component ...
-
-    const clientOptions = allClients.map(client => ({
-                                    label: `${client.fullName} (${client.gender})`,
-                                value: client.id
-    }));
-
-                                // ... render ...
-
                                 <SearchableSelect
                                     options={clientOptions}
                                     value={selectedClientId}
@@ -138,6 +132,9 @@ export default function MatchingPage() {
                                     }}
                                     placeholder="Search by name..."
                                     className="w-full shrink-0"
+                                />
+                                placeholder="Search by name..."
+                                className="w-full shrink-0"
                                 />
 
                                 {selectedClient && (
