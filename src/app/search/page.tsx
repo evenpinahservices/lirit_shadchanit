@@ -91,7 +91,6 @@ export default function SearchPage() {
         // Religiosity filter
         if (religiosity.length > 0) {
             results = results.filter((c) => {
-                // Handle both string and array (since mock data was updated to array but some might be string)
                 const clientReligiosity = Array.isArray(c.religiousAffiliation)
                     ? c.religiousAffiliation
                     : [c.religiousAffiliation];
@@ -113,23 +112,40 @@ export default function SearchPage() {
         }
 
         setFilteredClients(results);
+        setCurrentPage(1);
     }, [clients, keyword, gender, location, minAge, maxAge, minHeight, maxHeight, religiosity, maritalStatus, ethnicity]);
 
-    const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+    // Pagination Logic
+    const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+    const paginatedClients = filteredClients.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-hidden">
             <div className="shrink-0 px-4 pt-4 pb-2 md:pb-4 border-b bg-white dark:bg-gray-950 z-10 flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Advanced Search</h1>
                     <p className="text-muted-foreground text-sm hidden md:block">Filter clients by detailed criteria.</p>
                 </div>
                 <button
-                    onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
-                    className="md:hidden text-sm font-medium text-red-600 flex items-center gap-1"
+                    onClick={() => {
+                        setShowResults(!showResults);
+                    }}
+                    className={cn(
+                        "md:hidden text-sm font-medium text-red-600 flex items-center gap-1",
+                        !showResults && "hidden"
+                    )}
                 >
                     <Filter className="h-4 w-4" />
-                    {isMobileFiltersOpen ? "Hide Filters" : "Filter Criteria"}
+                    Refine Search
                 </button>
             </div>
 
@@ -139,11 +155,10 @@ export default function SearchPage() {
                     {/* FILTERS COLUMN */}
                     <div className={cn(
                         "md:w-80 md:shrink-0 md:border-r md:pr-8 overflow-y-auto bg-white dark:bg-gray-950 md:bg-transparent transition-all duration-300 ease-in-out",
-                        // Mobile: Static stacking. Hidden if closed.
                         "w-full border-b md:border-b-0 md:static",
-                        isMobileFiltersOpen ? "block p-4 max-h-[60vh] shadow-sm md:shadow-none md:max-h-full" : "hidden md:block md:max-h-full"
+                        showResults ? "hidden md:block" : "block p-4"
                     )}>
-                        <div className="space-y-6">
+                        <div className="space-y-6 pb-24 md:pb-0">
                             <div className="space-y-4">
                                 <h3 className="font-semibold flex items-center text-lg">
                                     <Search className="w-5 h-5 mr-2" />
@@ -273,6 +288,24 @@ export default function SearchPage() {
                                         </div>
                                     </div>
 
+                                    {/* Ethnicity */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-medium text-gray-500">Ethnicity</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {ethnicityOptions.map((option) => (
+                                                <label key={option} className="inline-flex items-center gap-1.5 text-xs bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded border border-gray-100 dark:border-gray-800 cursor-pointer hover:border-red-200">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="rounded border-gray-300 text-red-600 focus:ring-red-500 h-3 w-3"
+                                                        checked={ethnicity.includes(option)}
+                                                        onChange={() => toggleFilter(option, ethnicity, setEthnicity)}
+                                                    />
+                                                    {option}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
                                     <button
                                         onClick={() => {
                                             setKeyword("");
@@ -296,45 +329,113 @@ export default function SearchPage() {
                     </div>
 
                     {/* RESULTS COLUMN */}
-                    <div className="flex-1 overflow-y-auto px-4 pb-24 md:pb-0 h-full">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h2 className="font-semibold text-lg">Results ({filteredClients.length})</h2>
-                        </div>
-
-                        {filteredClients.length === 0 ? (
-                            <div className="text-center py-12 text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                                <p>No clients match your criteria.</p>
+                    <div className={cn(
+                        "flex-1 overflow-hidden px-4 pb-20 md:pb-0 h-full flex flex-col",
+                        !showResults && "hidden md:flex md:items-center md:justify-center"
+                    )}>
+                        {!showResults ? (
+                            <div className="hidden md:flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 border-2 border-dashed rounded-xl">
+                                <Search className="h-10 w-10 text-gray-300 mb-2" />
+                                <p className="font-medium">Ready to search?</p>
+                                <p className="text-sm mb-4">Adjust filters to see breakdown.</p>
+                                <button
+                                    onClick={() => setShowResults(true)}
+                                    className="bg-red-600 text-white px-6 py-2 rounded-full font-medium hover:bg-red-700 transition"
+                                >
+                                    Show {filteredClients.length} Results
+                                </button>
                             </div>
                         ) : (
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                {filteredClients.map(client => (
-                                    <div key={client.id} className="bg-white dark:bg-gray-950 p-4 rounded-xl border shadow-sm hover:shadow-md transition-shadow">
-                                        <Link href={`/clients/${client.id}`} className="flex gap-4 items-start">
-                                            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-                                                {client.photoUrl ? (
-                                                    <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="flex items-center justify-center w-full h-full text-gray-400">?</div>
-                                                )}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <h3 className="font-semibold truncate">{client.fullName}</h3>
-                                                <p className="text-sm text-gray-500">{calculateAge(client.dob)} • {client.gender}</p>
-                                                <p className="text-xs text-gray-400 truncate mt-1">{client.location}</p>
-                                                <div className="flex gap-1 mt-2">
-                                                    <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300">
-                                                        {calculateAge(client.dob)} y/o
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </Link>
+                            <>
+                                <div className="mb-4 flex items-center justify-between shrink-0 pt-4 md:pt-0">
+                                    <h2 className="font-semibold text-lg">Results ({filteredClients.length})</h2>
+                                    <button
+                                        onClick={() => setShowResults(false)}
+                                        className="md:hidden text-sm text-red-600 font-medium"
+                                    >
+                                        Filters
+                                    </button>
+                                </div>
+
+                                {filteredClients.length === 0 ? (
+                                    <div className="text-center py-12 text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                        <p>No clients match your criteria.</p>
+                                        <button onClick={() => setShowResults(false)} className="mt-2 text-red-600 underline">Adjust Filters</button>
                                     </div>
-                                ))}
-                            </div>
+                                ) : (
+                                    <div className="flex-1 overflow-hidden p-1">
+                                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                                            {paginatedClients.map(client => (
+                                                <div key={client.id} className="bg-white dark:bg-gray-950 p-4 rounded-xl border shadow-sm hover:shadow-md transition-shadow">
+                                                    <Link href={`/clients/${client.id}`} className="flex gap-4 items-start">
+                                                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+                                                            {client.photoUrl ? (
+                                                                <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="flex items-center justify-center w-full h-full text-gray-400">?</div>
+                                                            )}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <h3 className="font-semibold truncate">{client.fullName}</h3>
+                                                            <p className="text-sm text-gray-500">{calculateAge(client.dob)} • {client.gender}</p>
+                                                            <p className="text-xs text-gray-400 truncate mt-1">{client.location}</p>
+                                                            <div className="flex gap-1 mt-2">
+                                                                <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300">
+                                                                    {calculateAge(client.dob)} y/o
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </Link>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Pagination Controls */}
+                                {filteredClients.length > 0 && totalPages > 1 && (
+                                    <div className="shrink-0 pt-4 flex items-center justify-between pb-24 md:pb-0">
+                                        <button
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={currentPage === 1}
+                                            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                            Prev
+                                        </button>
+                                        <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                                            Page {currentPage} of {totalPages}
+                                        </span>
+                                        <button
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={currentPage === totalPages}
+                                            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            Next
+                                            <ChevronRight className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* Mobile "Show Results" Button (When in Filters View) */}
+            {!showResults && (
+                <div className="md:hidden fixed bottom-14 left-0 right-0 p-4 bg-white dark:bg-gray-950 border-t z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                    <button
+                        onClick={() => {
+                            setShowResults(true);
+                            setCurrentPage(1);
+                        }}
+                        className="w-full bg-red-600 text-white font-medium py-3 rounded-xl shadow-md active:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                        Show Results ({filteredClients.length})
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
