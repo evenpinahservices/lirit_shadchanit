@@ -135,11 +135,11 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
     const watchedMedical = watch("medicalHistory");
 
     return (
-        <div className="h-[calc(100vh-80px)] flex flex-col">
-            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full">
-                {/* Wizard Header - Fixed */}
-                <div className="shrink-0 bg-white dark:bg-gray-950 p-4 rounded-xl border shadow-sm z-30 mb-4">
-                    <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-x-0 bottom-0 top-[65px] z-40 bg-white dark:bg-gray-950 flex flex-col md:relative md:inset-auto md:top-auto md:h-auto md:bg-transparent md:block">
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full md:h-auto md:block md:space-y-6">
+                {/* Wizard Header - Sticky on Mobile */}
+                <div className="shrink-0 bg-white dark:bg-gray-950 p-4 border-b md:border md:rounded-xl md:shadow-sm z-30">
+                    <div className="flex items-center justify-between mb-2 md:mb-4">
                         <h2 className="text-lg font-semibold">{STEPS[currentStep].title}</h2>
                         <span className="text-sm text-gray-500">
                             Step {currentStep + 1} of {STEPS.length}
@@ -153,8 +153,8 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                     </div>
                 </div>
 
-                {/* Steps Content - Scrollable */}
-                <div className="flex-1 overflow-y-auto min-h-0 bg-white dark:bg-gray-950 p-6 rounded-xl border shadow-sm space-y-6 mb-4">
+                {/* Steps Content - Scrollable on Mobile */}
+                <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 bg-white dark:bg-gray-950 p-6 md:rounded-xl md:border md:shadow-sm space-y-6 scrollbar-hide pb-24 md:pb-6">
 
                     {/* STEP 0: BASIC INFO */}
                     {currentStep === 0 && (
@@ -399,7 +399,7 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                 </div>
 
                 {/* Footer Navigation - Fixed in layout */}
-                <div className="shrink-0 p-4 bg-white dark:bg-gray-950 border-t z-40 flex items-center justify-between pb-[env(safe-area-inset-bottom)] md:pb-4">
+                <div className="shrink-0 p-4 bg-white dark:bg-gray-950 border-t z-50 flex items-center justify-between pb-[env(safe-area-inset-bottom)] md:pb-4 md:static fixed bottom-0 left-0 right-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] md:shadow-none">
                     <div className="flex gap-2">
                         {isEditing && onCancel && (
                             <button
