@@ -66,7 +66,7 @@ export default function DashboardAnalytics() {
         {
             title: "Gender Distribution",
             component: (
-                <div className="h-[300px] w-full">
+                <div className="h-full w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={genderData} margin={{ top: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" />
@@ -84,7 +84,7 @@ export default function DashboardAnalytics() {
         {
             title: "Age Distribution",
             component: (
-                <div className="h-[300px] w-full">
+                <div className="h-full w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={ageData} margin={{ top: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" />
