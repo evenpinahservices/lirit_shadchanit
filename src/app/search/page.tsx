@@ -1,4 +1,3 @@
-```javascript
 "use client";
 
 import { useState, useEffect } from "react";
@@ -14,7 +13,7 @@ export default function SearchPage() {
 
     // View State
     const [showResults, setShowResults] = useState(false);
-    
+
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 4; // Requested: 4 per page
@@ -310,7 +309,7 @@ export default function SearchPage() {
                             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                                 {filteredClients.map(client => (
                                     <div key={client.id} className="bg-white dark:bg-gray-950 p-4 rounded-xl border shadow-sm hover:shadow-md transition-shadow">
-                                        <Link href={`/ clients / ${ client.id } `} className="flex gap-4 items-start">
+                                        <Link href={`/clients/${client.id}`} className="flex gap-4 items-start">
                                             <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
                                                 {client.photoUrl ? (
                                                     <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
