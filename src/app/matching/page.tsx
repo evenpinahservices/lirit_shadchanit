@@ -108,11 +108,12 @@ export default function MatchingPage() {
                 <p className="text-muted-foreground">Find compatible matches based on strict deal-breakers.</p>
             </div>
 
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-24">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-4 md:pb-0">
                 <div className="flex flex-col gap-4 h-full">
-                    {/* Search Section - Flexible Height with constraints */}
+
+                    {/* Search Section - Flexible Height that shrinks internally when pressed */}
                     <div className="flex flex-col shrink min-h-0">
-                        <div className="rounded-xl border bg-white dark:bg-gray-950 p-4 shadow-sm flex flex-col min-h-0">
+                        <div className="rounded-xl border bg-white dark:bg-gray-950 p-4 shadow-sm flex flex-col max-h-full">
                             <h2 className="font-semibold mb-3 shrink-0">Select Client</h2>
                             <div className="space-y-3 flex flex-col min-h-0">
                                 <select
@@ -133,7 +134,7 @@ export default function MatchingPage() {
                                 </select>
 
                                 {selectedClient && (
-                                    <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-md flex flex-col min-h-0 shrink">
+                                    <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-md flex flex-col min-h-0 shrink overflow-hidden">
                                         <p className="font-semibold text-gray-900 dark:text-gray-100 mb-1 shrink-0">Matching based on deal breakers:</p>
                                         <div className="overflow-y-auto custom-scrollbar min-h-0 shrink text-left">
                                             {activeDealBreakers.length > 0 ? (
@@ -163,8 +164,8 @@ export default function MatchingPage() {
                         </div>
                     </div>
 
-                    {/* Results Section - Fixed/Scrollable if needed */}
-                    <div className="min-h-0 overflow-y-auto custom-scrollbar shrink-0">
+                    {/* Results Section - Pushed to bottom, Fixed Height (or min-height) */}
+                    <div className="shrink-0 min-h-0 overflow-y-auto custom-scrollbar">
                         {!hasSearched ? (
                             <div className="flex items-center justify-center p-6 text-center border-2 border-dashed rounded-xl bg-gray-50/50 dark:bg-gray-900/50 h-60">
                                 <div className="flex flex-col items-center gap-2">
@@ -177,7 +178,7 @@ export default function MatchingPage() {
                                 <p>No matches found matching the strict criteria.</p>
                             </div>
                         ) : (
-                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pb-2">
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pb-24 md:pb-2">
                                 {matches.map((match) => (
                                     <Link
                                         key={match.id}

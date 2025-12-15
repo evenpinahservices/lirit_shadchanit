@@ -171,7 +171,7 @@ export default function ClientsPage() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="md:hidden flex-1 overflow-y-auto min-h-0 space-y-3 px-1 pb-16">
+            <div className="md:hidden flex-1 overflow-y-auto min-h-0 space-y-3 px-1 pb-32">
                 {paginatedClients.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                         {searchTerm ? "No results found." : "No clients yet."}
@@ -223,7 +223,7 @@ export default function ClientsPage() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-2 shrink-0 md:pt-0 bg-white dark:bg-gray-950 z-20 pb-24 md:pb-4 px-1">
+                <div className="absolute bottom-20 left-0 right-0 flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent">
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
