@@ -108,24 +108,22 @@ export default function SearchPage() {
         setFilteredClients(results);
     }, [clients, keyword, gender, location, minAge, maxAge, minHeight, maxHeight, religiosity, maritalStatus, ethnicity]);
 
-    const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(true);
+    const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
     return (
         <div className="flex flex-col h-full">
-            <div className="shrink-0 px-4 pt-4 pb-2 md:pb-4 border-b md:border-b-0 bg-white dark:bg-gray-950 z-10 flex justify-between items-center">
+            <div className="shrink-0 px-4 pt-4 pb-2 md:pb-4 border-b bg-white dark:bg-gray-950 z-10 flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Advanced Search</h1>
                     <p className="text-muted-foreground text-sm hidden md:block">Filter clients by detailed criteria.</p>
                 </div>
-                {!isMobileFiltersOpen && (
-                    <button
-                        onClick={() => setIsMobileFiltersOpen(true)}
-                        className="md:hidden text-sm font-medium text-red-600 flex items-center gap-1"
-                    >
-                        <Filter className="h-4 w-4" />
-                        Modify Search
-                    </button>
-                )}
+                <button
+                    onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
+                    className="md:hidden text-sm font-medium text-red-600 flex items-center gap-1"
+                >
+                    <Filter className="h-4 w-4" />
+                    {isMobileFiltersOpen ? "Hide Filters" : "Filter Criteria"}
+                </button>
             </div>
 
             <div className="flex-1 min-h-0 overflow-hidden relative">
@@ -133,8 +131,10 @@ export default function SearchPage() {
 
                     {/* FILTERS COLUMN */}
                     <div className={cn(
-                        "md:w-80 md:shrink-0 md:border-r md:pr-8 overflow-y-auto bg-white dark:bg-gray-950 bg-opacity-100 absolute inset-0 z-20 md:static md:bg-transparent transition-transform duration-300 ease-in-out p-4 md:p-0 pb-24 md:pb-0",
-                        isMobileFiltersOpen ? "translate-y-0" : "translate-y-full md:translate-y-0"
+                        "md:w-80 md:shrink-0 md:border-r md:pr-8 overflow-y-auto bg-white dark:bg-gray-950 md:bg-transparent transition-all duration-300 ease-in-out",
+                        // Mobile: Static stacking. Hidden if closed.
+                        "w-full border-b md:border-b-0 md:static",
+                        isMobileFiltersOpen ? "block p-4 max-h-[60vh] shadow-sm md:shadow-none md:max-h-full" : "hidden md:block md:max-h-full"
                     )}>
                         <div className="space-y-6">
                             <div className="space-y-4">
@@ -289,7 +289,7 @@ export default function SearchPage() {
                     </div>
 
                     {/* RESULTS COLUMN */}
-                    <div className="flex-1 overflow-y-auto px-4 pb-20 md:pb-0 h-full">
+                    <div className="flex-1 overflow-y-auto px-4 pb-24 md:pb-0 h-full">
                         <div className="mb-4 flex items-center justify-between">
                             <h2 className="font-semibold text-lg">Results ({filteredClients.length})</h2>
                         </div>
@@ -327,31 +327,6 @@ export default function SearchPage() {
                         )}
                     </div>
                 </div>
-            </div>
-
-            {/* Mobile Bottom Search Bar */}
-            <div
-                className={cn(
-                    "md:hidden fixed bottom-14 left-0 right-0 p-4 bg-white dark:bg-gray-950 border-t z-50 shadow-lg transition-transform duration-300",
-                    isMobileFiltersOpen ? "translate-y-0" : "translate-y-0"
-                )}
-            >
-                <button
-                    onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
-                    className="w-full bg-red-600 text-white font-medium py-3 rounded-xl shadow-md active:bg-red-700 transition-colors flex items-center justify-center gap-2"
-                >
-                    {isMobileFiltersOpen ? (
-                        <>
-                            Show {filteredClients.length} Results
-                            <ChevronDown className="h-4 w-4" />
-                        </>
-                    ) : (
-                        <>
-                            <Filter className="h-4 w-4" />
-                            Refine Search
-                        </>
-                    )}
-                </button>
             </div>
         </div>
     );
