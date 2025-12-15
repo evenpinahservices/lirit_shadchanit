@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useClients } from "@/context/ClientContext";
-import { seedDatabase } from "@/actions/client";
+import { resetAndSeedDatabase } from "@/actions/client";
 import { Plus, Pencil, Trash2, MapPin, Briefcase, Search, ChevronLeft, ChevronRight, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
 export default function ClientsPage() {
     const { clients, deleteClient } = useClients();
@@ -13,6 +14,22 @@ export default function ClientsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(4); // Fixed to 4
     const [isSeeding, setIsSeeding] = useState(false);
+
+    // Delete Modal State
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [clientToDelete, setClientToDelete] = useState<string | null>(null);
+
+    const handleDeleteClick = (clientId: string) => {
+        setClientToDelete(clientId);
+        setDeleteModalOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (clientToDelete) {
+            deleteClient(clientToDelete);
+            setClientToDelete(null);
+        }
+    };
 
     const filteredClients = clients.filter(client =>
         client.fullName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -52,8 +69,9 @@ export default function ClientsPage() {
                             if (isSeeding) return;
                             setIsSeeding(true);
                             try {
-                                await seedDatabase(10);
-                                alert("Added 10 clients!");
+                                await resetAndSeedDatabase(100);
+                                alert("Reset complete! Added 100 clients.");
+                                window.location.reload();
                             } catch (err: any) {
                                 console.error(err);
                                 alert("Failed to seed: " + (err.message || err));
@@ -64,7 +82,7 @@ export default function ClientsPage() {
                         disabled={isSeeding}
                         className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-3 py-2 border rounded-md disabled:opacity-50 disabled:cursor-wait"
                     >
-                        {isSeeding ? "Seeding..." : "Seed 10"}
+                        {isSeeding ? "Seeding..." : "Reset+Seed 100"}
                     </button>
                     <Link
                         href="/clients/new"
@@ -143,18 +161,14 @@ export default function ClientsPage() {
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 <Link
-                                                    href={`/clients/${client.id}`}
+                                                    href={`/clients/${client.id}?mode=edit`}
                                                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                                                     title="Edit"
                                                 >
                                                     <Pencil className="h-4 w-4" />
                                                 </Link>
                                                 <button
-                                                    onClick={() => {
-                                                        if (confirm("Are you sure you want to delete this client?")) {
-                                                            deleteClient(client.id);
-                                                        }
-                                                    }}
+                                                    onClick={() => handleDeleteClick(client.id)}
                                                     className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                                                     title="Delete"
                                                 >
@@ -200,17 +214,13 @@ export default function ClientsPage() {
 
                             <div className="flex flex-col gap-1 shrink-0">
                                 <Link
-                                    href={`/clients/${client.id}`}
+                                    href={`/clients/${client.id}?mode=edit`}
                                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-gray-50 dark:bg-gray-900 rounded-full"
                                 >
                                     <Pencil className="h-4 w-4" />
                                 </Link>
                                 <button
-                                    onClick={() => {
-                                        if (confirm("Are you sure you want to delete?")) {
-                                            deleteClient(client.id);
-                                        }
-                                    }}
+                                    onClick={() => handleDeleteClick(client.id)}
                                     className="p-2 text-red-400 hover:text-red-600 bg-red-50 dark:bg-red-900/20 rounded-full"
                                 >
                                     <Trash2 className="h-4 w-4" />
@@ -245,6 +255,16 @@ export default function ClientsPage() {
                     </button>
                 </div>
             )}
+
+            <ConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Client"
+                message="Are you sure you want to delete this client? This action cannot be undone."
+                confirmText="Delete"
+                isDangerous={true}
+            />
         </div>
     );
 }

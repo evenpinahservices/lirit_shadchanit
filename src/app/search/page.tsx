@@ -6,6 +6,7 @@ import { Client } from "@/lib/mockData";
 import { Search, MapPin, Briefcase, Filter, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { MultiSelect } from "@/components/ui/MultiSelect";
 
 export default function SearchPage() {
     const { clients, isLoading } = useClients();
@@ -34,9 +35,11 @@ export default function SearchPage() {
     const [ethnicity, setEthnicity] = useState<string[]>([]);
 
     // Options
-    const religiosityOptions = ["Dati Leumi", "Masorti", "Chareidi", "Dati", "Secular"];
-    const maritalStatusOptions = ["Single", "Divorced", "Widowed"];
-    const ethnicityOptions = ["Ashkenazi", "Sephardi", "Mizrachi", "Ethiopian", "Yemenite", "Convert", "Any"];
+    // Options
+    const genderOptions = ["Male", "Female"];
+    const religiosityOptions = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
+    const maritalStatusOptions = ["Single", "Divorced", "Divorced with Kids", "Widowed", "Widowed with Kids"];
+    const ethnicityOptions = ["Ashkenazi", "Sephardi", "Mizrahi", "Yemenite", "Ethiopian", "Convert", "Mixed", "Other"];
 
     const toggleFilter = (item: string, current: string[], set: (val: string[]) => void) => {
         if (current.includes(item)) {
@@ -132,7 +135,9 @@ export default function SearchPage() {
         <div className="flex flex-col h-full overflow-hidden">
             <div className="shrink-0 px-4 pt-4 pb-2 md:pb-4 border-b bg-white dark:bg-gray-950 z-10 flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Advanced Search</h1>
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                        {showResults ? `Results (${filteredClients.length})` : "Advanced Search"}
+                    </h1>
                     <p className="text-muted-foreground text-sm hidden md:block">Filter clients by detailed criteria.</p>
                 </div>
                 <button
@@ -155,7 +160,7 @@ export default function SearchPage() {
                     {/* FILTERS COLUMN */}
                     <div className={cn(
                         "md:w-80 md:shrink-0 md:border-r md:pr-8 overflow-y-auto bg-white dark:bg-gray-950 md:bg-transparent transition-all duration-300 ease-in-out",
-                        "w-full border-b md:border-b-0 md:static",
+                        "w-full md:static",
                         showResults ? "hidden md:block" : "block p-4"
                     )}>
                         <div className="space-y-6 pb-4 md:pb-0">
@@ -256,55 +261,37 @@ export default function SearchPage() {
                                     {/* Religiosity */}
                                     <div className="space-y-1 pt-2 border-t border-dashed">
                                         <label className="text-xs font-medium text-gray-500">Religiosity</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {religiosityOptions.map((option) => (
-                                                <label key={option} className="inline-flex items-center gap-1.5 text-xs bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded border border-gray-100 dark:border-gray-800 cursor-pointer hover:border-red-200">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="rounded border-gray-300 text-red-600 focus:ring-red-500 h-3 w-3"
-                                                        checked={religiosity.includes(option)}
-                                                        onChange={() => toggleFilter(option, religiosity, setReligiosity)}
-                                                    />
-                                                    {option}
-                                                </label>
-                                            ))}
-                                        </div>
+                                        <MultiSelect
+                                            options={religiosityOptions}
+                                            selected={religiosity}
+                                            onChange={setReligiosity}
+                                            placeholder="Select..."
+                                            direction="top"
+                                        />
                                     </div>
 
                                     {/* Marital Status */}
                                     <div className="space-y-1">
                                         <label className="text-xs font-medium text-gray-500">Marital Status</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {maritalStatusOptions.map((option) => (
-                                                <label key={option} className="inline-flex items-center gap-1.5 text-xs bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded border border-gray-100 dark:border-gray-800 cursor-pointer hover:border-red-200">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="rounded border-gray-300 text-red-600 focus:ring-red-500 h-3 w-3"
-                                                        checked={maritalStatus.includes(option)}
-                                                        onChange={() => toggleFilter(option, maritalStatus, setMaritalStatus)}
-                                                    />
-                                                    {option}
-                                                </label>
-                                            ))}
-                                        </div>
+                                        <MultiSelect
+                                            options={maritalStatusOptions}
+                                            selected={maritalStatus}
+                                            onChange={setMaritalStatus}
+                                            placeholder="Select..."
+                                            direction="top"
+                                        />
                                     </div>
 
                                     {/* Ethnicity */}
                                     <div className="space-y-1">
                                         <label className="text-xs font-medium text-gray-500">Ethnicity</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {ethnicityOptions.map((option) => (
-                                                <label key={option} className="inline-flex items-center gap-1.5 text-xs bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded border border-gray-100 dark:border-gray-800 cursor-pointer hover:border-red-200">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="rounded border-gray-300 text-red-600 focus:ring-red-500 h-3 w-3"
-                                                        checked={ethnicity.includes(option)}
-                                                        onChange={() => toggleFilter(option, ethnicity, setEthnicity)}
-                                                    />
-                                                    {option}
-                                                </label>
-                                            ))}
-                                        </div>
+                                        <MultiSelect
+                                            options={ethnicityOptions}
+                                            selected={ethnicity}
+                                            onChange={setEthnicity}
+                                            placeholder="Select..."
+                                            direction="top"
+                                        />
                                     </div>
 
                                     <button
@@ -349,13 +336,7 @@ export default function SearchPage() {
                         ) : (
                             <>
                                 <div className="mb-4 flex items-center justify-between shrink-0 pt-4 md:pt-0">
-                                    <h2 className="font-semibold text-lg">Results ({filteredClients.length})</h2>
-                                    <button
-                                        onClick={() => setShowResults(false)}
-                                        className="md:hidden text-sm text-red-600 font-medium"
-                                    >
-                                        Filters
-                                    </button>
+                                    {/* Subheader removed */}
                                 </div>
 
                                 {filteredClients.length === 0 ? (
@@ -365,7 +346,7 @@ export default function SearchPage() {
                                     </div>
                                 ) : (
                                     <div className="flex-1 overflow-hidden p-1">
-                                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 pb-4">
+                                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-4">
                                             {paginatedClients.map(client => (
                                                 <div key={client.id} className="bg-white dark:bg-gray-950 p-4 rounded-xl border shadow-sm hover:shadow-md transition-shadow">
                                                     <Link href={`/clients/${client.id}`} className="flex gap-4 items-start">
@@ -395,7 +376,7 @@ export default function SearchPage() {
 
                                 {/* Pagination Controls */}
                                 {filteredClients.length > 0 && totalPages > 1 && (
-                                    <div className="shrink-0 pt-4 flex items-center justify-between pb-24 md:pb-0">
+                                    <div className="absolute bottom-16 left-0 right-0 flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent">
                                         <button
                                             onClick={() => handlePageChange(currentPage - 1)}
                                             disabled={currentPage === 1}
@@ -425,7 +406,7 @@ export default function SearchPage() {
 
             {/* Mobile "Show Results" Button (When in Filters View) */}
             {!showResults && (
-                <div className="md:hidden fixed bottom-14 left-0 right-0 p-4 bg-white dark:bg-gray-950 border-t z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                <div className="md:hidden fixed bottom-22 left-0 right-0 p-4 z-50">
                     <button
                         onClick={() => {
                             setShowResults(true);

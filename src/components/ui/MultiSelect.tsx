@@ -7,6 +7,7 @@ interface MultiSelectProps {
     onChange: (selected: string[]) => void;
     placeholder?: string;
     className?: string;
+    direction?: "top" | "bottom";
 }
 
 export function MultiSelect({
@@ -15,6 +16,7 @@ export function MultiSelect({
     onChange,
     placeholder = "Select options...",
     className,
+    direction = "bottom",
 }: MultiSelectProps) {
     const [isOpen, setIsOpen] = React.useState(false);
     const containerRef = React.useRef<HTMLDivElement>(null);
@@ -74,7 +76,10 @@ export function MultiSelect({
                 ))}
             </div>
             {isOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                <div className={cn(
+                    "absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto",
+                    direction === "top" ? "bottom-full mb-1" : "mt-1"
+                )}>
                     {options.map((option) => (
                         <div
                             key={option}

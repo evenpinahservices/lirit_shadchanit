@@ -99,6 +99,17 @@ export function findMatches(client: Client, allClients: Client[]): Client[] {
             }
         }
 
+        // 8. Expected Head Covering (for male clients expecting female head covering)
+        if (client.expectedHeadCovering && client.expectedHeadCovering.length > 0) {
+            const expected = client.expectedHeadCovering;
+            if (!isWildcard(expected)) {
+                // Only apply if candidate is female (checking male's preference for wife's covering)
+                if (candidate.gender === "Female" && candidate.headCovering !== expected && candidate.headCovering !== "Flexible") {
+                    return false;
+                }
+            }
+        }
+
         return true;
     });
 }

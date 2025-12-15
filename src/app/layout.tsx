@@ -28,7 +28,7 @@ export default function RootLayout({
             <AuthGuard>
               <div className="flex flex-col h-full max-h-dvh">
                 <Navbar />
-                <main className="flex-1 overflow-hidden flex flex-col container mx-auto py-8 px-4">
+                <main className="flex-1 overflow-y-auto flex flex-col container mx-auto pt-2 pb-8 px-4">
                   {children}
                 </main>
                 <BottomNav />

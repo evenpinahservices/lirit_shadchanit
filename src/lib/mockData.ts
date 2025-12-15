@@ -146,69 +146,134 @@ const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (m
 
 export const generateMockClients = (count: number): Client[] => {
     const clients: Client[] = [];
-    for (let i = 0; i < count; i++) {
-        const gender = Math.random() > 0.5 ? "Male" : "Female";
+
+    // Ensure 50/50 gender split
+    const maleCount = Math.ceil(count / 2);
+    const femaleCount = count - maleCount;
+
+    const generateClient = (i: number, forcedGender: "Male" | "Female"): Client => {
+        const gender = forcedGender;
         const isMale = gender === "Male";
         const firstName = isMale ? getRandomElement(MALE_NAMES) : getRandomElement(FEMALE_NAMES);
         const lastName = getRandomElement(LAST_NAMES);
-        const age = getRandomInt(19, 45);
+
+        // Age clusters: 19-24, 25-30, 31-40, 41-45
+        const ageCluster = getRandomElement([
+            { min: 19, max: 24 },
+            { min: 25, max: 30 },
+            { min: 31, max: 40 },
+            { min: 41, max: 45 }
+        ]);
+        const age = getRandomInt(ageCluster.min, ageCluster.max);
         const birthYear = new Date().getFullYear() - age;
         const dob = `${birthYear}-${getRandomInt(1, 12).toString().padStart(2, '0')}-${getRandomInt(1, 28).toString().padStart(2, '0')}`;
+
+        // Location clusters: 30% Jerusalem, 20% Tel Aviv, 15% Lakewood, rest random
+        let location: string;
+        const locationRoll = Math.random();
+        if (locationRoll < 0.3) {
+            location = "Jerusalem, Israel";
+        } else if (locationRoll < 0.5) {
+            location = "Tel Aviv, Israel";
+        } else if (locationRoll < 0.65) {
+            location = "Lakewood, NJ";
+        } else {
+            location = getRandomElement(LOCATIONS);
+        }
 
         let headCovering = "";
         let preferredHeadCovering: string[] = [];
 
         if (isMale) {
-            headCovering = getRandomElement(["Kippah", "Black Hat", "None", "Kippah Seruga"]);
-            preferredHeadCovering = Math.random() > 0.3 ? [getRandomElement(PREFERRED_HEAD_COVERING_MALE)] : ["I don't mind"];
+            headCovering = getRandomElement(["Kippah Sruga", "Kippah Black", "None", "Hat"]);
+            // Vary strictness: 40% strict, 60% flexible
+            preferredHeadCovering = Math.random() > 0.4
+                ? [getRandomElement(PREFERRED_HEAD_COVERING_MALE)]
+                : ["I don't mind"];
         } else {
             headCovering = getRandomElement(HEAD_COVERING_FEMALE);
             preferredHeadCovering = [];
         }
 
+        // Vary preference strictness for matching tests
+        const isStrict = Math.random() > 0.6; // 40% are strict
+
+        const preferredEthnicities = isStrict
+            ? getRandomElements(ETHNICITIES, getRandomInt(1, 2))
+            : ["I don't mind"];
+
+        const preferredHashkafos = isStrict
+            ? getRandomElements(HASHKAFOS, getRandomInt(1, 3))
+            : getRandomElements(HASHKAFOS, getRandomInt(2, 4));
+
+        const preferredLearningStatus = isStrict
+            ? [getRandomElement(LEARNING_STATUS)]
+            : ["I don't mind"];
+
+        // Age gap preference - vary strictness
+        const ageGapPreference = isStrict
+            ? [getRandomElement(["1-2 years", "3-5 years"])]
+            : [getRandomElement(["5-10 years", "I don't mind"])];
+
+        // Relocation - cluster to test location matching
+        const willingToRelocate = isStrict ? "No" : getRandomElement(["Yes", "Maybe"]);
+
         const client: Client = {
-            id: (i + 1).toString(),
+            id: `gen-${i + 1}`,
             fullName: `${firstName} ${lastName}`,
             email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${i}@example.com`,
             phone: `+1-555-${getRandomInt(100, 999)}-${getRandomInt(1000, 9999)}`,
             dob: dob,
-            location: getRandomElement(LOCATIONS),
+            location: location,
             gender: gender,
-            height: getRandomInt(155, 190), // Changed to number
+            height: getRandomInt(155, 190),
             eyeColor: getRandomElement(["Brown", "Blue", "Green", "Hazel", "Grey", "Other"]),
-            hairColor: getRandomElement(["Black", "Brown", "Blond", "Red", "Bald"]),
+            hairColor: getRandomElement(["Black", "Brown", "Blonde", "Red", "Bald"]),
             ethnicity: getRandomElement(ETHNICITIES),
             tribalStatus: isMale ? getRandomElement(["Cohen", "Levi", "Yisrael"]) : "Yisrael",
             religiousAffiliation: getRandomElements(HASHKAFOS, 1),
             learningStatus: getRandomElement(LEARNING_STATUS) || "Working",
             maritalStatus: getRandomElement(["Single", "Divorced", "Widowed"]),
-            children: getRandomInt(0, 5), // Added children
+            children: getRandomInt(0, 3),
             languages: getRandomElements(["English", "Hebrew", "French", "Spanish", "Yiddish"], getRandomInt(1, 3)),
             familyBackground: getRandomElement(["Baal Teshuva", "FFB", "Modern", "Traditional"]),
             education: getRandomElement(["High School", "Seminary", "Yeshiva", "Bachelor's", "Master's", "PhD"]),
             occupation: getRandomElement(PROFESSIONS),
             smoking: Math.random() > 0.9 ? "Yes" : "No",
             headCovering: headCovering,
-            hobbies: getRandomElements(HOBBIES_LIST, getRandomInt(2, 4)), // Keep as array
+            hobbies: getRandomElements(HOBBIES_LIST, getRandomInt(2, 4)),
             personality: getRandomElement(["Quiet", "Outgoing", "Serious", "Funny", "Intellectual", "Kind", "Energetic"]),
             medicalHistory: Math.random() > 0.9,
             medicalHistoryDetails: "Minor allergy",
             lookingFor: "Someone compatible with similar values",
-            willingToRelocate: getRandomElement(["Yes", "No", "Maybe"]),
-            ageGapPreference: [getRandomElement(["1-2 years", "3-5 years", "5-10 years"])],
-            preferredEthnicities: Math.random() > 0.3 ? ["I don't mind"] : getRandomElements(ETHNICITIES, 2),
-            preferredHashkafos: getRandomElements(HASHKAFOS, 2),
-            preferredLearningStatus: getRandomElements(["Full Time", "Half Time", "Working", "I don't mind"], 2),
+            willingToRelocate: willingToRelocate,
+            ageGapPreference: ageGapPreference,
+            preferredEthnicities: preferredEthnicities,
+            preferredHashkafos: preferredHashkafos,
+            preferredLearningStatus: preferredLearningStatus,
             preferredHeadCovering: preferredHeadCovering,
+            expectedHeadCovering: isMale ? getRandomElement(["Wig", "Tichel", "I don't mind"]) : "",
             references: `Rabbi ${getRandomElement(LAST_NAMES)}`,
-            notes: "Generated mock client",
+            notes: "Auto-generated personality description for testing purposes.",
             active: true,
             createdAt: new Date().toISOString().split("T")[0],
         };
-        clients.push(client);
+        return client;
+    };
+
+    // Generate males
+    for (let i = 0; i < maleCount; i++) {
+        clients.push(generateClient(i, "Male"));
     }
-    return clients;
+    // Generate females
+    for (let i = 0; i < femaleCount; i++) {
+        clients.push(generateClient(maleCount + i, "Female"));
+    }
+
+    // Shuffle to mix genders
+    return clients.sort(() => 0.5 - Math.random());
 };
+
 
 
 const testClient: Client = {

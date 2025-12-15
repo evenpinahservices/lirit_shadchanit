@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Client, ClientSchema } from "@/lib/mockData";
@@ -10,6 +10,26 @@ import { useState } from "react";
 import { Loader2, ChevronLeft, ChevronRight, Check, UploadCloud } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { MultiSelect } from "@/components/ui/MultiSelect";
+
+const GENDER_OPTIONS = ["Male", "Female"];
+const RELIGIOUS_AFFILIATION_OPTIONS = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
+const ETHNICITY_OPTIONS = ["Ashkenazi", "Sephardi", "Mizrahi", "Yemenite", "Ethiopian", "Convert", "Mixed", "Other"];
+const TRIBAL_STATUS_OPTIONS = ["Cohen", "Levi", "Yisrael", "Bat Cohen", "Bat Levi", "Bat Yisrael", "Convert"];
+const MARITAL_STATUS_OPTIONS = ["Single", "Divorced", "Divorced with Kids", "Widowed", "Widowed with Kids"];
+const LEARNING_STATUS_OPTIONS = ["Full Time", "Half Time", "Koveah Itim", "Working", "Student", "Retired", "N/A"];
+const HEAD_COVERING_OPTIONS = ["None", "Kippah Sruga", "Kippah Black", "Wig", "Tichel", "Hat", "Scarf", "Flexible"];
+const SMOKING_OPTIONS = ["No", "Yes", "Occasionally", "Vape"];
+const LANGUAGES_OPTIONS = ["English", "Hebrew", "French", "Spanish", "Yiddish", "Russian", "Portuguese", "German"];
+const EYE_COLOR_OPTIONS = ["Brown", "Blue", "Green", "Hazel", "Grey", "Other"];
+const HAIR_COLOR_OPTIONS = ["Black", "Brown", "Blonde", "Red", "Grey", "Bald", "White", "Other"];
+const LOOKING_FOR_OPTIONS = ["Long-term", "Short-term", "Marriage", "Dating"];
+const AGE_GAP_OPTIONS = ["I don't mind", "1-2 years", "3-5 years", "5-10 years", "Any"];
+const WILLING_TO_RELOCATE_OPTIONS = ["Yes", "No", "Maybe"];
+const PREFERRED_ETHNICITY_OPTIONS = ["I don't mind", ...ETHNICITY_OPTIONS];
+const PREFERRED_HASHKAFOS_OPTIONS = ["I don't mind", ...RELIGIOUS_AFFILIATION_OPTIONS];
+const PREFERRED_LEARNING_STATUS_OPTIONS = ["I don't mind", ...LEARNING_STATUS_OPTIONS];
+const PREFERRED_HEAD_COVERING_OPTIONS = ["I don't mind", ...HEAD_COVERING_OPTIONS];
 
 const formSchema = ClientSchema;
 
@@ -23,7 +43,8 @@ interface ClientFormProps {
 const STEPS = [
     { title: "Basic Info", fields: ["fullName", "email", "phone", "dob", "gender", "location"] },
     { title: "Appearance", fields: ["height", "eyeColor", "hairColor", "photoUrl"] },
-    { title: "Background", fields: ["ethnicity", "tribalStatus", "religiousAffiliation", "learningStatus", "maritalStatus", "languages", "familyBackground", "education", "occupation", "smoking", "headCovering"] },
+    { title: "Background", fields: ["ethnicity", "tribalStatus", "maritalStatus", "languages", "familyBackground", "education", "occupation"] },
+    { title: "Religious Details", fields: ["religiousAffiliation", "learningStatus", "headCovering", "smoking"] },
     { title: "Personal", fields: ["hobbies", "personality", "medicalHistory", "medicalHistoryDetails"] },
     { title: "Preferences", fields: ["lookingFor", "ageGapPreference", "willingToRelocate", "preferredEthnicities", "preferredHashkafos", "preferredLearningStatus", "expectedHeadCovering"] },
     { title: "Admin", fields: ["references", "notes"] },
@@ -51,8 +72,8 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
         hairColor: "Dark",
         maritalStatus: "Single",
         children: 0,
-        religiousAffiliation: "Yeshivish",
-        learningStatus: "Full-time Learner",
+        religiousAffiliation: [], // Changed to array
+        learningStatus: "Full Time", // Changed generic default
         ethnicity: "Ashkenazi",
         education: "",
         occupation: "",
@@ -60,7 +81,7 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
         hobbies: [],
         personality: "",
         lookingFor: "Long-term",
-        ageGapPreference: "Up to 3 years",
+        ageGapPreference: [], // Changed to array
         willingToRelocate: "Maybe",
         medicalHistory: "No",
         smoking: "No",
@@ -68,11 +89,17 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
         notes: "",
         active: true,
         photoUrl: "",
+        preferredEthnicities: [],
+        preferredHashkafos: [],
+        preferredLearningStatus: [],
+        preferredHeadCovering: [],
+        expectedHeadCovering: "I don't mind",
     };
 
     const {
         register,
         handleSubmit,
+        control,
         formState: { errors },
         watch,
         setValue,
@@ -224,8 +251,9 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Gender</label>
                                     <select {...register("gender")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
+                                        {GENDER_OPTIONS.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
@@ -269,20 +297,17 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Eye Color</label>
                                     <select {...register("eyeColor")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                        <option value="Brown">Brown</option>
-                                        <option value="Blue">Blue</option>
-                                        <option value="Green">Green</option>
-                                        <option value="Hazel">Hazel</option>
+                                        {EYE_COLOR_OPTIONS.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Hair Color</label>
                                     <select {...register("hairColor")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                        <option value="Dark">Dark</option>
-                                        <option value="Brown">Brown</option>
-                                        <option value="Blonde">Blonde</option>
-                                        <option value="Red">Red</option>
-                                        <option value="Grey">Grey</option>
+                                        {HAIR_COLOR_OPTIONS.map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -293,29 +318,28 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                     {currentStep === 2 && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Religious Affiliation</label>
-                                <select {...register("religiousAffiliation")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                    <option value="Yeshivish">Yeshivish</option>
-                                    <option value="Chassidish">Chassidish</option>
-                                    <option value="Modern Orthodox">Modern Orthodox</option>
-                                    <option value="Traditional">Traditional</option>
+                                <label className="text-sm font-medium">Ethnicity</label>
+                                <select {...register("ethnicity")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                    {ETHNICITY_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Ethnicity</label>
-                                <select {...register("ethnicity")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                    <option value="Ashkenazi">Ashkenazi</option>
-                                    <option value="Sefardi">Sefardi</option>
-                                    <option value="Temani">Temani</option>
-                                    <option value="Convert">Convert</option>
+                                <label className="text-sm font-medium">Tribal Status</label>
+                                <select {...register("tribalStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                    <option value="">Select...</option>
+                                    {TRIBAL_STATUS_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Marital Status</label>
                                 <select {...register("maritalStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                    <option value="Single">Single</option>
-                                    <option value="Divorced">Divorced</option>
-                                    <option value="Widowed">Widowed</option>
+                                    {MARITAL_STATUS_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
@@ -323,36 +347,72 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                 <input {...register("occupation")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder="e.g. Teacher, Developer" />
                             </div>
                             <div className="space-y-2">
+                                <label className="text-sm font-medium">Languages</label>
+                                <Controller
+                                    name="languages"
+                                    control={control}
+                                    defaultValue={[]}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            options={LANGUAGES_OPTIONS}
+                                            selected={Array.isArray(field.value) ? field.value : []}
+                                            onChange={field.onChange}
+                                            placeholder="Select languages..."
+                                        />
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 3: RELIGIOUS DETAILS */}
+                    {currentStep === 3 && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Religious Affiliation</label>
+                                <Controller
+                                    name="religiousAffiliation"
+                                    control={control}
+                                    defaultValue={[]}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            options={RELIGIOUS_AFFILIATION_OPTIONS}
+                                            selected={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])}
+                                            onChange={field.onChange}
+                                            placeholder="Select affiliations..."
+                                        />
+                                    )}
+                                />
+                            </div>
+                            <div className="space-y-2">
                                 <label className="text-sm font-medium">Learning Status</label>
                                 <select {...register("learningStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                    <option value="Full-time Learner">Full-time Learner</option>
-                                    <option value="Working & Learning">Working & Learning</option>
-                                    <option value="Working">Working</option>
+                                    {LEARNING_STATUS_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Head Covering (if applicable)</label>
                                 <select {...register("headCovering")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                    <option value="None">None</option>
-                                    <option value="Kippah Srugah">Kippah Srugah</option>
-                                    <option value="Kippah Black">Kippah Black</option>
-                                    <option value="Wig">Wig</option>
-                                    <option value="Tichel">Tichel</option>
+                                    {HEAD_COVERING_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Smoking</label>
                                 <select {...register("smoking")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                    <option value="No">No</option>
-                                    <option value="Yes">Yes</option>
-                                    <option value="Occasionally">Occasionally</option>
+                                    {SMOKING_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
                     )}
 
-                    {/* STEP 3: PERSONAL */}
-                    {currentStep === 3 && (
+                    {/* STEP 4: PERSONAL */}
+                    {currentStep === 4 && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Personality Description</label>
@@ -360,8 +420,19 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Hobbies</label>
-                                <input {...register("hobbies")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder="e.g. Music, Hiking (comma separated)" />
-                                <p className="text-xs text-gray-500">Separate with commas</p>
+                                <Controller
+                                    name="hobbies"
+                                    control={control}
+                                    defaultValue={[]}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            options={["Reading", "Hiking", "Music", "Cooking", "Traveling", "Learning Torah", "Sports", "Art", "Writing", "Volunteering", "Photography", "Gardening", "Chess", "History", "Swimming", "Running"]}
+                                            selected={Array.isArray(field.value) ? field.value : []}
+                                            onChange={field.onChange}
+                                            placeholder="Select hobbies..."
+                                        />
+                                    )}
+                                />
                             </div>
                             <div className="space-y-4 border-t pt-4">
                                 <label className="text-sm font-medium block">Medical History?</label>
@@ -385,46 +456,110 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                         </div>
                     )}
 
-                    {/* STEP 4: PREFERENCES */}
-                    {currentStep === 4 && (
+                    {/* STEP 5: PREFERENCES */}
+                    {currentStep === 5 && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Looking For</label>
                                 <select {...register("lookingFor")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                    <option value="Long-term">Long-term</option>
-                                    <option value="Short-term">Short-term</option>
+                                    {LOOKING_FOR_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Age Gap Preference</label>
-                                <select {...register("ageGapPreference")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                    <option value="Up to 3 years">Up to 3 years</option>
-                                    <option value="Up to 5 years">Up to 5 years</option>
-                                    <option value="Up to 10 years">Up to 10 years</option>
-                                    <option value="Any">Any</option>
-                                </select>
+                                <Controller
+                                    name="ageGapPreference"
+                                    control={control}
+                                    defaultValue={[]}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            options={AGE_GAP_OPTIONS}
+                                            selected={Array.isArray(field.value) ? field.value : [String(field.value)]}
+                                            onChange={field.onChange}
+                                            placeholder="Select age gap preference..."
+                                        />
+                                    )}
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Willing to Relocate</label>
                                 <select {...register("willingToRelocate")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                    <option value="Maybe">Maybe</option>
-                                    <option value="Yes">Yes</option>
-                                    <option value="No">No</option>
+                                    {WILLING_TO_RELOCATE_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Preferred Ethnicities</label>
-                                <input {...register("preferredEthnicities")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder="Comma separated..." />
+                                <Controller
+                                    name="preferredEthnicities"
+                                    control={control}
+                                    defaultValue={[]}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            options={PREFERRED_ETHNICITY_OPTIONS}
+                                            selected={Array.isArray(field.value) ? field.value : []}
+                                            onChange={field.onChange}
+                                            placeholder="Select preferred ethnicities..."
+                                        />
+                                    )}
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Preferred Hashkafos</label>
-                                <input {...register("preferredHashkafos")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder="Comma separated..." />
+                                <Controller
+                                    name="preferredHashkafos"
+                                    control={control}
+                                    defaultValue={[]}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            options={PREFERRED_HASHKAFOS_OPTIONS}
+                                            selected={Array.isArray(field.value) ? field.value : []}
+                                            onChange={field.onChange}
+                                            placeholder="Select preferred hashkafos..."
+                                        />
+                                    )}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Preferred Learning Status</label>
+                                <Controller
+                                    name="preferredLearningStatus"
+                                    control={control}
+                                    defaultValue={[]}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            options={PREFERRED_LEARNING_STATUS_OPTIONS}
+                                            selected={Array.isArray(field.value) ? field.value : []}
+                                            onChange={field.onChange}
+                                            placeholder="Select preferred learning status..."
+                                        />
+                                    )}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Preferred Head Covering</label>
+                                <Controller
+                                    name="preferredHeadCovering"
+                                    control={control}
+                                    defaultValue={[]}
+                                    render={({ field }) => (
+                                        <MultiSelect
+                                            options={PREFERRED_HEAD_COVERING_OPTIONS}
+                                            selected={Array.isArray(field.value) ? field.value : []}
+                                            onChange={field.onChange}
+                                            placeholder="Select preferred head covering..."
+                                        />
+                                    )}
+                                />
                             </div>
                         </div>
                     )}
 
-                    {/* STEP 5: ADMIN */}
-                    {currentStep === 5 && (
+                    {/* STEP 6: ADMIN */}
+                    {currentStep === 6 && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">References (Name & Phone)</label>
@@ -441,7 +576,7 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
 
                 {/* Footer Navigation - Fixed in layout */}
                 {/* Footer Navigation - Fixed in layout */}
-                <div className="shrink-0 px-4 py-2 bg-white dark:bg-gray-950 z-50 flex items-center justify-between md:pb-4 md:static fixed bottom-16 left-0 right-0">
+                <div className="fixed bottom-24 left-0 right-0 flex items-center justify-center gap-4 px-4 py-2 bg-white dark:bg-gray-950 z-50 md:static md:p-0 md:pb-4 md:bg-transparent">
                     <div className="flex gap-2">
                         {isEditing && onCancel && (
                             <button

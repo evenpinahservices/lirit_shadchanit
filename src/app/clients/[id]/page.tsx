@@ -3,6 +3,7 @@
 import { ClientForm } from "@/components/clients/ClientForm";
 import { ClientProfileView } from "@/components/clients/ClientProfileView";
 import { useClients } from "@/context/ClientContext";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { Client } from "@/lib/mockData";
@@ -15,7 +16,9 @@ function ClientDetailsContent() {
     const { getClient, deleteClient } = useClients();
     const [client, setClient] = useState<Client | undefined>(undefined);
     const [loading, setLoading] = useState(true);
-    const [isViewMode, setIsViewMode] = useState(true);
+    // Initialize view mode based on query param
+    const [isViewMode, setIsViewMode] = useState(searchParams.get("mode") !== "edit");
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
     useEffect(() => {
         if (params.id) {
@@ -33,8 +36,14 @@ function ClientDetailsContent() {
     if (!client) return null;
 
     const handleDelete = () => {
-        deleteClient(client.id);
-        router.push("/clients");
+        setDeleteModalOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (client) {
+            deleteClient(client.id);
+            router.push("/clients");
+        }
     };
 
     const getBackInfo = () => {
@@ -64,6 +73,15 @@ function ClientDetailsContent() {
                     onEdit={() => setIsViewMode(false)}
                     onDelete={handleDelete}
                 />
+                <ConfirmationModal
+                    isOpen={deleteModalOpen}
+                    onClose={() => setDeleteModalOpen(false)}
+                    onConfirm={confirmDelete}
+                    title="Delete Client"
+                    message="Are you sure you want to delete this client? This action cannot be undone."
+                    confirmText="Delete"
+                    isDangerous={true}
+                />
             </div>
         );
     }
@@ -84,6 +102,15 @@ function ClientDetailsContent() {
                 client={client}
                 isEditing
                 onCancel={() => setIsViewMode(true)}
+            />
+            <ConfirmationModal
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                title="Delete Client"
+                message="Are you sure you want to delete this client? This action cannot be undone."
+                confirmText="Delete"
+                isDangerous={true}
             />
         </div>
     );

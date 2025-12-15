@@ -84,3 +84,19 @@ export async function seedDatabase(count: number = 10): Promise<void> {
     revalidatePath("/clients");
     revalidatePath("/matching");
 }
+
+export async function resetAndSeedDatabase(count: number = 100): Promise<void> {
+    await dbConnect();
+    // Delete all existing clients
+    await ClientModel.deleteMany({});
+    // Generate and insert new clients
+    const clients = generateMockClients(count);
+    for (const client of clients) {
+        const { id, createdAt, ...data } = client;
+        await createClient(data);
+    }
+    revalidatePath("/clients");
+    revalidatePath("/matching");
+    revalidatePath("/search");
+}
+
