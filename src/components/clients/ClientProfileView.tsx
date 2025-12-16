@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Client } from "@/lib/mockData";
 import Image from "next/image";
 import { MapPin, Briefcase, Ruler, Heart, BookOpen, GraduationCap, Globe, Users, FileText, ChevronLeft, ChevronRight, User as UserIcon } from "lucide-react";
@@ -167,6 +167,31 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
         }
     };
 
+    // Conditional Scroll Logic
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [isScrollable, setIsScrollable] = useState(false);
+
+    useEffect(() => {
+        const checkScroll = () => {
+            if (scrollContainerRef.current) {
+                const { scrollHeight, clientHeight } = scrollContainerRef.current;
+                // Only enable scroll if content exceeds container by more than ~1cm (approx 40-50px)
+                setIsScrollable(scrollHeight > clientHeight + 50);
+            }
+        };
+
+        checkScroll();
+        window.addEventListener('resize', checkScroll);
+
+        // Small delay to ensure content has rendered/layout is stable
+        const timer = setTimeout(checkScroll, 100);
+
+        return () => {
+            window.removeEventListener('resize', checkScroll);
+            clearTimeout(timer);
+        };
+    }, [client, currentSectionIndex, sections]);
+
     const CurrentIcon = sections[currentSectionIndex].icon;
 
     return (
@@ -266,7 +291,11 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
 
                 {/* Section Content - Scrollable */}
                 <div
-                    className="flex-1 overflow-y-auto p-4 animate-in fade-in duration-300 touch-pan-y"
+                    ref={scrollContainerRef}
+                    className={cn(
+                        "flex-1 p-4 animate-in fade-in duration-300 touch-pan-y",
+                        isScrollable ? "overflow-y-auto" : "overflow-hidden"
+                    )}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
