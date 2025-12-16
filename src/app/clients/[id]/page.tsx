@@ -61,18 +61,20 @@ function ClientDetailsContent() {
 
     if (isViewMode) {
         return (
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-4xl mx-auto h-[calc(100vh-140px)] flex flex-col space-y-2">
                 <button
                     onClick={() => router.push(backLink)}
-                    className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1"
+                    className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1 shrink-0"
                 >
                     &larr; {backText}
                 </button>
-                <ClientProfileView
-                    client={client}
-                    onEdit={() => setIsViewMode(false)}
-                    onDelete={handleDelete}
-                />
+                <div className="flex-1 min-h-0">
+                    <ClientProfileView
+                        client={client}
+                        onEdit={() => setIsViewMode(false)}
+                        onDelete={handleDelete}
+                    />
+                </div>
                 <ConfirmationModal
                     isOpen={deleteModalOpen}
                     onClose={() => setDeleteModalOpen(false)}

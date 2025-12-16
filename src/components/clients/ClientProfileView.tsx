@@ -172,7 +172,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
     return (
         <div className="flex flex-col h-full overflow-hidden pb-24">
             {/* Header / Top Card (Fixed Info) */}
-            <div className="bg-white dark:bg-gray-950 p-4 rounded-xl border shadow-sm shrink-0">
+            <div className="bg-white dark:bg-gray-950 p-4 rounded-xl shrink-0">
                 <div className="flex flex-col items-center text-center space-y-3">
                     <div className="relative w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-900 overflow-hidden border-2 border-gray-50 dark:border-gray-800 shadow-sm">
                         {client.photoUrl ? (
@@ -226,7 +226,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
             </div>
 
             {/* Carousel Content - Takes remaining space */}
-            <div className="flex-1 mt-2 bg-white dark:bg-gray-950 rounded-xl border shadow-sm flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 mt-2 bg-white dark:bg-gray-950 rounded-xl flex flex-col min-h-0 overflow-hidden">
                 {/* Carousel Controls */}
                 <div className="flex items-center justify-between p-3 border-b bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
                     <button
