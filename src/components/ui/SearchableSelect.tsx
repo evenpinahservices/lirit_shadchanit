@@ -27,13 +27,22 @@ export function SearchableSelect({
     disabled = false
 }: SearchableSelectProps) {
     const [isOpen, setIsOpen] = React.useState(false);
-    const [searchTerm, setSearchTerm] = React.useState("");
     const containerRef = React.useRef<HTMLDivElement>(null);
 
-    // Get selected label
+    // Derive selected option
     const selectedOption = options.find(opt => opt.value === value);
 
-    // Initial check for click outside
+    // Input value state - strictly for display/filtering
+    // We initialize it with the selected label if present, or empty string.
+    // However, user interaction (typing) updates this independent of 'value' prop temporarily.
+    const [inputValue, setInputValue] = React.useState(selectedOption?.label || "");
+
+    // Sync input with external value changes
+    React.useEffect(() => {
+        setInputValue(selectedOption?.label || "");
+    }, [value, selectedOption]);
+
+    // Handle click outside
     React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (
@@ -41,6 +50,9 @@ export function SearchableSelect({
                 !containerRef.current.contains(event.target as Node)
             ) {
                 setIsOpen(false);
+                // On close, reset input to match selected value (if any), or clear if invalid?
+                // For a strict select, we reset.
+                setInputValue(selectedOption?.label || "");
             }
         };
 
@@ -48,77 +60,68 @@ export function SearchableSelect({
         return () => {
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, []);
+    }, [selectedOption]);
 
-    // Filter options
+    // Filter options based on current input
     const filteredOptions = options.filter(option =>
-        option.label.toLowerCase().includes(searchTerm.toLowerCase())
+        option.label.toLowerCase().includes(inputValue.toLowerCase())
     );
 
-    const handleSelect = (optionValue: string) => {
-        onChange(optionValue);
+    const handleSelect = (option: Option) => {
+        onChange(option.value);
+        setInputValue(option.label);
         setIsOpen(false);
-        setSearchTerm(""); // Reset search after selection? Optional. keeping for now.
     };
 
     return (
         <div className={cn("relative", className)} ref={containerRef}>
-            <div
-                className={cn(
-                    "flex items-center justify-between w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-950 dark:border-gray-700",
-                    isOpen && "ring-2 ring-red-500 border-red-500",
-                    className
-                )}
-                onClick={() => !disabled && setIsOpen(!isOpen)}
-            >
-                <span className={cn("truncate", !selectedOption && "text-muted-foreground")}>
-                    {selectedOption ? selectedOption.label : placeholder}
-                </span>
-                <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+            <div className="relative">
+                <input
+                    type="text"
+                    className={cn(
+                        "flex w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 pr-8 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-950 dark:border-gray-700",
+                        className
+                    )}
+                    placeholder={placeholder}
+                    value={inputValue}
+                    onChange={(e) => {
+                        setInputValue(e.target.value);
+                        setIsOpen(true);
+                        // If cleared, notify parent?
+                        if (e.target.value === "") {
+                            onChange("");
+                        }
+                    }}
+                    onFocus={() => setIsOpen(true)}
+                    disabled={disabled}
+                />
+                <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />
             </div>
 
-            {isOpen && (
-                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md shadow-lg max-h-60 flex flex-col overflow-hidden">
-                    <div className="p-2 border-b dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-950 z-10">
-                        <div className="flex items-center px-2 py-1 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
-                            <Search className="h-4 w-4 text-gray-400 mr-2" />
-                            <input
-                                type="text"
-                                className="w-full bg-transparent border-none p-0 text-sm focus:outline-none focus:ring-0"
-                                placeholder="Search..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                autoFocus
-                                onClick={(e) => e.stopPropagation()}
-                            />
-                        </div>
-                    </div>
-                    <div className="overflow-y-auto flex-1 p-1">
-                        {filteredOptions.length === 0 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
-                                No options found.
+            {isOpen && filteredOptions.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md shadow-lg max-h-60 flex flex-col overflow-y-auto transform origin-top animate-in fade-in zoom-in-95 duration-100">
+                    <div className="p-1">
+                        {filteredOptions.map((option) => (
+                            <div
+                                key={option.value}
+                                className={cn(
+                                    "flex items-center justify-between px-2 py-1.5 text-sm rounded-sm cursor-pointer hover:bg-red-50 hover:text-red-900 dark:hover:bg-red-900/20 dark:hover:text-red-100",
+                                    value === option.value && "bg-red-50 text-red-900 dark:bg-red-900/20 dark:text-red-100 font-medium"
+                                )}
+                                onClick={() => handleSelect(option)}
+                            >
+                                {option.label}
+                                {value === option.value && (
+                                    <Check className="h-4 w-4" />
+                                )}
                             </div>
-                        ) : (
-                            filteredOptions.map((option) => (
-                                <div
-                                    key={option.value}
-                                    className={cn(
-                                        "flex items-center justify-between px-2 py-1.5 text-sm rounded-sm cursor-pointer hover:bg-red-50 hover:text-red-900 dark:hover:bg-red-900/20 dark:hover:text-red-100",
-                                        value === option.value && "bg-red-50 text-red-900 dark:bg-red-900/20 dark:text-red-100 font-medium"
-                                    )}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleSelect(option.value);
-                                    }}
-                                >
-                                    {option.label}
-                                    {value === option.value && (
-                                        <Check className="h-4 w-4" />
-                                    )}
-                                </div>
-                            ))
-                        )}
+                        ))}
                     </div>
+                </div>
+            )}
+            {isOpen && filteredOptions.length === 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md shadow-lg p-4 text-center text-sm text-muted-foreground animate-in fade-in zoom-in-95 duration-100">
+                    No results found.
                 </div>
             )}
         </div>

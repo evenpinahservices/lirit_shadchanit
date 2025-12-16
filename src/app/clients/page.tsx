@@ -57,7 +57,7 @@ export default function ClientsPage() {
     };
 
     return (
-        <div className="flex flex-col h-full gap-4 overflow-hidden relative z-0">
+        <div id="clients-page-root" className="flex flex-col h-full gap-4 overflow-hidden relative z-0">
             <div className="flex items-center justify-between shrink-0 px-1 pt-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
@@ -109,7 +109,7 @@ export default function ClientsPage() {
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block rounded-md border bg-white dark:bg-gray-950 shadow-sm overflow-hidden flex-1 min-h-0">
+            <div id="tour-client-results-desktop" className="hidden md:block rounded-md border bg-white dark:bg-gray-950 shadow-sm overflow-hidden flex-1 min-h-0">
                 <div className="overflow-auto h-full">
                     <table className="w-full text-sm text-left relative">
                         <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-b sticky top-0 z-10 shadow-sm">
@@ -129,7 +129,7 @@ export default function ClientsPage() {
                                     </td>
                                 </tr>
                             ) : (
-                                paginatedClients.map((client) => (
+                                paginatedClients.map((client, index) => (
                                     <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
                                         <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
                                             <Link href={`/clients/${client.id}`} className="hover:underline flex items-center gap-2">
@@ -162,6 +162,7 @@ export default function ClientsPage() {
                                             <div className="flex items-center justify-end gap-2">
                                                 <Link
                                                     href={`/clients/${client.id}?mode=edit`}
+                                                    id={index === 0 ? "tour-client-edit-btn" : undefined}
                                                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                                                     title="Edit"
                                                 >
@@ -169,6 +170,7 @@ export default function ClientsPage() {
                                                 </Link>
                                                 <button
                                                     onClick={() => handleDeleteClick(client.id)}
+                                                    id={index === 0 ? "tour-client-delete-btn" : undefined}
                                                     className="p-2 text-gray-400 hover:text-red-600 transition-colors"
                                                     title="Delete"
                                                 >
@@ -185,13 +187,13 @@ export default function ClientsPage() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="md:hidden flex-1 overflow-y-auto min-h-0 space-y-3 px-1 pb-32">
+            <div id="tour-client-results-mobile" className="md:hidden flex-1 overflow-y-auto min-h-0 space-y-3 px-1 pb-32">
                 {paginatedClients.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                         {searchTerm ? "No results found." : "No clients yet."}
                     </div>
                 ) : (
-                    paginatedClients.map((client) => (
+                    paginatedClients.map((client, index) => (
                         <div key={client.id} className="bg-white dark:bg-gray-950 p-4 rounded-xl shadow-sm border flex items-center gap-4">
                             <Link href={`/clients/${client.id}`} className="shrink-0 relative">
                                 <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-800">
@@ -215,12 +217,14 @@ export default function ClientsPage() {
                             <div className="flex flex-col gap-1 shrink-0">
                                 <Link
                                     href={`/clients/${client.id}?mode=edit`}
+                                    id={index === 0 ? "tour-client-edit-btn-mobile" : undefined}
                                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-gray-50 dark:bg-gray-900 rounded-full"
                                 >
                                     <Pencil className="h-4 w-4" />
                                 </Link>
                                 <button
                                     onClick={() => handleDeleteClick(client.id)}
+                                    id={index === 0 ? "tour-client-delete-btn-mobile" : undefined}
                                     className="p-2 text-red-400 hover:text-red-600 bg-red-50 dark:bg-red-900/20 rounded-full"
                                 >
                                     <Trash2 className="h-4 w-4" />

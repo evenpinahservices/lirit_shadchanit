@@ -66,13 +66,12 @@ export default function DashboardAnalytics() {
         {
             title: "Gender Distribution",
             component: (
-                <div className="h-full w-full">
+                <div className="h-full w-full pointer-events-none">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={genderData} margin={{ top: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
                             <YAxis />
-                            <Legend />
                             <Bar dataKey="count" name="Clients" fill="#8884d8" radius={[4, 4, 0, 0]}>
                                 <LabelList dataKey="count" position="insideTop" fill="white" fontSize={14} fontWeight="bold" />
                             </Bar>
@@ -84,13 +83,12 @@ export default function DashboardAnalytics() {
         {
             title: "Age Distribution",
             component: (
-                <div className="h-full w-full">
+                <div className="h-full w-full pointer-events-none">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={ageData} margin={{ top: 20 }}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
                             <YAxis />
-                            <Legend />
                             <Bar dataKey="count" name="Clients" fill="#82ca9d" radius={[4, 4, 0, 0]}>
                                 <LabelList dataKey="count" position="insideTop" fill="white" fontSize={14} fontWeight="bold" />
                             </Bar>

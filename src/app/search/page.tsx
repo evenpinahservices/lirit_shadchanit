@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useClients } from "@/context/ClientContext";
 import { Client } from "@/lib/mockData";
 import { Search, MapPin, Briefcase, Filter, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
@@ -10,6 +11,8 @@ import { MultiSelect } from "@/components/ui/MultiSelect";
 
 export default function SearchPage() {
     const { clients, isLoading } = useClients();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [filteredClients, setFilteredClients] = useState<Client[]>(clients);
 
     // View State
@@ -143,11 +146,22 @@ export default function SearchPage() {
                 <button
                     onClick={() => {
                         setShowResults(!showResults);
+                        if (showResults) {
+                            router.push("/search");
+                        } else {
+                            // If toggling ON, we push results? Refine usually toggles OFF results (back to filters).
+                            // The Refine button is visible ONLY in Results view (line 410 -> !showResults && hidden).
+                            // Wait, line 150: `!showResults && "hidden"`.
+                            // So Refine button is visible when SHOWING RESULTS.
+                            // Clicking it should hide results -> go to filters.
+                            router.push("/search");
+                        }
                     }}
                     className={cn(
                         "md:hidden text-sm font-medium text-red-600 flex items-center gap-1",
                         !showResults && "hidden"
                     )}
+                    id="tour-refine-search-btn"
                 >
                     <Filter className="h-4 w-4" />
                     Refine Search
@@ -170,7 +184,7 @@ export default function SearchPage() {
                                     Filter Criteria
                                 </h3>
 
-                                <div className="space-y-4">
+                                <div id="tour-search-filters" className="space-y-4">
                                     {/* Name */}
                                     <div className="space-y-1">
                                         <label className="text-xs font-medium text-gray-500">Name</label>
@@ -327,7 +341,11 @@ export default function SearchPage() {
                                 <p className="font-medium">Ready to search?</p>
                                 <p className="text-sm mb-4">Adjust filters to see breakdown.</p>
                                 <button
-                                    onClick={() => setShowResults(true)}
+                                    id="tour-show-results-btn"
+                                    onClick={() => {
+                                        setShowResults(true);
+                                        router.push("/search?view=results");
+                                    }}
                                     className="bg-red-600 text-white px-6 py-2 rounded-full font-medium hover:bg-red-700 transition"
                                 >
                                     Show {filteredClients.length} Results
@@ -342,7 +360,7 @@ export default function SearchPage() {
                                 {filteredClients.length === 0 ? (
                                     <div className="text-center py-12 text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg">
                                         <p>No clients match your criteria.</p>
-                                        <button onClick={() => setShowResults(false)} className="mt-2 text-red-600 underline">Adjust Filters</button>
+                                        <button onClick={() => { setShowResults(false); router.push("/search"); }} className="mt-2 text-red-600 underline">Adjust Filters</button>
                                     </div>
                                 ) : (
                                     <div className="flex-1 overflow-hidden p-1">
@@ -408,9 +426,11 @@ export default function SearchPage() {
             {!showResults && (
                 <div className="md:hidden fixed bottom-22 left-0 right-0 p-4 z-50">
                     <button
+                        id="tour-mobile-show-results-btn"
                         onClick={() => {
                             setShowResults(true);
                             setCurrentPage(1);
+                            router.push("/search?view=results");
                         }}
                         className="w-full bg-red-600 text-white font-medium py-3 rounded-xl shadow-md active:bg-red-700 transition-colors flex items-center justify-center gap-2"
                     >

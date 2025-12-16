@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useClients } from "@/context/ClientContext";
 import { seedTestClient } from "@/actions/client";
 import { Client, MOCK_CLIENTS } from "@/lib/mockData";
@@ -12,6 +12,7 @@ import { SearchableSelect } from "@/components/ui/SearchableSelect";
 
 export default function MatchingPage() {
     const { clients } = useClients();
+    const router = useRouter();
 
     const clientOptions = clients.map(client => ({
         label: `${client.fullName} (${client.gender})`,
@@ -66,13 +67,18 @@ export default function MatchingPage() {
         setMatches(suggestions);
         setIsResultsView(true);
         setCurrentPage(1); // Reset to page 1
+
+        // Update URL to reflect results state for tour
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("view", "results");
+        if (selectedClientId) params.set("clientId", selectedClientId);
+        router.push(`/matching?${params.toString()}`);
     };
 
     const handleReset = () => {
         setIsResultsView(false);
         setMatches([]);
-        // Keep selected client ID in case they want to adjust parameters (if we had params to adjust)
-        // or just re-run.
+        router.push("/matching");
     };
 
     // Pagination Logic
@@ -135,7 +141,7 @@ export default function MatchingPage() {
     const activeDealBreakers = selectedClient ? getActiveDealBreakers(selectedClient) : [];
 
     return (
-        <div className="flex flex-col h-full overflow-hidden space-y-4">
+        <div id="matching-page-root" className="flex flex-col h-full overflow-hidden space-y-4">
             <div className="shrink-0 flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Smart Matching</h1>
@@ -153,16 +159,18 @@ export default function MatchingPage() {
                             <div className="rounded-xl border bg-white dark:bg-gray-950 p-4 shadow-sm flex flex-col">
                                 <h2 className="font-semibold mb-3 shrink-0">Select Client</h2>
                                 <div className="space-y-3 flex flex-col">
-                                    <SearchableSelect
-                                        options={clientOptions}
-                                        value={selectedClientId}
-                                        onChange={(val) => {
-                                            setSelectedClientId(val);
-                                            setMatches([]);
-                                        }}
-                                        placeholder="Search by name..."
-                                        className="w-full"
-                                    />
+                                    <div id="tour-matching-search">
+                                        <SearchableSelect
+                                            options={clientOptions}
+                                            value={selectedClientId}
+                                            onChange={(val) => {
+                                                setSelectedClientId(val);
+                                                setMatches([]);
+                                            }}
+                                            placeholder="Search by name..."
+                                            className="w-full"
+                                        />
+                                    </div>
 
                                     {selectedClient && (
                                         <div className="text-sm text-muted-foreground space-y-2 bg-gray-50 dark:bg-gray-900 p-3 rounded-md">
@@ -225,13 +233,13 @@ export default function MatchingPage() {
                             </div>
 
                             {matches.length === 0 ? (
-                                <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground border rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                                <div id="tour-matching-results" className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground border rounded-xl bg-gray-50 dark:bg-gray-900/50">
                                     <p>No matches found matching the strict criteria.</p>
                                     <button onClick={handleReset} className="mt-2 text-red-600 hover:underline">Try another client</button>
                                 </div>
                             ) : (
                                 <div className="flex-1 overflow-hidden p-1">
-                                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                    <div id="tour-matching-results-grid" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                         {paginatedMatches.map((match) => (
                                             <Link
                                                 key={match.id}

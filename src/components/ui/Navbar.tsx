@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { LayoutDashboard, Users, Heart, Search, LogOut, User as UserIcon, Maximize, Minimize, HelpCircle } from "lucide-react";
 import { useOnboardingTour } from "@/components/OnboardingTour";
+import { BugReportButton } from "@/components/ui/BugReportButton";
 
 export function Navbar() {
     const pathname = usePathname();
@@ -76,6 +77,8 @@ export function Navbar() {
                         <HelpCircle className="h-5 w-5" />
                     </button>
 
+                    <BugReportButton />
+
                     <button
                         onClick={toggleFullscreen}
                         className="p-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
@@ -84,17 +87,11 @@ export function Navbar() {
                         {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
                     </button>
 
-                    <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
-                        <UserIcon className="h-4 w-4" />
-                        <span>{user.name} ({user.role})</span>
-                    </div>
-                    {/* Simplified User Icon for Mobile */}
-                    <div className="md:hidden flex items-center justify-center p-2 rounded-full bg-gray-100 dark:bg-gray-800 text-muted-foreground">
-                        <UserIcon className="h-5 w-5" />
-                    </div>
+
 
                     <button
                         onClick={logout}
+                        id="tour-logout-btn"
                         className="text-sm font-medium text-red-500 hover:text-red-600 flex items-center gap-1"
                     >
                         <LogOut className="h-4 w-4" />
