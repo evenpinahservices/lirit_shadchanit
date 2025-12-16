@@ -17,6 +17,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "cloudinary": "^2.8.0",
     "clsx": "^2.1.1",
+    "driver.js": "^1.4.0",
     "lucide-react": "^0.556.0",
     "mongoose": "^9.0.1",
     "next": "16.0.7",

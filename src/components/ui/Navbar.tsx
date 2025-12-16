@@ -6,12 +6,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Users, Heart, Search, LogOut, User as UserIcon, Maximize, Minimize } from "lucide-react";
+import { LayoutDashboard, Users, Heart, Search, LogOut, User as UserIcon, Maximize, Minimize, HelpCircle } from "lucide-react";
+import { useOnboardingTour } from "@/components/OnboardingTour";
 
 export function Navbar() {
     const pathname = usePathname();
     const { user, logout } = useAuth();
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const { startTour, isRunning: isTourRunning } = useOnboardingTour();
 
     if (!user) return null; // Don't show navbar if not logged in
 
@@ -65,6 +67,15 @@ export function Navbar() {
 
                 {/* User Menu - Visible on all screens now */}
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={startTour}
+                        disabled={isTourRunning}
+                        className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50"
+                        title="Start Tutorial"
+                    >
+                        <HelpCircle className="h-5 w-5" />
+                    </button>
+
                     <button
                         onClick={toggleFullscreen}
                         className="p-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
