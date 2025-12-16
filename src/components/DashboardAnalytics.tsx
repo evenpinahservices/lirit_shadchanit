@@ -109,6 +109,37 @@ export default function DashboardAnalytics() {
         setCurrentSlide((prev) => (prev - 1 + charts.length) % charts.length);
     };
 
+    // Touch Handling
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+    // Minimum swipe distance (in px)
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null); // Reset
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            nextSlide();
+        }
+        if (isRightSwipe) {
+            prevSlide();
+        }
+    };
+
     return (
         <div className="flex flex-col h-full space-y-4">
             {/* Total Clients Card - Fixed Top */}
@@ -120,7 +151,12 @@ export default function DashboardAnalytics() {
             </div>
 
             {/* Carousel Area */}
-            <div className="flex-1 min-h-0 flex flex-col rounded-xl border bg-card text-card-foreground shadow p-4 relative">
+            <div
+                className="flex-1 min-h-0 flex flex-col rounded-xl border bg-card text-card-foreground shadow p-4 relative"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+            >
                 <div className="mb-2 text-lg font-medium text-center">{charts[currentSlide].title}</div>
 
                 <div className="flex-1 w-full flex items-center justify-center overflow-hidden">

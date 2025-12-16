@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Client, ClientSchema } from "@/lib/mockData";
 import { useClients } from "@/context/ClientContext";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, ChevronLeft, ChevronRight, Check, UploadCloud } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -112,6 +112,20 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
     const { addClient, updateClient, isUploading, uploadImage } = useClients();
     const router = useRouter();
     const [currentStep, setCurrentStep] = useState(0);
+    const [isSubmitReady, setIsSubmitReady] = useState(false);
+
+    // Reset submit ready state when stepping back or forward, but trigger it for the last step
+    useEffect(() => {
+        if (currentStep === STEPS.length - 1) {
+            setIsSubmitReady(false);
+            const timer = setTimeout(() => {
+                setIsSubmitReady(true);
+            }, 500); // 500ms delay to prevent double-tap submission
+            return () => clearTimeout(timer);
+        } else {
+            setIsSubmitReady(false);
+        }
+    }, [currentStep]);
 
     const onSubmit = async (values: z.output<typeof formSchema>) => {
         try {
@@ -615,7 +629,8 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                     ) : (
                         <button
                             type="submit"
-                            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            disabled={!isSubmitReady}
+                            className={`flex items-center gap-1 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSubmitReady ? 'bg-green-600 hover:bg-green-700' : 'bg-green-400 cursor-not-allowed'}`}
                         >
                             {isEditing ? "Update Client" : "Submit Client"}
                             <Check className="h-4 w-4" />

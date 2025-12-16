@@ -143,7 +143,7 @@ export default function MatchingPage() {
                 </div>
             </div>
 
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-16 md:pb-0 relative">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-24 md:pb-0 relative">
                 <div className="flex flex-col gap-4 h-full">
 
                     {/* SEARCH / HEADER SECTION */}
