@@ -1,33 +1,21 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { useState, Suspense } from "react";
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Heart } from "lucide-react";
 
-function LoginContent() {
+export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const { login } = useAuth();
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const redirectPath = searchParams.get("redirect") || "/";
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
         if (username.trim() && password.trim()) {
             const success = await login(username, password);
-            if (success) {
-                // If login function returns true, we can manually redirect if the context doesn't
-                // But AuthContext implementation redirects to "/" automatically.
-                // ideally AuthContext should accept a redirect path or return success so we can redirect.
-                // For now, relies on AuthContext behavior but this component reads searchParams which causes the error.
-                // Since we are fixing the error, we might as well use the functionality.
-            } else {
+            if (!success) {
                 setError("Invalid username or password");
             }
         }
@@ -102,10 +90,3 @@ function LoginContent() {
     );
 }
 
-export default function LoginPage() {
-    return (
-        <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
-            <LoginContent />
-        </Suspense>
-    );
-}
