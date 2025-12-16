@@ -170,7 +170,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
     const CurrentIcon = sections[currentSectionIndex].icon;
 
     return (
-        <div className="flex flex-col h-full overflow-hidden pb-2">
+        <div className="flex flex-col h-full overflow-hidden pb-4">
             {/* Header / Top Card (Fixed Info) */}
             <div className="bg-white dark:bg-gray-950 p-4 rounded-xl shrink-0">
                 <div className="flex flex-col items-center text-center space-y-3">
