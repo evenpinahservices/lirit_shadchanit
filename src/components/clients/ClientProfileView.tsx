@@ -175,8 +175,9 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
         const checkScroll = () => {
             if (scrollContainerRef.current) {
                 const { scrollHeight, clientHeight } = scrollContainerRef.current;
-                // Only enable scroll if content exceeds container by more than ~1cm (approx 40-50px)
-                setIsScrollable(scrollHeight > clientHeight + 50);
+                // Only enable scroll if content exceeds container by more than a small threshold (e.g. 5px)
+                // This prevents scrolling for tiny sub-pixel overflows but ensures text lines are scrollable
+                setIsScrollable(scrollHeight > clientHeight + 5);
             }
         };
 
