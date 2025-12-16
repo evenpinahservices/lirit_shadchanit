@@ -226,7 +226,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
             </div>
 
             {/* Carousel Content - Takes remaining space */}
-            <div className="flex-1 mt-2 bg-white dark:bg-gray-950 rounded-xl flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 mt-4 bg-white dark:bg-gray-950 rounded-xl flex flex-col min-h-0 overflow-hidden">
                 {/* Carousel Controls */}
                 <div className="flex items-center justify-between p-3 border-b bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
                     <button
