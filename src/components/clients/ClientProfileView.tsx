@@ -170,30 +170,30 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
     const CurrentIcon = sections[currentSectionIndex].icon;
 
     return (
-        <div className="flex flex-col h-full overflow-hidden pb-16">
+        <div className="flex flex-col h-full overflow-hidden pb-24">
             {/* Header / Top Card (Fixed Info) */}
-            <div className="bg-white dark:bg-gray-950 p-6 rounded-xl border shadow-sm shrink-0">
-                <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="relative w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-900 overflow-hidden border-4 border-gray-50 dark:border-gray-800 shadow-sm">
+            <div className="bg-white dark:bg-gray-950 p-4 rounded-xl border shadow-sm shrink-0">
+                <div className="flex flex-col items-center text-center space-y-3">
+                    <div className="relative w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-900 overflow-hidden border-2 border-gray-50 dark:border-gray-800 shadow-sm">
                         {client.photoUrl ? (
                             <Image
                                 src={client.photoUrl}
                                 alt={client.fullName}
                                 fill
                                 className="object-cover"
-                                sizes="96px"
+                                sizes="80px"
                                 priority
                             />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                <UserIcon className="h-10 w-10" />
+                                <UserIcon className="h-8 w-8" />
                             </div>
                         )}
                     </div>
 
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{client.fullName}</h1>
-                        <div className="flex flex-wrap justify-center gap-2 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                        <h1 className="text-xl font-bold text-gray-900 dark:text-white">{client.fullName}</h1>
+                        <div className="flex flex-wrap justify-center gap-2 mt-1 text-sm text-gray-600 dark:text-gray-400">
                             <span className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" /> {client.location}
                             </span>
@@ -208,36 +208,30 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                         </div>
                     </div>
 
-                    <div className="flex gap-3 w-full sm:w-auto pt-2">
+                    <div className="flex gap-3 w-full sm:w-auto pt-1">
                         <button
                             onClick={onEdit}
-                            className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                            className="flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
                         >
                             Edit
                         </button>
                         <button
                             onClick={onDelete}
-                            className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none"
+                            className="flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none"
                         >
                             Delete
                         </button>
                     </div>
                 </div>
-
-                {client.personality && (
-                    <div className="mt-6 pt-6 border-t font-serif italic text-center text-gray-600 dark:text-gray-400">
-                        "{client.personality}"
-                    </div>
-                )}
             </div>
 
             {/* Carousel Content - Takes remaining space */}
-            <div className="flex-1 mt-6 bg-white dark:bg-gray-950 rounded-xl border shadow-sm flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 mt-2 bg-white dark:bg-gray-950 rounded-xl border shadow-sm flex flex-col min-h-0 overflow-hidden">
                 {/* Carousel Controls */}
-                <div className="flex items-center justify-between p-4 border-b bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
+                <div className="flex items-center justify-between p-3 border-b bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
                     <button
                         onClick={prevSection}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                        className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                         aria-label="Previous section"
                     >
                         <ChevronLeft className="h-5 w-5 text-gray-500" />
@@ -263,7 +257,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
 
                     <button
                         onClick={nextSection}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                        className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                         aria-label="Next section"
                     >
                         <ChevronRight className="h-5 w-5 text-gray-500" />
@@ -272,12 +266,12 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
 
                 {/* Section Content - Scrollable */}
                 <div
-                    className="flex-1 overflow-y-auto p-6 md:p-8 animate-in fade-in duration-300 touch-pan-y"
+                    className="flex-1 overflow-y-auto p-4 animate-in fade-in duration-300 touch-pan-y"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    <div className="max-w-xl mx-auto w-full">
+                    <div className="w-full">
                         {sections[currentSectionIndex].content}
                     </div>
                 </div>
