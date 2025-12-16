@@ -44,7 +44,7 @@ export function Navbar() {
                         <Heart className="h-6 w-6 text-red-500 fill-red-500" />
                         <span>ShadchanitDB</span>
                     </Link>
-                    <div className="hidden md:flex items-center gap-6">
+                    <div id="desktop-nav-links" className="hidden md:flex items-center gap-6">
                         {links.map((link) => {
                             const Icon = link.icon;
                             const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));

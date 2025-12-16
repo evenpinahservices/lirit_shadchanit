@@ -14,7 +14,7 @@ const DASHBOARD_STEPS: DriveStep[] = [
         }
     },
     {
-        element: "nav",
+        element: "#desktop-nav-links, #mobile-bottom-nav",
         popover: {
             title: "📍 Navigation Bar",
             description: "Use the navigation bar (top on desktop, bottom on mobile) to switch between Dashboard, Clients, Matching, and Search pages.",

@@ -16,7 +16,7 @@ export function BottomNav() {
     ];
 
     return (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-white dark:bg-gray-950 z-50 pb-[env(safe-area-inset-bottom)]">
+        <div id="mobile-bottom-nav" className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-white dark:bg-gray-950 z-50 pb-[env(safe-area-inset-bottom)]">
             <div className="flex items-center justify-around h-16">
                 {links.map((link) => {
                     const Icon = link.icon;
