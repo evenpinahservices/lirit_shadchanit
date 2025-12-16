@@ -57,6 +57,14 @@ export function useOnboardingTour() {
                 }
             },
             {
+                element: "#bug-report-btn",
+                popover: {
+                    title: "🐛 Report a Bug",
+                    description: "Found an issue? Click this button to take a screenshot and report it directly to us.",
+                    side: "bottom" as const,
+                }
+            },
+            {
                 element: "[title='Enter Fullscreen'], [title='Exit Fullscreen']",
                 popover: {
                     title: "🖥️ Fullscreen Mode",
