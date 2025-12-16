@@ -7,6 +7,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 import { Navbar } from "@/components/ui/Navbar";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { cn } from "@/lib/utils";
+import { Suspense } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -36,7 +37,9 @@ export default function RootLayout({
           <ClientProvider>
             <AuthGuard>
               <div className="flex flex-col h-full max-h-dvh">
-                <Navbar />
+                <Suspense fallback={null}>
+                  <Navbar />
+                </Suspense>
                 <main className="flex-1 overflow-hidden flex flex-col container mx-auto pt-2 px-4">
                   {children}
                 </main>
