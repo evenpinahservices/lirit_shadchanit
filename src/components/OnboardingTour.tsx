@@ -98,7 +98,7 @@ const MATCHING_STEPS: DriveStep[] = [
     {
         popover: {
             title: "🎯 Select a Client",
-            description: "Use the dropdown to select a client. The system will automatically find compatible matches based on their preferences and deal-breakers.",
+            description: "Use the dropdown to select a client. Try searching for 'Shoshana Brown' to see an example! The system will find compatible matches based on preferences and deal-breakers.",
         }
     },
     {
