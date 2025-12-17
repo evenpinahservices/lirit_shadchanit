@@ -37,7 +37,7 @@ const ClientSchema = new Schema<Client>(
         medicalHistoryDetails: { type: String },
 
         // Preferences
-        lookingFor: { type: String },
+
         willingToRelocate: { type: String },
         ageGapPreference: { type: [String], default: [] },
         preferredEthnicities: { type: [String], default: [] },

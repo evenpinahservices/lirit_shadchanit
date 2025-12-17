@@ -112,7 +112,6 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
             icon: Users,
             content: (
                 <div className="grid gap-4">
-                    <Field label="Looking For" value={client.lookingFor} />
                     <Field label="Age Gap Preference" value={client.ageGapPreference} />
                     <Field label="Willing to Relocate" value={client.willingToRelocate} />
                     <Field label="Preferred Ethnicities" value={client.preferredEthnicities} />
