@@ -95,7 +95,10 @@ export function findMatches(client: Client, allClients: Client[]): Client[] {
         if (client.preferredHeadCovering && client.preferredHeadCovering.length > 0) {
             const prefs = Array.isArray(client.preferredHeadCovering) ? client.preferredHeadCovering : [client.preferredHeadCovering];
             if (!prefs.some(p => isWildcard(p))) {
-                if (!prefs.includes(candidate.headCovering) && candidate.headCovering !== "Flexible") return false;
+                // Only check head covering match if candidate is female (since we removed male head covering logic)
+                if (candidate.gender === "Female") {
+                    if (!prefs.includes(candidate.headCovering) && candidate.headCovering !== "Flexible") return false;
+                }
             }
         }
 

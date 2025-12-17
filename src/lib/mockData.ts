@@ -46,7 +46,7 @@ export interface Client {
     medicalHistoryDetails?: string; // Optional explanation if Yes
 
     // Preferences / Match Criteria
-    lookingFor: string;
+    // lookingFor removed
     willingToRelocate: string; // Yes/No/Maybe
     ageGapPreference: string | string[]; // Single or Multi
     preferredEthnicities: string | string[]; // Single or Multi
@@ -95,7 +95,7 @@ export const ClientSchema = z.object({
     medicalHistory: z.union([z.boolean(), z.string()]).transform(val => val === true || val === "Yes"),
     medicalHistoryDetails: z.string().optional().default(""),
 
-    lookingFor: z.string().optional().default(""),
+    // lookingFor removed
     ageGapPreference: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : [String(val)]),
     willingToRelocate: z.string().optional().default(""),
     preferredEthnicities: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean)),
@@ -185,14 +185,14 @@ export const generateMockClients = (count: number): Client[] => {
         let preferredHeadCovering: string[] = [];
 
         if (isMale) {
-            headCovering = getRandomElement(["Kippah Sruga", "Kippah Black", "None", "Hat"]);
-            // Vary strictness: 40% strict, 60% flexible
+            headCovering = "N/A"; // Male head covering defaults to N/A
+            // Men prefer female head covering
             preferredHeadCovering = Math.random() > 0.4
-                ? [getRandomElement(PREFERRED_HEAD_COVERING_MALE)]
+                ? [getRandomElement(HEAD_COVERING_FEMALE)]
                 : ["I don't mind"];
         } else {
             headCovering = getRandomElement(HEAD_COVERING_FEMALE);
-            preferredHeadCovering = [];
+            preferredHeadCovering = []; // Women don't ask about male head covering anymore
         }
 
         // Vary preference strictness for matching tests
@@ -245,7 +245,7 @@ export const generateMockClients = (count: number): Client[] => {
             personality: getRandomElement(["Quiet", "Outgoing", "Serious", "Funny", "Intellectual", "Kind", "Energetic"]),
             medicalHistory: Math.random() > 0.9,
             medicalHistoryDetails: "Minor allergy",
-            lookingFor: "Someone compatible with similar values",
+            // lookingFor removed
             willingToRelocate: willingToRelocate,
             ageGapPreference: ageGapPreference,
             preferredEthnicities: preferredEthnicities,
@@ -302,7 +302,7 @@ const testClient: Client = {
     hobbies: ["Reading"],
     personality: "Quiet",
     medicalHistory: false,
-    lookingFor: "Someone nice",
+    // lookingFor: "Someone nice", - removed
     willingToRelocate: "No", // Dealbreaker 1
     ageGapPreference: ["1-2 years", "3-5 years"], // Dealbreaker 2
     preferredEthnicities: ["Ashkenazi", "Sephardi", "Yemenite", "Convert", "Mixed", "Ashkenazi (Strict)", "Sephardi (Strict)", "Yemenite (Strict)", "Other"],

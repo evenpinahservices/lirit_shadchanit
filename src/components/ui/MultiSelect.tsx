@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
 interface MultiSelectProps {
     options: string[];
@@ -80,6 +81,19 @@ export function MultiSelect({
                     "absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto",
                     direction === "top" ? "bottom-full mb-1" : "mt-1"
                 )}>
+                    <div className="sticky top-0 right-0 z-20 flex justify-end p-2 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsOpen(false);
+                            }}
+                            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                            title="Close"
+                        >
+                            <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                        </button>
+                    </div>
                     {options.map((option) => (
                         <div
                             key={option}
