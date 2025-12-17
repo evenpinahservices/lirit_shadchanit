@@ -255,7 +255,7 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
 
     return (
         <>
-            <div className="fixed inset-x-0 bottom-0 top-[65px] z-40 bg-white dark:bg-gray-950 flex flex-col md:relative md:inset-auto md:top-auto md:h-auto md:bg-transparent md:block">
+            <div className="fixed inset-x-0 bottom-0 top-[4rem] z-40 bg-white dark:bg-gray-950 flex flex-col md:relative md:inset-auto md:top-auto md:h-auto md:bg-transparent md:block">
                 <form
                     onSubmit={handleSubmit(onSubmit)}
                     onKeyDown={(e) => {
@@ -286,7 +286,7 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                     </div>
 
                     {/* Steps Content - Scrollable on Mobile with EXTRA padding for validation errors */}
-                    <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 bg-white dark:bg-gray-950 p-6 md:rounded-xl md:border md:shadow-sm space-y-6 scrollbar-hide pb-40 md:pb-6">
+                    <div className="flex-1 overflow-y-auto md:overflow-visible min-h-0 bg-white dark:bg-gray-950 p-6 md:rounded-xl md:border md:shadow-sm space-y-6 scrollbar-hide pb-48 md:pb-6">
 
                         {/* STEP 0: BASIC INFO */}
                         {currentStep === 0 && (
@@ -631,8 +631,8 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
 
                     </div>
 
-                    {/* Footer Navigation - Fixed in layout */}
-                    <div className="fixed bottom-24 left-0 right-0 flex items-center justify-center gap-4 px-4 py-2 bg-white dark:bg-gray-950 z-50 md:static md:p-0 md:pb-4 md:bg-transparent">
+                    {/* Footer Navigation - Fixed with gradient fade */}
+                    <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-50 md:static md:p-0 md:pb-4 md:bg-transparent bg-gradient-to-t from-white via-white to-transparent dark:from-gray-950 dark:via-gray-950 pt-6 px-4 pb-2 flex items-center justify-center gap-4">
                         <div className="flex gap-2">
                             {isEditing && onCancel && (
                                 <button

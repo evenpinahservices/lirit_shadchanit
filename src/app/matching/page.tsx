@@ -37,7 +37,33 @@ export default function MatchingPage() {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 2; // Reduced to 2 to avoid scrolling
+    const [itemsPerPage, setItemsPerPage] = useState(2);
+
+    // Dynamic items per page based on viewport height
+    useEffect(() => {
+        const calculateItemsPerPage = () => {
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+            // Determine grid columns: 1 on mobile, 2 on sm (640px+), 3 on lg (1024px+)
+            let columns = 1;
+            if (viewportWidth >= 1024) columns = 3;
+            else if (viewportWidth >= 640) columns = 2;
+
+            // On tablet (md+), reserve less space since no bottom nav
+            const isMdOrLarger = viewportWidth >= 768;
+            // Header ~60px, client section ~150px, pagination ~50px, margins ~40px
+            const reservedHeight = isMdOrLarger ? 280 : 400;
+            const availableHeight = viewportHeight - reservedHeight;
+            const itemHeight = 150; // Match cards are ~150px tall
+            const rows = Math.max(1, Math.floor(availableHeight / itemHeight));
+            // Calculate items as rows × columns for full grid utilization
+            const calculated = rows * columns;
+            setItemsPerPage(calculated);
+        };
+        calculateItemsPerPage();
+        window.addEventListener('resize', calculateItemsPerPage);
+        return () => window.removeEventListener('resize', calculateItemsPerPage);
+    }, []);
 
     useEffect(() => {
         seedTestClient().catch(console.error);
@@ -150,7 +176,7 @@ export default function MatchingPage() {
             </div>
 
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-24 md:pb-0 relative">
-                <div className="flex flex-col gap-4 h-full">
+                <div className="flex flex-col gap-4 h-full min-h-0 overflow-hidden">
 
                     {/* SEARCH / HEADER SECTION */}
                     <div className="shrink-0 min-h-0">
@@ -225,7 +251,7 @@ export default function MatchingPage() {
 
                     {/* RESULTS SECTION */}
                     {isResultsView && (
-                        <div className="flex-1 min-h-0 flex flex-col">
+                        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                             <div className="flex items-center justify-between mb-2 shrink-0">
                                 <h3 className="font-semibold text-gray-700 dark:text-gray-300">
                                     Possible Matches ({matches.length})
@@ -238,7 +264,7 @@ export default function MatchingPage() {
                                     <button onClick={handleReset} className="mt-2 text-red-600 hover:underline">Try another client</button>
                                 </div>
                             ) : (
-                                <div className="flex-1 overflow-hidden p-1">
+                                <div className="flex-1 min-h-0 overflow-y-auto p-1 pb-20 md:pb-0">
                                     <div id="tour-matching-results-grid" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                         {paginatedMatches.map((match) => (
                                             <Link
@@ -260,15 +286,15 @@ export default function MatchingPage() {
                                                     <div className="space-y-1 text-xs">
                                                         <div className="flex justify-between">
                                                             <span className="text-muted-foreground">Ethnicity:</span>
-                                                            <span className="text-right truncate max-w-[120px]">{Array.isArray(match.ethnicity) ? match.ethnicity.join(", ") : match.ethnicity}</span>
+                                                            <span className="text-right truncate max-w-[7.5rem]">{Array.isArray(match.ethnicity) ? match.ethnicity.join(", ") : match.ethnicity}</span>
                                                         </div>
                                                         <div className="flex justify-between">
                                                             <span className="text-muted-foreground">Hashkafa:</span>
-                                                            <span className="text-right truncate max-w-[120px]">{Array.isArray(match.religiousAffiliation) ? match.religiousAffiliation[0] : match.religiousAffiliation}</span>
+                                                            <span className="text-right truncate max-w-[7.5rem]">{Array.isArray(match.religiousAffiliation) ? match.religiousAffiliation[0] : match.religiousAffiliation}</span>
                                                         </div>
                                                         <div className="flex justify-between">
                                                             <span className="text-muted-foreground">Learning:</span>
-                                                            <span className="text-right truncate max-w-[120px]">{Array.isArray(match.learningStatus) ? match.learningStatus[0] : match.learningStatus}</span>
+                                                            <span className="text-right truncate max-w-[7.5rem]">{Array.isArray(match.learningStatus) ? match.learningStatus[0] : match.learningStatus}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -285,7 +311,7 @@ export default function MatchingPage() {
 
                             {/* Pagination Footer - Only show if valid results */}
                             {matches.length > 0 && totalPages > 1 && (
-                                <div className="shrink-0 pt-2 flex items-center justify-between">
+                                <div className="shrink-0 pt-2 flex items-center justify-between fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pt-2 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none">
                                     <button
                                         onClick={() => handlePageChange(currentPage - 1)}
                                         disabled={currentPage === 1}

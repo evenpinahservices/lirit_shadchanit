@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useClients } from "@/context/ClientContext";
 import { resetAndSeedDatabase } from "@/actions/client";
@@ -12,8 +12,30 @@ export default function ClientsPage() {
     const { clients, deleteClient } = useClients();
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(4); // Fixed to 4
+    const [itemsPerPage, setItemsPerPage] = useState(4);
     const [isSeeding, setIsSeeding] = useState(false);
+
+    // Dynamic items per page based on viewport height
+    useEffect(() => {
+        const calculateItemsPerPage = () => {
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+            const isMobile = viewportWidth < 768;
+            // Match the container max-h-[calc(100dvh-12rem)]
+            // Using rem for consistency: 1rem = 16px
+            const remToPixels = parseFloat(getComputedStyle(document.documentElement).fontSize);
+            const reservedRem = isMobile ? 22 : 28.5; // 22rem mobile, 28.5rem tablet
+            const reservedHeight = reservedRem * remToPixels;
+            const availableHeight = viewportHeight - reservedHeight;
+            const itemHeightRem = isMobile ? 6.25 : 3.5; // 6.25rem mobile card, 3.5rem table row
+            const itemHeight = itemHeightRem * remToPixels;
+            const calculated = Math.max(2, Math.floor(availableHeight / itemHeight));
+            setItemsPerPage(calculated);
+        };
+        calculateItemsPerPage();
+        window.addEventListener('resize', calculateItemsPerPage);
+        return () => window.removeEventListener('resize', calculateItemsPerPage);
+    }, []);
 
     // Delete Modal State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -57,7 +79,7 @@ export default function ClientsPage() {
     };
 
     return (
-        <div id="clients-page-root" className="flex flex-col h-full gap-4 overflow-hidden relative z-0">
+        <div id="clients-page-root" className="flex flex-col h-full min-h-0 gap-4 overflow-hidden relative z-0">
             <div className="flex items-center justify-between shrink-0 px-1 pt-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
@@ -109,8 +131,8 @@ export default function ClientsPage() {
             </div>
 
             {/* Desktop Table View */}
-            <div id="tour-client-results-desktop" className="hidden md:block rounded-md border bg-white dark:bg-gray-950 shadow-sm overflow-hidden flex-1 min-h-0">
-                <div className="overflow-auto h-full">
+            <div id="tour-client-results-desktop" className="hidden md:block rounded-md border bg-white dark:bg-gray-950 shadow-sm overflow-y-auto flex-1 min-h-0 max-h-[calc(100dvh-12rem)]">
+                <div className="h-full">
                     <table className="w-full text-sm text-left relative">
                         <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-b sticky top-0 z-10 shadow-sm">
                             <tr>
@@ -237,7 +259,7 @@ export default function ClientsPage() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-                <div className="absolute bottom-16 left-0 right-0 flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent">
+                <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none">
                     <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}

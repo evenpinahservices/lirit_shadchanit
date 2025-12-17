@@ -16,13 +16,13 @@ export const metadata: Metadata = {
   description: "Client management and matchmaking system",
 };
 
-// Lock viewport to 412x892 (Galaxy A35) for consistent rendering
+// Responsive viewport - scales to device width
 export const viewport: Viewport = {
-  width: 412,
-  height: 892,
+  width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -36,11 +36,11 @@ export default function RootLayout({
         <AuthProvider>
           <ClientProvider>
             <AuthGuard>
-              <div className="flex flex-col h-full max-h-dvh">
+              <div className="flex flex-col h-full max-h-dvh min-h-0 overflow-hidden">
                 <Suspense fallback={null}>
                   <Navbar />
                 </Suspense>
-                <main className="flex-1 overflow-hidden flex flex-col container mx-auto pt-2 px-4">
+                <main className="flex-1 min-h-0 overflow-hidden flex flex-col container mx-auto pt-2 px-4">
                   {children}
                 </main>
                 <BottomNav />

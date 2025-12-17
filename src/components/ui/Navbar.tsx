@@ -38,7 +38,7 @@ export function Navbar() {
     ];
 
     return (
-        <nav className="border-b bg-white dark:bg-gray-950 px-6 py-4 sticky top-0 z-50 shadow-sm shrink-0">
+        <nav className="border-b bg-white dark:bg-gray-950 px-4 py-3 sm:px-6 sm:py-4 sticky top-0 z-50 shadow-sm shrink-0">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-8">
                     <Link href="/" className="text-xl font-bold text-primary flex items-center gap-2">

@@ -20,7 +20,33 @@ export default function SearchPage() {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 4; // Requested: 4 per page
+    const [itemsPerPage, setItemsPerPage] = useState(4);
+
+    // Dynamic items per page based on viewport height
+    useEffect(() => {
+        const calculateItemsPerPage = () => {
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+            // Determine grid columns: 1 on mobile, 2 on sm, 3 on lg, 4 on xl
+            let columns = 1;
+            if (viewportWidth >= 1280) columns = 4;
+            else if (viewportWidth >= 1024) columns = 3;
+            else if (viewportWidth >= 640) columns = 2;
+
+            const isMdOrLarger = viewportWidth >= 768;
+            // On tablet/desktop, reserve less space since no bottom nav
+            const reservedHeight = isMdOrLarger ? 280 : 380;
+            const availableHeight = viewportHeight - reservedHeight;
+            const itemHeight = 140; // Result cards ~140px tall
+            const rows = Math.max(1, Math.floor(availableHeight / itemHeight));
+            // Calculate items as rows × columns for full grid utilization
+            const calculated = rows * columns;
+            setItemsPerPage(calculated);
+        };
+        calculateItemsPerPage();
+        window.addEventListener('resize', calculateItemsPerPage);
+        return () => window.removeEventListener('resize', calculateItemsPerPage);
+    }, []);
 
     // Filters
     const [keyword, setKeyword] = useState("");
@@ -135,7 +161,7 @@ export default function SearchPage() {
     };
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full min-h-0 overflow-hidden">
             <div className="shrink-0 px-4 pt-4 pb-2 md:pb-4 border-b bg-white dark:bg-gray-950 z-10 flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
@@ -169,15 +195,16 @@ export default function SearchPage() {
             </div>
 
             <div className="flex-1 min-h-0 overflow-hidden relative">
-                <div className="h-full flex flex-col md:flex-row md:gap-8 max-w-7xl mx-auto md:p-4">
+                <div className="h-full min-h-0 overflow-hidden flex flex-col md:flex-row md:gap-8 max-w-7xl mx-auto md:p-4">
 
-                    {/* FILTERS COLUMN */}
+                    {/* FILTERS COLUMN - Now with internal scroll and fixed button */}
                     <div className={cn(
-                        "md:w-80 md:shrink-0 md:border-r md:pr-8 overflow-y-auto bg-white dark:bg-gray-950 md:bg-transparent transition-all duration-300 ease-in-out",
-                        "w-full md:static",
-                        showResults ? "hidden md:block" : "block p-4"
+                        "md:w-80 md:shrink-0 md:border-r md:pr-8 bg-white dark:bg-gray-950 md:bg-transparent transition-all duration-300 ease-in-out flex flex-col",
+                        "w-full md:static h-full min-h-0",
+                        showResults ? "hidden md:flex" : "flex"
                     )}>
-                        <div className="space-y-6 pb-4 md:pb-0">
+                        {/* Scrollable filters area */}
+                        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-0 pb-24 md:pb-0 max-h-[calc(100dvh-12rem)]">
                             <div className="space-y-4">
                                 <h3 className="font-semibold flex items-center text-lg">
                                     <Search className="w-5 h-5 mr-2" />
@@ -394,7 +421,7 @@ export default function SearchPage() {
 
                                 {/* Pagination Controls */}
                                 {filteredClients.length > 0 && totalPages > 1 && (
-                                    <div className="absolute bottom-16 left-0 right-0 flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent">
+                                    <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none">
                                         <button
                                             onClick={() => handlePageChange(currentPage - 1)}
                                             disabled={currentPage === 1}
@@ -422,9 +449,9 @@ export default function SearchPage() {
                 </div>
             </div>
 
-            {/* Mobile "Show Results" Button (When in Filters View) */}
+            {/* Mobile "Show Results" Button - Fixed above bottom nav */}
             {!showResults && (
-                <div className="md:hidden fixed bottom-22 left-0 right-0 p-4 z-50">
+                <div className="md:hidden fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] p-4 z-50 bg-gradient-to-t from-white via-white to-transparent dark:from-gray-950 dark:via-gray-950 pt-8">
                     <button
                         id="tour-mobile-show-results-btn"
                         onClick={() => {
