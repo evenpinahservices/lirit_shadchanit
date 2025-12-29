@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { AutomaticMatchingModal } from "./AutomaticMatchingModal";
 import { findMatches } from "@/lib/matchingUtils";
 import { MultiSelect } from "@/components/ui/MultiSelect";
+import { HDate, gematriya } from "hdate";
 
 const GENDER_OPTIONS = ["Male", "Female"];
 const RELIGIOUS_AFFILIATION_OPTIONS = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
@@ -24,7 +25,11 @@ const HEAD_COVERING_OPTIONS = ["N/A", "None", "Wig", "Tichel", "Hat", "Scarf", "
 const SMOKING_OPTIONS = ["No", "Yes", "Occasionally", "Vape"];
 const LANGUAGES_OPTIONS = ["English", "Hebrew", "French", "Spanish", "Yiddish", "Russian", "Portuguese", "German"];
 const EYE_COLOR_OPTIONS = ["Brown", "Blue", "Green", "Hazel", "Grey", "Other"];
+
 const HAIR_COLOR_OPTIONS = ["Black", "Brown", "Blonde", "Red", "Grey", "Bald", "White", "Other"];
+
+const HEBREW_MONTHS = ["Tishrei", "Cheshvan", "Kislev", "Tevet", "Shevat", "Adar", "Adar I", "Adar II", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul"];
+
 
 const AGE_GAP_OPTIONS = ["I don't mind", "1-2 years", "3-5 years", "5-10 years", "Any"];
 const WILLING_TO_RELOCATE_OPTIONS = ["Yes", "No", "Maybe"];
@@ -117,7 +122,39 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
     const [isSubmitReady, setIsSubmitReady] = useState(false);
     const [showMatchModal, setShowMatchModal] = useState(false);
     const [matchResults, setMatchResults] = useState<Client[]>([]);
+
     const [createdClient, setCreatedClient] = useState<Client | null>(null);
+
+    // Date Logic - Flexible DOB
+    const [dateMode, setDateMode] = useState<"Gregorian" | "Hebrew" | "Year">("Gregorian");
+    const [hebrewDateState, setHebrewDateState] = useState({ day: 1, month: "Tishrei", year: 5785 });
+
+    // Initialize date mode based on existing dob
+    useEffect(() => {
+        if (client?.dob) {
+            if (/^\d{4}$/.test(client.dob)) {
+                setDateMode("Year");
+            } else if (client.dob.includes("Hebrew:")) {
+                setDateMode("Hebrew");
+                const parts = client.dob.replace("Hebrew: ", "").split(" ");
+                if (parts.length === 3) {
+                    setHebrewDateState({ day: parseInt(parts[0]), month: parts[1], year: parseInt(parts[2]) });
+                }
+            } else {
+                setDateMode("Gregorian");
+            }
+        }
+    }, [client]);
+
+    const updateHebrewDate = (field: keyof typeof hebrewDateState, value: any) => {
+        const newState = { ...hebrewDateState, [field]: value };
+        setHebrewDateState(newState);
+        setValue("dob", `Hebrew: ${newState.day} ${newState.month} ${newState.year}`);
+    };
+
+
+
+
 
     // Reset submit ready state when stepping back or forward, but trigger it for the last step
     useEffect(() => {
@@ -308,8 +345,86 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                         {errors.phone && <p className="text-red-500 text-xs">{errors.phone?.message}</p>}
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">Date of Birth</label>
-                                        <input type="date" {...register("dob")} className="w-full p-2 border rounded-md dark:bg-gray-900" />
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-sm font-medium">Date of Birth</label>
+                                            <div className="flex bg-gray-100 dark:bg-gray-800 rounded-md p-0.5 text-xs">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setDateMode("Gregorian");
+                                                        setValue("dob", "");
+                                                    }}
+                                                    className={`px-2 py-1 rounded-sm transition-colors ${dateMode === "Gregorian" ? "bg-white dark:bg-gray-600 shadow-sm font-medium" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+                                                >
+                                                    Gregorian
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setDateMode("Year");
+                                                        setValue("dob", new Date().getFullYear().toString());
+                                                    }}
+                                                    className={`px-2 py-1 rounded-sm transition-colors ${dateMode === "Year" ? "bg-white dark:bg-gray-600 shadow-sm font-medium" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+                                                >
+                                                    Year Only
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setDateMode("Hebrew");
+                                                        setValue("dob", `Hebrew: ${hebrewDateState.day} ${hebrewDateState.month} ${hebrewDateState.year}`);
+                                                    }}
+                                                    className={`px-2 py-1 rounded-sm transition-colors ${dateMode === "Hebrew" ? "bg-white dark:bg-gray-600 shadow-sm font-medium" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+                                                >
+                                                    Hebrew
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {dateMode === "Gregorian" && (
+                                            <input type="date" {...register("dob")} className="w-full p-2 border rounded-md dark:bg-gray-900" />
+                                        )}
+
+                                        {dateMode === "Year" && (
+                                            <input
+                                                type="number"
+                                                placeholder="YYYY"
+                                                min="1900"
+                                                max="2100"
+                                                {...register("dob")}
+                                                className="w-full p-2 border rounded-md dark:bg-gray-900"
+                                            />
+                                        )}
+
+                                        {dateMode === "Hebrew" && (
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <select
+                                                    value={hebrewDateState.day}
+                                                    onChange={(e) => updateHebrewDate("day", parseInt(e.target.value))}
+                                                    className="p-2 border rounded-md dark:bg-gray-900"
+                                                >
+                                                    {Array.from({ length: 30 }, (_, i) => i + 1).map(d => (
+                                                        <option key={d} value={d}>{d}</option>
+                                                    ))}
+                                                </select>
+                                                <select
+                                                    value={hebrewDateState.month}
+                                                    onChange={(e) => updateHebrewDate("month", e.target.value)}
+                                                    className="p-2 border rounded-md dark:bg-gray-900"
+                                                >
+                                                    {HEBREW_MONTHS.map(m => (
+                                                        <option key={m} value={m}>{m}</option>
+                                                    ))}
+                                                </select>
+                                                <input
+                                                    type="number"
+                                                    value={hebrewDateState.year}
+                                                    onChange={(e) => updateHebrewDate("year", parseInt(e.target.value))}
+                                                    className="p-2 border rounded-md dark:bg-gray-900"
+                                                    placeholder="Year (e.g. 5785)"
+                                                />
+                                            </div>
+                                        )}
                                         {errors.dob && <p className="text-red-500 text-xs">{errors.dob?.message}</p>}
                                     </div>
                                     <div className="space-y-2">
@@ -326,6 +441,7 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                         {errors.location && <p className="text-red-500 text-xs">{errors.location?.message}</p>}
                                     </div>
                                 </div>
+
                             </div>
                         )}
 
@@ -679,8 +795,8 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                             </button>
                         )}
                     </div>
-                </form>
-            </div>
+                </form >
+            </div >
 
             {createdClient && (
                 <AutomaticMatchingModal
@@ -690,7 +806,8 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                     matches={matchResults}
                     newClient={createdClient}
                 />
-            )}
+            )
+            }
         </>
     );
 }

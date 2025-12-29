@@ -39,6 +39,25 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
 
     const calculateAge = (dob: string) => {
         if (!dob) return "N/A";
+
+        // Handle Year Only (YYYY)
+        if (/^\d{4}$/.test(dob)) {
+            return new Date().getFullYear() - parseInt(dob);
+        }
+
+        // Handle Hebrew Date
+        if (dob.includes("Hebrew:")) {
+            // Extract year from "Hebrew: Day Month Year"
+            const parts = dob.trim().split(" ");
+            const hebrewYear = parseInt(parts[parts.length - 1]);
+            // Approximate Gregorian year: Hebrew Year - 3760
+            if (!isNaN(hebrewYear)) {
+                return new Date().getFullYear() - (hebrewYear - 3760);
+            }
+            return "N/A";
+        }
+
+        // Handle Standard Date (YYYY-MM-DD)
         const birthDate = new Date(dob);
         const ageDifMs = Date.now() - birthDate.getTime();
         const ageDate = new Date(ageDifMs);
