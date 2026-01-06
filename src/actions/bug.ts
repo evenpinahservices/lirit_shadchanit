@@ -57,10 +57,11 @@ export async function submitBugReport(data: BugReportData): Promise<{ success: b
     }
 }
 
-export async function getBugReports(): Promise<IBugReport[]> {
+export async function getBugReports(includeArchived: boolean = false): Promise<IBugReport[]> {
     try {
         await dbConnect();
-        const reports = await BugReport.find().sort({ createdAt: -1 }).lean();
+        const query = includeArchived ? {} : { archived: { $ne: true } };
+        const reports = await BugReport.find(query).sort({ createdAt: -1 }).lean();
         return JSON.parse(JSON.stringify(reports));
     } catch (error) {
         console.error("Error fetching bug reports:", error);
@@ -74,10 +75,50 @@ export async function updateBugReportStatus(
 ): Promise<{ success: boolean }> {
     try {
         await dbConnect();
-        await BugReport.findByIdAndUpdate(id, { status });
+        const updateData: any = { status };
+        
+        // Automatically archive when status is set to "resolved"
+        if (status === "resolved") {
+            updateData.archived = true;
+            updateData.archivedAt = new Date();
+        } else {
+            // Unarchive if status is changed from resolved to something else
+            updateData.archived = false;
+            updateData.archivedAt = undefined;
+        }
+        
+        await BugReport.findByIdAndUpdate(id, updateData);
         return { success: true };
     } catch (error) {
         console.error("Error updating bug report status:", error);
+        return { success: false };
+    }
+}
+
+export async function archiveBugReport(id: string): Promise<{ success: boolean }> {
+    try {
+        await dbConnect();
+        await BugReport.findByIdAndUpdate(id, { 
+            archived: true, 
+            archivedAt: new Date() 
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error archiving bug report:", error);
+        return { success: false };
+    }
+}
+
+export async function unarchiveBugReport(id: string): Promise<{ success: boolean }> {
+    try {
+        await dbConnect();
+        await BugReport.findByIdAndUpdate(id, { 
+            archived: false, 
+            archivedAt: undefined 
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error unarchiving bug report:", error);
         return { success: false };
     }
 }

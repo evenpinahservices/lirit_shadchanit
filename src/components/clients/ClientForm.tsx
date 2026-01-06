@@ -7,13 +7,16 @@ import { Client, ClientSchema } from "@/lib/mockData";
 import { useClients } from "@/context/ClientContext";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Loader2, ChevronLeft, ChevronRight, Check, UploadCloud, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, UploadCloud, X } from "lucide-react";
+import { CircularProgress } from "@/components/ui/CircularProgress";
+import { useUploadWithProgress } from "@/hooks/useUploadWithProgress";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { AutomaticMatchingModal } from "./AutomaticMatchingModal";
 import { findMatches } from "@/lib/matchingUtils";
 import { MultiSelect } from "@/components/ui/MultiSelect";
 import { DateCarousel } from "@/components/ui/DateCarousel";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
 const GENDER_OPTIONS = ["Male", "Female"];
 const RELIGIOUS_AFFILIATION_OPTIONS = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
@@ -115,10 +118,19 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
         defaultValues,
     });
 
-    const { addClient, updateClient, isUploading, uploadImage, clients } = useClients();
+    const { addClient, updateClient, clients } = useClients();
     const router = useRouter();
     const [currentStep, setCurrentStep] = useState(0);
+    const [uploadError, setUploadError] = useState<string | null>(null);
     const [isSubmitReady, setIsSubmitReady] = useState(false);
+    
+    // Upload progress tracking
+    const profileUpload = useUploadWithProgress();
+    const galleryUpload = useUploadWithProgress();
+    const [currentUploadFile, setCurrentUploadFile] = useState<File | null>(null);
+    const [galleryUploadFile, setGalleryUploadFile] = useState<File | null>(null);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<"profile" | { type: "gallery"; index: number } | null>(null);
     const [showMatchModal, setShowMatchModal] = useState(false);
     const [matchResults, setMatchResults] = useState<Client[]>([]);
 
@@ -126,6 +138,8 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
 
     // Date Logic - Flexible DOB
     const [dateMode, setDateMode] = useState<"Gregorian" | "Hebrew" | "Year">("Gregorian");
+    const currentDob = watch("dob");
+    
     // Initialize date mode based on existing dob
     useEffect(() => {
         if (client?.dob) {
@@ -138,6 +152,83 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
             }
         }
     }, [client]);
+
+    // Helper function to convert between date formats
+    const convertDateFormat = (currentDob: string, fromMode: "Gregorian" | "Hebrew" | "Year", toMode: "Gregorian" | "Hebrew" | "Year"): string => {
+        if (!currentDob || currentDob.trim() === "") {
+            return "";
+        }
+
+        // Year mode - just extract year
+        if (fromMode === "Year") {
+            const year = parseInt(currentDob);
+            if (isNaN(year)) return "";
+            
+            if (toMode === "Year") return currentDob;
+            if (toMode === "Gregorian") {
+                // Use January 1st as default
+                return `${year}-01-01`;
+            }
+            if (toMode === "Hebrew") {
+                // Convert to Hebrew year (approximate)
+                const hebrewYear = year + 3760;
+                return `Hebrew: א תשרי ${hebrewYear}`;
+            }
+        }
+
+        // Gregorian mode
+        if (fromMode === "Gregorian") {
+            if (toMode === "Gregorian") return currentDob;
+            
+            const date = new Date(currentDob);
+            if (isNaN(date.getTime())) return "";
+            
+            const year = date.getFullYear();
+            
+            if (toMode === "Year") {
+                return year.toString();
+            }
+            if (toMode === "Hebrew") {
+                // Approximate conversion: Gregorian + 3760
+                const hebrewYear = year + 3760;
+                // Use first day of first month as default
+                return `Hebrew: א תשרי ${hebrewYear}`;
+            }
+        }
+
+        // Hebrew mode
+        if (fromMode === "Hebrew") {
+            if (toMode === "Hebrew") return currentDob;
+            
+            // Parse Hebrew date: "Hebrew: Day Month Year"
+            const parts = currentDob.replace("Hebrew: ", "").split(" ");
+            if (parts.length < 3) return "";
+            
+            // Extract year (could be Hebrew numerals or numeric)
+            let hebrewYearStr = parts[2];
+            // Try to extract numeric year from Hebrew numerals
+            // For now, use approximate conversion
+            let numericYear = parseInt(hebrewYearStr);
+            if (isNaN(numericYear)) {
+                // If it's Hebrew numerals, approximate: remove thousands marker and convert
+                // This is a simplified conversion
+                numericYear = 5785; // Default fallback
+            }
+            
+            // Convert Hebrew year to Gregorian (approximate)
+            const gregorianYear = numericYear - 3760;
+            
+            if (toMode === "Year") {
+                return gregorianYear.toString();
+            }
+            if (toMode === "Gregorian") {
+                // Use January 1st as default
+                return `${gregorianYear}-01-01`;
+            }
+        }
+
+        return currentDob;
+    };
 
 
 
@@ -180,17 +271,76 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
         const file = e.target.files?.[0];
         if (!file) return;
 
+        setUploadError(null);
+        setCurrentUploadFile(file);
+
         try {
-            const uploadedUrl = await uploadImage(file);
-            if (uploadedUrl) {
-                setValue("photoUrl", uploadedUrl);
+            const result = await profileUpload.uploadWithProgress(file);
+            
+            if (result.url) {
+                const newPhotoUrl = result.url;
+                setValue("photoUrl", newPhotoUrl);
+                setUploadError(null);
+                trigger("photoUrl");
+                
+                // Auto-save: If editing, save immediately to database
+                if (isEditing && client) {
+                    try {
+                        await updateClient(client.id, { photoUrl: newPhotoUrl });
+                    } catch (err) {
+                        console.error("Failed to auto-save photo:", err);
+                    }
+                }
             } else {
-                alert("Failed to upload image.");
+                const errorMsg = result.error || "Failed to upload image.";
+                setUploadError(errorMsg);
+                console.error("Upload error:", errorMsg);
             }
         } catch (error) {
             console.error("Failed to upload image:", error);
-            alert("Failed to upload image. Please try again.");
+            setUploadError("Failed to upload image. Please try again.");
+        } finally {
+            setCurrentUploadFile(null);
         }
+        // Reset the input so the same file can be selected again if needed
+        e.target.value = "";
+    };
+
+    const handleDeletePhoto = () => {
+        setDeleteTarget("profile");
+        setDeleteConfirmOpen(true);
+    };
+
+    const confirmDeletePhoto = async () => {
+        if (deleteTarget === "profile") {
+            setValue("photoUrl", "");
+            trigger("photoUrl");
+            
+            // Auto-save: If editing, save immediately to database
+            if (isEditing && client) {
+                try {
+                    await updateClient(client.id, { photoUrl: "" });
+                } catch (err) {
+                    console.error("Failed to auto-save photo deletion:", err);
+                }
+            }
+        } else if (deleteTarget && deleteTarget.type === "gallery") {
+            const current = watch("galleryImages") || [];
+            const updated = current.filter((_, i) => i !== deleteTarget.index);
+            setValue("galleryImages", updated);
+            trigger("galleryImages");
+            
+            // Auto-save: If editing, save immediately to database
+            if (isEditing && client) {
+                try {
+                    await updateClient(client.id, { galleryImages: updated });
+                } catch (err) {
+                    console.error("Failed to auto-save gallery deletion:", err);
+                }
+            }
+        }
+        setDeleteConfirmOpen(false);
+        setDeleteTarget(null);
     };
 
     const nextStep = async () => {
@@ -338,8 +488,9 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                                 <button
                                                     type="button"
                                                     onClick={() => {
+                                                        const converted = convertDateFormat(currentDob || "", dateMode, "Gregorian");
                                                         setDateMode("Gregorian");
-                                                        setValue("dob", "");
+                                                        setValue("dob", converted);
                                                     }}
                                                     className={`px-2 py-1 rounded-sm transition-colors ${dateMode === "Gregorian" ? "bg-white dark:bg-gray-600 shadow-sm font-medium" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
                                                 >
@@ -348,8 +499,9 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                                 <button
                                                     type="button"
                                                     onClick={() => {
+                                                        const converted = convertDateFormat(currentDob || "", dateMode, "Year");
                                                         setDateMode("Year");
-                                                        setValue("dob", new Date().getFullYear().toString());
+                                                        setValue("dob", converted || new Date().getFullYear().toString());
                                                     }}
                                                     className={`px-2 py-1 rounded-sm transition-colors ${dateMode === "Year" ? "bg-white dark:bg-gray-600 shadow-sm font-medium" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
                                                 >
@@ -358,8 +510,9 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                                 <button
                                                     type="button"
                                                     onClick={() => {
+                                                        const converted = convertDateFormat(currentDob || "", dateMode, "Hebrew");
                                                         setDateMode("Hebrew");
-                                                        setValue("dob", `Hebrew: ${hebrewDateState.day} ${hebrewDateState.month} ${hebrewDateState.year}`);
+                                                        setValue("dob", converted || `Hebrew: א תשרי ${new Date().getFullYear() + 3760}`);
                                                     }}
                                                     className={`px-2 py-1 rounded-sm transition-colors ${dateMode === "Hebrew" ? "bg-white dark:bg-gray-600 shadow-sm font-medium" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
                                                 >
@@ -406,20 +559,49 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                 <div className="space-y-4">
                                     <label className="text-sm font-medium block">Profile Photo</label>
                                     <div className="flex items-center gap-4">
-                                        <div className="relative w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden border">
+                                        <div className="relative w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 overflow-visible border">
                                             {watchedPhotoUrl ? (
-                                                <Image src={watchedPhotoUrl || ""} alt="Preview" fill className="object-cover" />
+                                                <>
+                                                    <div className="w-full h-full rounded-full overflow-hidden">
+                                                        <Image src={watchedPhotoUrl || ""} alt="Preview" fill className="object-cover" />
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleDeletePhoto}
+                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors shadow-lg z-10 flex items-center justify-center"
+                                                        title="Delete photo"
+                                                    >
+                                                        <X className="h-2.5 w-2.5" />
+                                                    </button>
+                                                </>
                                             ) : (
                                                 <div className="flex items-center justify-center h-full text-gray-400">No Img</div>
                                             )}
                                         </div>
                                         <div className="flex-1">
-                                            <label className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 w-full mb-2">
-                                                <UploadCloud className="mr-2 h-4 w-4" />
-                                                <span>{isUploading ? "Uploading..." : "Upload New Photo"}</span>
-                                                <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} disabled={isUploading} />
+                                            <label className="relative inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 w-full mb-2 disabled:opacity-50 disabled:cursor-not-allowed" style={{ pointerEvents: profileUpload.isUploading ? 'none' : 'auto' }}>
+                                                {profileUpload.isUploading ? (
+                                                    <CircularProgress 
+                                                        progress={profileUpload.progress} 
+                                                        size={20} 
+                                                        strokeWidth={2.5}
+                                                        showPercentage={currentUploadFile ? profileUpload.isLargeFile(currentUploadFile) : false}
+                                                        className="mr-2"
+                                                    />
+                                                ) : (
+                                                    <UploadCloud className="mr-2 h-4 w-4" />
+                                                )}
+                                                <span>
+                                                    {profileUpload.isUploading 
+                                                        ? "Uploading..." 
+                                                        : "Upload New Photo"}
+                                                </span>
+                                                <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} disabled={profileUpload.isUploading} />
                                             </label>
-                                            <p className="text-xs text-gray-500">JPG, PNG up to 5MB</p>
+                                            <p className="text-xs text-gray-500">JPG, PNG up to 10MB</p>
+                                            {uploadError && (
+                                                <p className="text-xs text-red-500 mt-1">{uploadError}</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -456,42 +638,96 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        const current = watch("galleryImages") || [];
-                                                        setValue("galleryImages", current.filter((_, i) => i !== idx));
+                                                        setDeleteTarget({ type: "gallery", index: idx });
+                                                        setDeleteConfirmOpen(true);
                                                     }}
-                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5"
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors"
                                                 >
                                                     <X className="h-3 w-3" />
                                                 </button>
                                             </div>
                                         ))}
-                                        <label className="flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed border-gray-300 hover:border-gray-400 cursor-pointer bg-gray-50 dark:bg-gray-900">
-                                            <UploadCloud className="h-6 w-6 text-gray-400" />
-                                            <span className="text-xs text-gray-500 mt-1">Add</span>
-                                            <input
-                                                type="file"
-                                                className="hidden"
-                                                accept="image/*"
-                                                multiple
-                                                onChange={async (e) => {
-                                                    const files = Array.from(e.target.files || []);
-                                                    if (files.length === 0) return;
+                                        <div className="flex flex-col">
+                                            <label className="relative flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed border-gray-300 hover:border-gray-400 cursor-pointer bg-gray-50 dark:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed" style={{ pointerEvents: galleryUpload.isUploading ? 'none' : 'auto' }}>
+                                                {galleryUpload.isUploading ? (
+                                                    <>
+                                                        <CircularProgress 
+                                                            progress={galleryUpload.progress} 
+                                                            size={28} 
+                                                            strokeWidth={3}
+                                                            showPercentage={galleryUploadFile ? galleryUpload.isLargeFile(galleryUploadFile) : false}
+                                                        />
+                                                        <span className="text-xs text-gray-500 mt-1">Uploading...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <UploadCloud className="h-6 w-6 text-gray-400" />
+                                                        <span className="text-xs text-gray-500 mt-1">Add</span>
+                                                    </>
+                                                )}
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    multiple
+                                                    disabled={galleryUpload.isUploading}
+                                                    onChange={async (e) => {
+                                                        const files = Array.from(e.target.files || []);
+                                                        if (files.length === 0) return;
 
-                                                    // Upload one by one
-                                                    for (const file of files) {
-                                                        try {
-                                                            const url = await uploadImage(file);
-                                                            if (url) {
-                                                                const updated = [...(watch("galleryImages") || []), url];
-                                                                setValue("galleryImages", updated);
+                                                        setUploadError(null);
+
+                                                        // Upload one by one
+                                                        const uploadedUrls: string[] = [];
+                                                        for (const file of files) {
+                                                            setGalleryUploadFile(file);
+                                                            try {
+                                                                const result = await galleryUpload.uploadWithProgress(file);
+                                                                if (result.url) {
+                                                                    uploadedUrls.push(result.url);
+                                                                    setUploadError(null); // Clear errors on success
+                                                                } else {
+                                                                    const errorMsg = result.error || "Failed to upload image.";
+                                                                    setUploadError(errorMsg);
+                                                                    console.error("Upload error:", errorMsg);
+                                                                    break; // Stop uploading remaining files if one fails
+                                                                }
+                                                            } catch (err: any) {
+                                                                console.error("Upload failed", err);
+                                                                const errorMsg = err?.message || "Failed to upload image. Please try again.";
+                                                                setUploadError(errorMsg);
+                                                                break;
                                                             }
-                                                        } catch (err) {
-                                                            console.error("Upload failed", err);
                                                         }
-                                                    }
-                                                }}
-                                            />
-                                        </label>
+
+                                                        // Update gallery images with all uploaded URLs
+                                                        if (uploadedUrls.length > 0) {
+                                                            const current = watch("galleryImages") || [];
+                                                            const updated = [...current, ...uploadedUrls];
+                                                            setValue("galleryImages", updated);
+                                                            trigger("galleryImages");
+                                                            
+                                                            // Auto-save: If editing, save immediately to database
+                                                            if (isEditing && client) {
+                                                                try {
+                                                                    await updateClient(client.id, { galleryImages: updated });
+                                                                } catch (err) {
+                                                                    console.error("Failed to auto-save gallery images:", err);
+                                                                }
+                                                            }
+                                                        }
+                                                        
+                                                        setGalleryUploadFile(null);
+                                                        galleryUpload.reset();
+                                                        // Reset the input so the same files can be selected again if needed
+                                                        e.target.value = "";
+                                                    }}
+                                                />
+                                            </label>
+                                            {uploadError && (
+                                                <p className="text-xs text-red-500 mt-1 text-center">{uploadError}</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -810,8 +1046,23 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                     matches={matchResults}
                     newClient={createdClient}
                 />
-            )
-            }
+            )}
+
+            <ConfirmationModal
+                isOpen={deleteConfirmOpen}
+                onClose={() => {
+                    setDeleteConfirmOpen(false);
+                    setDeleteTarget(null);
+                }}
+                onConfirm={confirmDeletePhoto}
+                title="Delete Image"
+                message={deleteTarget === "profile" 
+                    ? "Are you sure you want to delete the profile photo? This action cannot be undone."
+                    : "Are you sure you want to delete this image? This action cannot be undone."}
+                confirmText="Delete"
+                cancelText="Cancel"
+                isDangerous={true}
+            />
         </>
     );
 }

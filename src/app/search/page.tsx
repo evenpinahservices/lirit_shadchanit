@@ -6,7 +6,7 @@ import { useClients } from "@/context/ClientContext";
 import { Client } from "@/lib/mockData";
 import { Search, MapPin, Briefcase, Filter, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn, compareLocations } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/MultiSelect";
 
 export default function SearchPage() {
@@ -17,6 +17,10 @@ export default function SearchPage() {
 
     // View State
     const [showResults, setShowResults] = useState(false);
+
+    // Note: Auto-fullscreen is NOT enabled by default
+    // It only activates if user explicitly enables it via: localStorage.setItem('autoFullscreen', 'true')
+    // This is an opt-in feature, not automatic
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -99,9 +103,9 @@ export default function SearchPage() {
             results = results.filter((c) => c.gender === gender);
         }
 
-        // Location filter
+        // Location filter (Hebrew-aware)
         if (location) {
-            results = results.filter((c) => c.location.toLowerCase().includes(location.toLowerCase()));
+            results = results.filter((c) => compareLocations(c.location, location));
         }
 
         // Age filter

@@ -36,11 +36,14 @@ export function SearchableSelect({
     // We initialize it with the selected label if present, or empty string.
     // However, user interaction (typing) updates this independent of 'value' prop temporarily.
     const [inputValue, setInputValue] = React.useState(selectedOption?.label || "");
+    const [isTyping, setIsTyping] = React.useState(false);
 
-    // Sync input with external value changes
+    // Sync input with external value changes only if user is not actively typing
     React.useEffect(() => {
-        setInputValue(selectedOption?.label || "");
-    }, [value, selectedOption]);
+        if (!isTyping) {
+            setInputValue(selectedOption?.label || "");
+        }
+    }, [value, selectedOption, isTyping]);
 
     // Handle click outside
     React.useEffect(() => {
@@ -85,14 +88,39 @@ export function SearchableSelect({
                     placeholder={placeholder}
                     value={inputValue}
                     onChange={(e) => {
-                        setInputValue(e.target.value);
+                        const newValue = e.target.value;
+                        setInputValue(newValue);
+                        setIsTyping(true);
                         setIsOpen(true);
-                        // If cleared, notify parent?
-                        if (e.target.value === "") {
+                        // If cleared, notify parent
+                        if (newValue === "") {
                             onChange("");
                         }
+                        // Allow typing to filter even when a value is selected
+                        // Don't clear the selected value until user selects a new option
                     }}
-                    onFocus={() => setIsOpen(true)}
+                    onClick={(e) => {
+                        // Reset search field when clicking - clear input to allow fresh search
+                        if (selectedOption && inputValue === selectedOption.label) {
+                            setInputValue("");
+                            setIsTyping(true);
+                        }
+                        setIsOpen(true);
+                    }}
+                    onFocus={() => {
+                        setIsOpen(true);
+                        setIsTyping(true);
+                        // When focused, if there's a selected value, clear it to allow fresh search
+                        if (selectedOption && inputValue === selectedOption.label) {
+                            setInputValue("");
+                        }
+                    }}
+                    onBlur={() => {
+                        // Reset typing state after a short delay to allow click events
+                        setTimeout(() => {
+                            setIsTyping(false);
+                        }, 200);
+                    }}
                     disabled={disabled}
                 />
                 <ChevronDown className="absolute right-3 top-3 h-4 w-4 opacity-50 pointer-events-none" />

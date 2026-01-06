@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getBugReports, updateBugReportStatus } from "@/actions/bug";
-import { Bug, ExternalLink, CheckCircle, Eye, Clock, ChevronLeft } from "lucide-react";
+import { Bug, ExternalLink, CheckCircle, Eye, Clock, ChevronLeft, Archive, ArchiveRestore } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,8 @@ interface BugReportData {
         userRole: string;
     };
     status: "new" | "reviewed" | "resolved";
+    archived: boolean;
+    archivedAt?: string;
     createdAt: string;
 }
 
@@ -29,6 +31,7 @@ export default function BugReportsPage() {
     const [reports, setReports] = useState<BugReportData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedReport, setSelectedReport] = useState<BugReportData | null>(null);
+    const [showArchived, setShowArchived] = useState(false);
     const { user } = useAuth();
     const router = useRouter();
 
@@ -48,11 +51,11 @@ export default function BugReportsPage() {
             loadReports();
         };
         checkAuth();
-    }, [router]);
+    }, [router, showArchived]);
 
     const loadReports = async () => {
         setIsLoading(true);
-        const data = await getBugReports();
+        const data = await getBugReports(showArchived);
         setReports(data as any[]);
         setIsLoading(false);
     };
@@ -102,16 +105,43 @@ export default function BugReportsPage() {
                     <Bug className="h-8 w-8 text-orange-500" />
                     <div>
                         <h1 className="text-2xl font-bold">Bug Reports</h1>
-                        <p className="text-sm text-muted-foreground">{reports.length} reports total</p>
+                        <p className="text-sm text-muted-foreground">
+                            {reports.length} {showArchived ? "archived" : "active"} reports
+                        </p>
                     </div>
                 </div>
-                <Link
-                    href="/"
-                    className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                >
-                    <ChevronLeft className="h-4 w-4" />
-                    Back to Dashboard
-                </Link>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => {
+                            setShowArchived(!showArchived);
+                            setSelectedReport(null);
+                        }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                            showArchived
+                                ? "bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-800"
+                        }`}
+                    >
+                        {showArchived ? (
+                            <>
+                                <ArchiveRestore className="h-4 w-4" />
+                                Show Active
+                            </>
+                        ) : (
+                            <>
+                                <Archive className="h-4 w-4" />
+                                Show Archived
+                            </>
+                        )}
+                    </button>
+                    <Link
+                        href="/"
+                        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                        Back to Dashboard
+                    </Link>
+                </div>
             </div>
 
             <div className="flex-1 min-h-0 flex gap-4">
@@ -119,7 +149,7 @@ export default function BugReportsPage() {
                 <div className="w-1/3 overflow-y-auto border rounded-lg bg-white dark:bg-gray-950">
                     {reports.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground">
-                            No bug reports yet.
+                            {showArchived ? "No archived bug reports." : "No bug reports yet."}
                         </div>
                     ) : (
                         <div className="divide-y">
@@ -127,14 +157,27 @@ export default function BugReportsPage() {
                                 <button
                                     key={report._id}
                                     onClick={() => setSelectedReport(report)}
-                                    className={`w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors ${selectedReport && (selectedReport as any)._id === report._id ? "bg-orange-50 dark:bg-orange-900/20" : ""
-                                        }`}
+                                    className={`w-full p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors ${
+                                        selectedReport && (selectedReport as any)._id === report._id 
+                                            ? "bg-orange-50 dark:bg-orange-900/20" 
+                                            : ""
+                                    } ${report.archived ? "opacity-60" : ""}`}
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium truncate">{report.metadata.pathname}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-medium truncate">{report.metadata.pathname}</p>
+                                                {report.archived && (
+                                                    <Archive className="h-3 w-3 text-gray-400" />
+                                                )}
+                                            </div>
                                             <p className="text-sm text-muted-foreground truncate">{report.description}</p>
-                                            <p className="text-xs text-gray-400 mt-1">{formatDate(report.createdAt)}</p>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                {formatDate(report.createdAt)}
+                                                {report.archivedAt && (
+                                                    <span className="ml-2">• Archived {formatDate(report.archivedAt)}</span>
+                                                )}
+                                            </p>
                                         </div>
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${getStatusColor(report.status)}`}>
                                             {getStatusIcon(report.status)}
@@ -201,7 +244,7 @@ export default function BugReportsPage() {
                             {/* Status Actions */}
                             <div>
                                 <h3 className="text-sm font-medium text-gray-500 mb-2">Status</h3>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 flex-wrap">
                                     <button
                                         onClick={() => handleStatusChange((selectedReport as any)._id, "new")}
                                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedReport.status === "new"
@@ -230,6 +273,17 @@ export default function BugReportsPage() {
                                         Resolved
                                     </button>
                                 </div>
+                                {selectedReport.archived && (
+                                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                        <p className="text-xs text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                                            <Archive className="h-3 w-3" />
+                                            This bug report has been archived. It was automatically archived when marked as resolved.
+                                            {selectedReport.archivedAt && (
+                                                <span className="ml-1">Archived on {formatDate(selectedReport.archivedAt)}</span>
+                                            )}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ) : (

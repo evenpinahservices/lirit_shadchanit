@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Increase body size limit for file uploads (10MB + buffer for processing)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '15mb', // Allow up to 15MB to account for processing overhead
+    },
+  },
 };
 
 export default nextConfig;

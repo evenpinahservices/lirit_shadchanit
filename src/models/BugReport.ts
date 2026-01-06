@@ -13,6 +13,8 @@ export interface IBugReport extends Document {
         userRole: string;
     };
     status: "new" | "reviewed" | "resolved";
+    archived: boolean;
+    archivedAt?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -40,6 +42,14 @@ const BugReportSchema = new Schema<IBugReport>(
             type: String,
             enum: ["new", "reviewed", "resolved"],
             default: "new",
+        },
+        archived: {
+            type: Boolean,
+            default: false,
+        },
+        archivedAt: {
+            type: Date,
+            required: false,
         },
     },
     { timestamps: true }

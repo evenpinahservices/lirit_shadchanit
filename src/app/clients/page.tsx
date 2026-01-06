@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
 export default function ClientsPage() {
-    const { clients, deleteClient } = useClients();
+    const { clients, deleteClient, error, clearError, isLoading } = useClients();
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(4);
@@ -80,6 +80,19 @@ export default function ClientsPage() {
 
     return (
         <div id="clients-page-root" className="flex flex-col h-full min-h-0 gap-4 overflow-hidden relative z-0">
+            {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="text-red-600 dark:text-red-400 font-medium">Error: {error}</span>
+                    </div>
+                    <button
+                        onClick={clearError}
+                        className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm font-medium"
+                    >
+                        Dismiss
+                    </button>
+                </div>
+            )}
             <div className="flex items-center justify-between shrink-0 px-1 pt-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Clients</h1>

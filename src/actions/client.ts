@@ -9,26 +9,33 @@ import { revalidatePath } from "next/cache";
 type ClientInput = Omit<Client, "id" | "createdAt">;
 
 export async function getClients(): Promise<Client[]> {
-    await dbConnect();
-    // We need to map _id to id string, which our Virtual does, 
-    // but for Server Actions serialization we often need to be explicit with `lean()` or JSON parsing
-    const clients = await ClientModel.find({}).sort({ createdAt: -1 }).lean();
+    try {
+        await dbConnect();
+        // We need to map _id to id string, which our Virtual does, 
+        // but for Server Actions serialization we often need to be explicit with `lean()` or JSON parsing
+        const clients = await ClientModel.find({}).sort({ createdAt: -1 }).lean();
 
-    return clients.map((doc: any) => {
-        const { _id, __v, ...rest } = doc;
-        return {
-            ...rest,
-            id: _id.toString(),
-            // Ensure arrays are arrays
-            religiousAffiliation: doc.religiousAffiliation || [],
-            languages: doc.languages || [],
-            ageGapPreference: doc.ageGapPreference || [],
-            preferredEthnicities: doc.preferredEthnicities || [],
-            preferredHashkafos: doc.preferredHashkafos || [],
-            preferredLearningStatus: doc.preferredLearningStatus || [],
-            preferredHeadCovering: doc.preferredHeadCovering || [],
-        } as Client;
-    });
+        return clients.map((doc: any) => {
+            const { _id, __v, ...rest } = doc;
+            return {
+                ...rest,
+                id: _id.toString(),
+                // Ensure arrays are arrays
+                religiousAffiliation: doc.religiousAffiliation || [],
+                languages: doc.languages || [],
+                ageGapPreference: doc.ageGapPreference || [],
+                preferredEthnicities: doc.preferredEthnicities || [],
+                preferredHashkafos: doc.preferredHashkafos || [],
+                preferredLearningStatus: doc.preferredLearningStatus || [],
+                preferredHeadCovering: doc.preferredHeadCovering || [],
+            } as Client;
+        });
+    } catch (error: any) {
+        console.error("Error in getClients:", error);
+        // Re-throw with a more descriptive error message for the client
+        const errorMessage = error?.message || "Failed to fetch clients";
+        throw new Error(errorMessage);
+    }
 }
 
 export async function createClient(data: ClientInput): Promise<Client> {

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Client } from "@/lib/mockData";
 import Image from "next/image";
 import { MapPin, Briefcase, Ruler, Heart, BookOpen, GraduationCap, Globe, Users, FileText, ChevronLeft, ChevronRight, User as UserIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getTextDirection } from "@/lib/utils";
 import { ImageGalleryModal } from "./ImageGalleryModal";
 
 interface ClientProfileViewProps {
@@ -15,10 +15,15 @@ const Field = ({ label, value }: { label: string; value: string | string[] | boo
     if (value === undefined || value === null || value === "") return null;
 
     let displayValue: React.ReactNode = value;
+    let textDirection: "rtl" | "ltr" = "ltr";
 
     if (Array.isArray(value)) {
         if (value.length === 0) return null;
         displayValue = value.join(", ");
+        // Check if any item in array contains Hebrew
+        textDirection = value.some(v => typeof v === "string" && getTextDirection(v) === "rtl") ? "rtl" : "ltr";
+    } else if (typeof value === "string") {
+        textDirection = getTextDirection(value);
     } else if (typeof value === "boolean") {
         displayValue = value ? "Yes" : "No";
     }
@@ -28,7 +33,13 @@ const Field = ({ label, value }: { label: string; value: string | string[] | boo
             <span className="block text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">
                 {label}
             </span>
-            <span className="block text-gray-900 dark:text-gray-100 font-medium text-base">
+            <span 
+                className={cn(
+                    "block text-gray-900 dark:text-gray-100 font-medium text-base",
+                    textDirection === "rtl" && "text-right"
+                )}
+                dir={textDirection}
+            >
                 {displayValue}
             </span>
         </div>
@@ -226,7 +237,15 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
             {/* Header / Top Card (Fixed Info) */}
             <div className="w-full bg-white dark:bg-gray-950 p-4 rounded-xl shrink-0">
                 <div className="flex flex-col items-center text-center space-y-3">
-                    <div className="relative w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-900 overflow-hidden border-2 border-gray-50 dark:border-gray-800 shadow-sm">
+                    <button
+                        onClick={() => {
+                            if (allImages.length > 0) {
+                                setIsGalleryOpen(true);
+                            }
+                        }}
+                        className="relative w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-900 overflow-hidden border-2 border-gray-50 dark:border-gray-800 shadow-sm hover:opacity-80 transition-opacity cursor-pointer"
+                        disabled={allImages.length === 0}
+                    >
                         {client.photoUrl ? (
                             <Image
                                 src={client.photoUrl}
@@ -241,21 +260,27 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                                 <UserIcon className="h-8 w-8" />
                             </div>
                         )}
-                    </div>
+                    </button>
 
                     {allImages.length > 0 && (
                         <button
                             onClick={() => setIsGalleryOpen(true)}
                             className="mt-2 text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100 font-medium hover:bg-blue-100 transition-colors"
                         >
-                            View Gallery ({allImages.length})
+                            View Resume ({allImages.length})
                         </button>
                     )}
 
                     <div>
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white">{client.fullName}</h1>
                         <div className="flex flex-wrap justify-center gap-2 mt-1 text-sm text-gray-600 dark:text-gray-400">
-                            <span className="flex items-center gap-1">
+                            <span 
+                                className={cn(
+                                    "flex items-center gap-1",
+                                    getTextDirection(client.location) === "rtl" && "flex-row-reverse"
+                                )}
+                                dir={getTextDirection(client.location)}
+                            >
                                 <MapPin className="h-3 w-3" /> {client.location}
                             </span>
                             <span className="hidden w-1 h-1 bg-gray-300 rounded-full sm:inline-block"></span>

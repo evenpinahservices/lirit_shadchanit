@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,14 +18,23 @@ export function Navbar() {
 
     // if (!user) return null; // Allow navbar to show for logged out users (for bug reporting)
 
+    // Check fullscreen state
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
+
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-            setIsFullscreen(true);
+            document.documentElement.requestFullscreen().catch(err => {
+                console.error('Error attempting to enable fullscreen:', err);
+            });
         } else {
             if (document.exitFullscreen) {
                 document.exitFullscreen();
-                setIsFullscreen(false);
             }
         }
     };
@@ -37,6 +46,11 @@ export function Navbar() {
         { href: "/search", label: "Search", icon: Search },
         { href: "/notes", label: "Notes", icon: StickyNote },
     ];
+
+    // Hide navbar on login page
+    if (pathname === "/login") {
+        return null;
+    }
 
     return (
         <nav className="border-b bg-white dark:bg-gray-950 px-4 py-3 sm:px-6 sm:py-4 sticky top-0 z-50 shadow-sm shrink-0">

@@ -8,6 +8,11 @@ import { LayoutDashboard, Users, Heart, Search, StickyNote } from "lucide-react"
 export function BottomNav() {
     const pathname = usePathname();
 
+    // Hide bottom nav on login page
+    if (pathname === "/login") {
+        return null;
+    }
+
     const links = [
         { href: "/", label: "Dashboard", icon: LayoutDashboard },
         { href: "/clients", label: "Clients", icon: Users },

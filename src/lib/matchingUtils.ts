@@ -1,4 +1,5 @@
 import { Client } from "./mockData";
+import { compareLocations } from "./utils";
 
 export const calculateAge = (dob: string) => {
     const birthDate = new Date(dob);
@@ -21,10 +22,10 @@ export function findMatches(client: Client, allClients: Client[]): Client[] {
         if (client.gender === "Male" && candidate.gender !== "Female") return false;
         if (client.gender === "Female" && candidate.gender !== "Male") return false;
 
-        // 2. Relocation
+        // 2. Relocation (Hebrew-aware location comparison)
         const clientRelocate = client.willingToRelocate?.toLowerCase();
         const candidateRelocate = candidate.willingToRelocate?.toLowerCase();
-        const sameLocation = client.location.toLowerCase().trim() === candidate.location.toLowerCase().trim();
+        const sameLocation = compareLocations(client.location, candidate.location);
 
         if (!sameLocation) {
             if (clientRelocate === "no" && candidateRelocate === "no") return false;

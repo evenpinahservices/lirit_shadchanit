@@ -5,7 +5,8 @@
 - **Page**: /login
 - **User**: Unknown (Unknown)
 - **Date**: 12/16/2025, 3:09:32 PM
-- **Status**: new
+- **Status**: resolved
+- **Note**: Mark as resolved
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1765890576/bug-reports/qlox0okwfirhhtfq8rd6.png)
 
 ---
@@ -16,6 +17,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 12/17/2025, 10:43:52 AM
 - **Status**: new
+- **Note**: Not sure what the issue is
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1765961033/bug-reports/mvxsuerak1qcqfobusqr.png)
 
 ---
@@ -26,6 +28,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 12/17/2025, 10:44:17 AM
 - **Status**: new
+- **Note**: Fix this later
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1765961058/bug-reports/dibyegyo4mjecruripyt.png)
 
 ---
@@ -36,6 +39,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 12/17/2025, 10:45:26 AM
 - **Status**: new
+- **Note**: Also later
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1765961127/bug-reports/hhyaoodsh6tqltqe9npn.png)
 
 ---
@@ -45,7 +49,8 @@
 - **Page**: /clients/new
 - **User**: Lirit Adam (admin)
 - **Date**: 12/17/2025, 10:46:01 AM
-- **Status**: new
+- **Status**: resolved
+- **Note**: Mark as resolved
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1765961164/bug-reports/ol9ympubffbflfocufrl.png)
 
 ---
@@ -55,7 +60,8 @@
 - **Page**: /
 - **User**: Lirit Adam (admin)
 - **Date**: 12/17/2025, 10:47:19 AM
-- **Status**: new
+- **Status**: resolved
+- **Note**: Resolved
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1765961240/bug-reports/wt7jwjgdyhtgedo2mpgc.png)
 
 ---
@@ -66,6 +72,7 @@
 - **User**: Unknown (Unknown)
 - **Date**: 12/17/2025, 10:47:36 AM
 - **Status**: new
+- **Note**: Do this
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1765961257/bug-reports/gyfmoc2uhp6qdzshirln.png)
 
 ---
@@ -76,6 +83,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 12/18/2025, 10:57:20 PM
 - **Status**: new
+- **Note**: Delete this is nonsense
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1766091440/bug-reports/bz45rhq8imubuwpot1qo.png)
 
 ---
@@ -85,7 +93,8 @@
 - **Page**: /clients/new
 - **User**: Lirit Adam (admin)
 - **Date**: 12/24/2025, 3:22:39 PM
-- **Status**: new
+- **Status**: resolved
+- **Note**: Mark as resolved
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1766582562/bug-reports/ukshbstedgqm5feznhoy.png)
 
 ---
@@ -95,7 +104,8 @@
 - **Page**: /clients/new
 - **User**: Lirit Adam (admin)
 - **Date**: 12/24/2025, 3:39:49 PM
-- **Status**: new
+- **Status**: resolved
+- **Note**: Mark as resolved
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1766583598/bug-reports/hvnbycrggzt7yrjwthw0.png)
 
 ---
@@ -106,6 +116,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 12/24/2025, 3:42:45 PM
 - **Status**: new
+- **Note**: Check this
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1766583770/bug-reports/tjcqy52xjtpibaxyyuls.png)
 
 ---
@@ -115,7 +126,8 @@
 - **Page**: /clients
 - **User**: Lirit Adam (admin)
 - **Date**: 12/24/2025, 4:11:33 PM
-- **Status**: new
+- **Status**: resolved
+- **Note**: Mark as done
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1766585498/bug-reports/fcclimhp9hli8c9wzvjd.png)
 
 ---
@@ -126,6 +138,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 12/24/2025, 5:16:00 PM
 - **Status**: new
+- **Note**: Look into the issue
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1766589364/bug-reports/hnvtxoy9tg4x9y60gx0d.png)
 
 ---
@@ -136,6 +149,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 12/29/2025, 11:37:53 PM
 - **Status**: new
+- **Note**: Looks fine maybe it get cut off in laptop view look into this and fix
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1767044277/bug-reports/yfg0mmzcg9bwxzbzfgnx.png)
 
 ---
@@ -145,7 +159,8 @@
 - **Page**: /clients/694c0456197738c63c7aadf4
 - **User**: Lirit Adam (admin)
 - **Date**: 12/29/2025, 11:38:48 PM
-- **Status**: new
+- **Status**: resolved
+- **Note**: Mark as resolved
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1767044330/bug-reports/z9rftgut2tjybn6dzuzb.png)
 
 ---
@@ -155,7 +170,8 @@
 - **Page**: /clients/694c0456197738c63c7aadf4
 - **User**: Lirit Adam (admin)
 - **Date**: 12/29/2025, 11:39:43 PM
-- **Status**: new
+- **Status**: resolved
+- **Note**: Added Hebrew comparison logic and RTL support for location display
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1767044385/bug-reports/rmx89hkg7atedcdsahn2.png)
 
 ---
@@ -165,7 +181,8 @@
 - **Page**: /clients/new
 - **User**: Lirit Adam (admin)
 - **Date**: 12/30/2025, 10:16:56 PM
-- **Status**: new
+- **Status**: resolved
+- **Note**: Done
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1767125817/bug-reports/gke1uxni3e4jjtmci4i0.png)
 
 ---
@@ -176,6 +193,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 12/30/2025, 10:19:16 PM
 - **Status**: new
+- **Note**: See 13
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1767125960/bug-reports/x5gp2hwsnfwdhv0omlte.png)
 
 ---
@@ -185,7 +203,8 @@
 - **Page**: /clients/694bebd9256ef470786df2c1
 - **User**: Lirit Adam (admin)
 - **Date**: 12/31/2025, 12:28:13 PM
-- **Status**: new
+- **Status**: resolved
+- **Note**: Mark as resolved
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1767176897/bug-reports/hnmq4osaxtw9on38mc4l.png)
 
 ---
@@ -196,6 +215,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 1/4/2026, 10:08:02 PM
 - **Status**: new
+- **Note**: Do this
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1767557287/bug-reports/innobws3oxkhaoulosso.png)
 
 ---
@@ -206,6 +226,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 1/4/2026, 10:18:26 PM
 - **Status**: new
+- **Note**: Put this on hold
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1767557911/bug-reports/sv5ya4wqkbzal72apul9.png)
 
 ---
@@ -216,6 +237,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 1/4/2026, 10:29:15 PM
 - **Status**: new
+- **Note**: Do this important
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1767558557/bug-reports/eqalhmb0iz02cxbagtv5.png)
 
 ---
@@ -226,6 +248,7 @@
 - **User**: Lirit Adam (admin)
 - **Date**: 1/4/2026, 10:31:23 PM
 - **Status**: new
+- **Note**: Postponed
 - **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1767558684/bug-reports/gji8ik8blngifvlfwuv0.png)
 
 ---
