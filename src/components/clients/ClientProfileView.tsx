@@ -3,6 +3,7 @@ import { Client } from "@/lib/mockData";
 import Image from "next/image";
 import { MapPin, Briefcase, Ruler, Heart, BookOpen, GraduationCap, Globe, Users, FileText, ChevronLeft, ChevronRight, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ImageGalleryModal } from "./ImageGalleryModal";
 
 interface ClientProfileViewProps {
     client: Client;
@@ -36,6 +37,13 @@ const Field = ({ label, value }: { label: string; value: string | string[] | boo
 
 export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileViewProps) {
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+    const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
+    // Combine profile photo and gallery images
+    const allImages = [
+        ...(client.photoUrl ? [client.photoUrl] : []),
+        ...(client.galleryImages || [])
+    ].filter(Boolean);
 
     const calculateAge = (dob: string) => {
         if (!dob) return "N/A";
@@ -235,6 +243,15 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                         )}
                     </div>
 
+                    {allImages.length > 0 && (
+                        <button
+                            onClick={() => setIsGalleryOpen(true)}
+                            className="mt-2 text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100 font-medium hover:bg-blue-100 transition-colors"
+                        >
+                            View Gallery ({allImages.length})
+                        </button>
+                    )}
+
                     <div>
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white">{client.fullName}</h1>
                         <div className="flex flex-wrap justify-center gap-2 mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -324,6 +341,12 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                     </div>
                 </div>
             </div>
+
+            <ImageGalleryModal
+                images={allImages}
+                isOpen={isGalleryOpen}
+                onClose={() => setIsGalleryOpen(false)}
+            />
         </div>
     );
 }

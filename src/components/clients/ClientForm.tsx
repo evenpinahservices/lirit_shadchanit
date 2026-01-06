@@ -7,13 +7,13 @@ import { Client, ClientSchema } from "@/lib/mockData";
 import { useClients } from "@/context/ClientContext";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Loader2, ChevronLeft, ChevronRight, Check, UploadCloud } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Check, UploadCloud, X } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { AutomaticMatchingModal } from "./AutomaticMatchingModal";
 import { findMatches } from "@/lib/matchingUtils";
 import { MultiSelect } from "@/components/ui/MultiSelect";
-import { HDate, gematriya } from "hdate";
+import { DateCarousel } from "@/components/ui/DateCarousel";
 
 const GENDER_OPTIONS = ["Male", "Female"];
 const RELIGIOUS_AFFILIATION_OPTIONS = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
@@ -28,7 +28,6 @@ const EYE_COLOR_OPTIONS = ["Brown", "Blue", "Green", "Hazel", "Grey", "Other"];
 
 const HAIR_COLOR_OPTIONS = ["Black", "Brown", "Blonde", "Red", "Grey", "Bald", "White", "Other"];
 
-const HEBREW_MONTHS = ["Tishrei", "Cheshvan", "Kislev", "Tevet", "Shevat", "Adar", "Adar I", "Adar II", "Nisan", "Iyar", "Sivan", "Tamuz", "Av", "Elul"];
 
 
 const AGE_GAP_OPTIONS = ["I don't mind", "1-2 years", "3-5 years", "5-10 years", "Any"];
@@ -127,8 +126,6 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
 
     // Date Logic - Flexible DOB
     const [dateMode, setDateMode] = useState<"Gregorian" | "Hebrew" | "Year">("Gregorian");
-    const [hebrewDateState, setHebrewDateState] = useState({ day: 1, month: "Tishrei", year: 5785 });
-
     // Initialize date mode based on existing dob
     useEffect(() => {
         if (client?.dob) {
@@ -136,21 +133,11 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                 setDateMode("Year");
             } else if (client.dob.includes("Hebrew:")) {
                 setDateMode("Hebrew");
-                const parts = client.dob.replace("Hebrew: ", "").split(" ");
-                if (parts.length === 3) {
-                    setHebrewDateState({ day: parseInt(parts[0]), month: parts[1], year: parseInt(parts[2]) });
-                }
             } else {
                 setDateMode("Gregorian");
             }
         }
     }, [client]);
-
-    const updateHebrewDate = (field: keyof typeof hebrewDateState, value: any) => {
-        const newState = { ...hebrewDateState, [field]: value };
-        setHebrewDateState(newState);
-        setValue("dob", `Hebrew: ${newState.day} ${newState.month} ${newState.year}`);
-    };
 
 
 
@@ -381,50 +368,18 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                             </div>
                                         </div>
 
-                                        {dateMode === "Gregorian" && (
-                                            <input type="date" {...register("dob")} className="w-full p-2 border rounded-md dark:bg-gray-900" />
-                                        )}
-
-                                        {dateMode === "Year" && (
-                                            <input
-                                                type="number"
-                                                placeholder="YYYY"
-                                                min="1900"
-                                                max="2100"
-                                                {...register("dob")}
-                                                className="w-full p-2 border rounded-md dark:bg-gray-900"
-                                            />
-                                        )}
-
-                                        {dateMode === "Hebrew" && (
-                                            <div className="grid grid-cols-3 gap-2">
-                                                <select
-                                                    value={hebrewDateState.day}
-                                                    onChange={(e) => updateHebrewDate("day", parseInt(e.target.value))}
-                                                    className="p-2 border rounded-md dark:bg-gray-900"
-                                                >
-                                                    {Array.from({ length: 30 }, (_, i) => i + 1).map(d => (
-                                                        <option key={d} value={d}>{d}</option>
-                                                    ))}
-                                                </select>
-                                                <select
-                                                    value={hebrewDateState.month}
-                                                    onChange={(e) => updateHebrewDate("month", e.target.value)}
-                                                    className="p-2 border rounded-md dark:bg-gray-900"
-                                                >
-                                                    {HEBREW_MONTHS.map(m => (
-                                                        <option key={m} value={m}>{m}</option>
-                                                    ))}
-                                                </select>
-                                                <input
-                                                    type="number"
-                                                    value={hebrewDateState.year}
-                                                    onChange={(e) => updateHebrewDate("year", parseInt(e.target.value))}
-                                                    className="p-2 border rounded-md dark:bg-gray-900"
-                                                    placeholder="Year (e.g. 5785)"
+                                        <Controller
+                                            name="dob"
+                                            control={control}
+                                            defaultValue=""
+                                            render={({ field }) => (
+                                                <DateCarousel
+                                                    mode={dateMode}
+                                                    value={field.value}
+                                                    onChange={field.onChange}
                                                 />
-                                            </div>
-                                        )}
+                                            )}
+                                        />
                                         {errors.dob && <p className="text-red-500 text-xs">{errors.dob?.message}</p>}
                                     </div>
                                     <div className="space-y-2">
@@ -491,7 +446,56 @@ export function ClientForm({ client, isEditing = false, onCancel }: ClientFormPr
                                         </select>
                                     </div>
                                 </div>
+
+                                <div className="space-y-4 pt-4 border-t">
+                                    <label className="text-sm font-medium block">Gallery Images</label>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {(watch("galleryImages") || []).map((img: string, idx: number) => (
+                                            <div key={idx} className="relative aspect-square rounded-md overflow-hidden bg-gray-100 border">
+                                                <Image src={img} alt="" fill className="object-cover" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const current = watch("galleryImages") || [];
+                                                        setValue("galleryImages", current.filter((_, i) => i !== idx));
+                                                    }}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <label className="flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed border-gray-300 hover:border-gray-400 cursor-pointer bg-gray-50 dark:bg-gray-900">
+                                            <UploadCloud className="h-6 w-6 text-gray-400" />
+                                            <span className="text-xs text-gray-500 mt-1">Add</span>
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={async (e) => {
+                                                    const files = Array.from(e.target.files || []);
+                                                    if (files.length === 0) return;
+
+                                                    // Upload one by one
+                                                    for (const file of files) {
+                                                        try {
+                                                            const url = await uploadImage(file);
+                                                            if (url) {
+                                                                const updated = [...(watch("galleryImages") || []), url];
+                                                                setValue("galleryImages", updated);
+                                                            }
+                                                        } catch (err) {
+                                                            console.error("Upload failed", err);
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
+
                         )}
 
                         {/* STEP 2: BACKGROUND */}

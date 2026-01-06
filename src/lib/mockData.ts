@@ -24,6 +24,7 @@ export interface Client {
     eyeColor: string;
     hairColor: string;
     photoUrl?: string;
+    galleryImages?: string[]; // Array of URL strings
 
     // Background
     ethnicity: string; // Single-select
@@ -72,17 +73,24 @@ export const ClientSchema = z.object({
     gender: z.enum(["Male", "Female"]),
     location: z.string().min(2, "Location is required"),
 
-    height: z.coerce.number().min(100, "Invalid height"),
-    eyeColor: z.string(),
-    hairColor: z.string(),
+    height: z.coerce.number().optional().default(0),
+    eyeColor: z.string().optional().default(""),
+    hairColor: z.string().optional().default(""),
     photoUrl: z.string().optional(),
+    galleryImages: z.array(z.string()).optional().default([]),
 
-    religiousAffiliation: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : [val]),
-    ethnicity: z.string(),
+    religiousAffiliation: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
+        if (!val) return [];
+        return Array.isArray(val) ? val : [val];
+    }),
+    ethnicity: z.string().optional().default(""),
     tribalStatus: z.string().optional().default(""),
-    maritalStatus: z.string(),
+    maritalStatus: z.string().optional().default(""),
     children: z.coerce.number().optional().default(0),
-    languages: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean)),
+    languages: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
+        if (!val) return [];
+        return Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean);
+    }),
     familyBackground: z.string().optional().default(""),
     education: z.string().optional().default(""),
     occupation: z.string().optional().default(""),
@@ -91,15 +99,26 @@ export const ClientSchema = z.object({
     smoking: z.string().optional().default(""),
 
     personality: z.string().optional().default(""),
-    hobbies: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean)),
-    medicalHistory: z.union([z.boolean(), z.string()]).transform(val => val === true || val === "Yes"),
+    hobbies: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
+        if (!val) return [];
+        return Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean);
+    }),
+    medicalHistory: z.union([z.boolean(), z.string()]).optional().transform(val => val === true || val === "Yes"),
     medicalHistoryDetails: z.string().optional().default(""),
 
-    // lookingFor removed
-    ageGapPreference: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : [String(val)]),
+    ageGapPreference: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
+        if (!val) return ["Any"];
+        return Array.isArray(val) ? val : [String(val)];
+    }),
     willingToRelocate: z.string().optional().default(""),
-    preferredEthnicities: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean)),
-    preferredHashkafos: z.union([z.string(), z.array(z.string())]).transform(val => Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean)),
+    preferredEthnicities: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
+        if (!val) return [];
+        return Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean);
+    }),
+    preferredHashkafos: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
+        if (!val) return [];
+        return Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean);
+    }),
     preferredLearningStatus: z.union([z.string(), z.array(z.string())]).optional().transform(val => Array.isArray(val) ? val : typeof val === 'string' ? [val] : []),
     preferredHeadCovering: z.array(z.string()).optional().default([]),
     expectedHeadCovering: z.string().optional().default(""),

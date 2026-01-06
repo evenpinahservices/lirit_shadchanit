@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Users, Heart, Search } from "lucide-react";
+import { LayoutDashboard, Users, Heart, Search, StickyNote } from "lucide-react";
 
 export function BottomNav() {
     const pathname = usePathname();
@@ -13,6 +13,7 @@ export function BottomNav() {
         { href: "/clients", label: "Clients", icon: Users },
         { href: "/matching", label: "Matching", icon: Heart },
         { href: "/search", label: "Search", icon: Search },
+        { href: "/notes", label: "Notes", icon: StickyNote },
     ];
 
     return (

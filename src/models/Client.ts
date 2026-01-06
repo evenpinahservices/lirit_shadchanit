@@ -15,6 +15,7 @@ const ClientSchema = new Schema<Client>(
         eyeColor: { type: String },
         hairColor: { type: String },
         photoUrl: { type: String },
+        galleryImages: { type: [String], default: [] },
 
         // Background
         ethnicity: { type: String },

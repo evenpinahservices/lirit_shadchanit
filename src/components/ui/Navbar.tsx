@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Users, Heart, Search, LogOut, User as UserIcon, Maximize, Minimize, HelpCircle } from "lucide-react";
+import { LayoutDashboard, Users, Heart, Search, LogOut, User as UserIcon, Maximize, Minimize, HelpCircle, StickyNote } from "lucide-react";
 import { useOnboardingTour } from "@/components/OnboardingTour";
 import { BugReportButton } from "@/components/ui/BugReportButton";
 
@@ -35,6 +35,7 @@ export function Navbar() {
         { href: "/clients", label: "Clients", icon: Users },
         { href: "/matching", label: "Matching", icon: Heart },
         { href: "/search", label: "Search", icon: Search },
+        { href: "/notes", label: "Notes", icon: StickyNote },
     ];
 
     return (
