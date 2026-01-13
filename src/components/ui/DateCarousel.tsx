@@ -45,7 +45,7 @@ const ENGLISH_TO_HEBREW_MONTHS: { [key: string]: string } = {
 
 // Convert numeric year to Hebrew numerals
 // Hebrew years use letters with gershayim (״) before the last letter
-// Thousands are marked with geresh (׳) after the letter
+// Display WITHOUT the thousands prefix (ה') - just show the year like תשפ"ה
 function convertToHebrewYear(year: number): string {
     const onesMap: { [key: number]: string } = {
         1: "א", 2: "ב", 3: "ג", 4: "ד", 5: "ה", 6: "ו", 7: "ז", 8: "ח", 9: "ט"
@@ -60,23 +60,11 @@ function convertToHebrewYear(year: number): string {
     const yearStr = year.toString();
     
     if (yearStr.length === 4) {
-        const thousands = parseInt(yearStr[0]);
+        // Skip the thousands digit - just use the last 3 digits for display
         const remainder = parseInt(yearStr.substring(1)); // Last 3 digits
         
-        let result = "";
-        
-        // Thousands: add the letter with geresh (׳)
-        if (thousands === 5) {
-            result += "ה׳";
-        } else if (thousands === 6) {
-            result += "ו׳";
-        } else if (thousands > 0 && thousands < 5) {
-            result += onesMap[thousands] + "׳";
-        }
-        
-        // Convert remainder (hundreds, tens, ones)
         if (remainder === 0) {
-            return result;
+            return year.toString();
         }
         
         let remainderStr = "";
@@ -113,13 +101,44 @@ function convertToHebrewYear(year: number): string {
         if (remainderStr.length > 1) {
             remainderStr = remainderStr.slice(0, -1) + "״" + remainderStr.slice(-1);
         } else if (remainderStr.length === 1) {
-            remainderStr = "״" + remainderStr;
+            remainderStr += "׳";
         }
         
-        return result + remainderStr;
+        return remainderStr;
     }
     
     return year.toString();
+}
+
+// Convert Hebrew numerals back to numeric year
+function parseHebrewYear(hebrewYear: string): number {
+    const onesMap: { [key: string]: number } = {
+        "א": 1, "ב": 2, "ג": 3, "ד": 4, "ה": 5, "ו": 6, "ז": 7, "ח": 8, "ט": 9
+    };
+    const tensMap: { [key: string]: number } = {
+        "י": 10, "כ": 20, "ך": 20, "ל": 30, "מ": 40, "ם": 40, "נ": 50, "ן": 50, 
+        "ס": 60, "ע": 70, "פ": 80, "ף": 80, "צ": 90, "ץ": 90
+    };
+    const hundredsMap: { [key: string]: number } = {
+        "ק": 100, "ר": 200, "ש": 300, "ת": 400
+    };
+    
+    // Remove gershayim and geresh
+    const cleaned = hebrewYear.replace(/[״׳"']/g, "");
+    
+    let total = 0;
+    for (const char of cleaned) {
+        if (onesMap[char]) total += onesMap[char];
+        else if (tensMap[char]) total += tensMap[char];
+        else if (hundredsMap[char]) total += hundredsMap[char];
+    }
+    
+    // Add 5000 for the current millennium (Hebrew years 5xxx)
+    if (total < 1000) {
+        total += 5000;
+    }
+    
+    return total;
 }
 
 export function DateCarousel({ mode, value, onChange }: DateCarouselProps) {
@@ -168,7 +187,7 @@ export function DateCarousel({ mode, value, onChange }: DateCarouselProps) {
         } else if (mode === "Hebrew") {
             // Expect "Hebrew: <Day> <Month> <Year>"
             const parts = value.replace("Hebrew: ", "").split(" ");
-            if (parts.length === 3) {
+            if (parts.length >= 3) {
                 // Convert English transliterations to Hebrew if needed (for backward compatibility)
                 let dayValue = parts[0];
                 if (ENGLISH_TO_HEBREW_DAYS[dayValue]) {
@@ -181,16 +200,18 @@ export function DateCarousel({ mode, value, onChange }: DateCarouselProps) {
                 }
                 
                 // Year: try to parse as numeric first (for backward compatibility)
-                // If it's Hebrew numerals, we'll need to extract numeric value
-                // For now, if it's not numeric, try to find a numeric year that matches
-                let yearValue = parts[2];
-                const numericYear = parseInt(parts[2]);
-                if (!isNaN(numericYear)) {
+                // If it's Hebrew numerals, convert back to numeric
+                const yearPart = parts[2];
+                const numericYear = parseInt(yearPart);
+                let yearValue: string;
+                
+                if (!isNaN(numericYear) && numericYear > 1000) {
+                    // Already numeric
                     yearValue = numericYear.toString();
                 } else {
-                    // If stored as Hebrew numerals, we can't easily convert back
-                    // Default to current year range - user can reselect
-                    yearValue = currentHebrewYear.toString();
+                    // Try to parse Hebrew numerals
+                    const parsedYear = parseHebrewYear(yearPart);
+                    yearValue = parsedYear.toString();
                 }
                 
                 setDay(dayValue);

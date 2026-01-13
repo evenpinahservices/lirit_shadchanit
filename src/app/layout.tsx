@@ -42,7 +42,7 @@ export default function RootLayout({
                 <Suspense fallback={null}>
                   <Navbar />
                 </Suspense>
-                <main className="flex-1 min-h-0 overflow-hidden flex flex-col container mx-auto pt-2 px-4">
+                <main className="flex-1 min-h-0 overflow-hidden flex flex-col w-full pt-2 px-4">
                   {children}
                 </main>
                 <BottomNav />

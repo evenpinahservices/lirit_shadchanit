@@ -32,7 +32,7 @@ const ClientSchema = new Schema<Client>(
         headCovering: { type: String },
 
         // Personal
-        hobbies: { type: [String], default: [] }, // Enforce array for storage
+        hobbies: { type: String }, // String field for hobbies
         personality: { type: String },
         medicalHistory: { type: Boolean, default: false },
         medicalHistoryDetails: { type: String },
@@ -45,13 +45,14 @@ const ClientSchema = new Schema<Client>(
         preferredHashkafos: { type: [String], default: [] },
         preferredLearningStatus: { type: [String], default: [] },
         preferredHeadCovering: { type: [String], default: [] },
-        expectedHeadCovering: { type: String }, // Added missing field
 
         // Meta
         references: { type: String },
         notes: { type: String },
+        resumeRawText: { type: String },
         active: { type: Boolean, default: true }, // Added missing field
         status: { type: String }, // Deprecated but kept for type signature
+        formLanguage: { type: String, enum: ["en", "he"], default: "en" }, // Language the form was filled in
         createdAt: { type: String }, // Storing as string YYYY-MM-DD
     },
     {

@@ -41,7 +41,7 @@ export interface Client {
     headCovering: string; // Drop-down
 
     // Personal
-    hobbies: string | string[]; // Can be string (comma sep) or array
+    hobbies: string; // Open text field
     personality: string;
     medicalHistory: boolean | string; // Yes/No can be boolean or string "Yes"/"No"
     medicalHistoryDetails?: string; // Optional explanation if Yes
@@ -54,13 +54,14 @@ export interface Client {
     preferredHashkafos: string | string[]; // Single or Multi
     preferredLearningStatus: string | string[]; // Single or Multi
     preferredHeadCovering: string[]; // Multi-select
-    expectedHeadCovering?: string; // For men's preference logic if needed
 
     // Admin / Meta
     references: string;
     notes: string;
+    resumeRawText?: string; // Raw text extracted from resume images
     active?: boolean; // For form compatibility
     status?: "Active" | "Inactive" | "Matched"; // Deprecated
+    formLanguage?: "en" | "he"; // Language the form was filled in
     createdAt: string;
 }
 
@@ -99,10 +100,7 @@ export const ClientSchema = z.object({
     smoking: z.string().optional().default(""),
 
     personality: z.string().optional().default(""),
-    hobbies: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
-        if (!val) return [];
-        return Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean);
-    }),
+    hobbies: z.string().optional().default(""),
     medicalHistory: z.union([z.boolean(), z.string()]).optional().transform(val => val === true || val === "Yes"),
     medicalHistoryDetails: z.string().optional().default(""),
 
@@ -121,11 +119,12 @@ export const ClientSchema = z.object({
     }),
     preferredLearningStatus: z.union([z.string(), z.array(z.string())]).optional().transform(val => Array.isArray(val) ? val : typeof val === 'string' ? [val] : []),
     preferredHeadCovering: z.array(z.string()).optional().default([]),
-    expectedHeadCovering: z.string().optional().default(""),
 
     references: z.string().optional().default(""),
     notes: z.string().optional().default(""),
+    resumeRawText: z.string().optional().default(""),
     active: z.boolean().optional(),
+    formLanguage: z.enum(["en", "he"]).optional().default("en"),
 });
 
 
@@ -148,7 +147,7 @@ const FEMALE_NAMES = ["Sarah", "Rivka", "Rachel", "Leah", "Chana", "Miriam", "Es
 const LAST_NAMES = ["Cohen", "Levi", "Shapiro", "Friedman", "Katz", "Goldstein", "Stern", "Rosenberg", "Klein", "Weiss", "Mizrachi", "Azoulay", "Biton", "Peretz", "Hassan", "Abutbul", "Gabai", "Amar", "Ohana", "Edri", "Schwartz", "Feldman", "Epstein", "Gottlieb", "Levin", "Green", "Brown", "Silver", "Rubin", "Segal"];
 const LOCATIONS = ["Jerusalem, Israel", "Tel Aviv, Israel", "Bnei Brak, Israel", "Lakewood, NJ", "Brooklyn, NY", "London, UK", "Manchester, UK", "Monsey, NY", "Five Towns, NY", "Chicago, IL", "Los Angeles, CA", "Miami, FL", "Efrat, Israel", "Raanana, Israel", "Bet Shemesh, Israel", "Petach Tikva, Israel", "Haifa, Israel", "Be'er Sheva, Israel", "Ashdod, Israel", "Netanya, Israel"];
 
-const ETHNICITIES = ["Ashkenazi", "Sephardi", "Mizrahi", "Yemenite", "Ethiopian"];
+const ETHNICITIES = ["Ashkenazi", "Sephardi", "Yemenite", "Ethiopian"];
 const HASHKAFOS = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
 const PROFESSIONS = ["Accountant", "Lawyer", "Doctor", "Nurse", "Student", "Teacher", "Rebbi", "Programmer", "Engineer", "Architect", "Designer", "Social Worker", "Psychologist", "Business Owner", "Sales", "Real Estate", "Therapist", "Actuary", "Dentist", "Consultant"];
 const HOBBIES_LIST = ["Reading", "Hiking", "Music", "Cooking", "Traveling", "Learning Torah", "Sports", "Art", "Writing", "Volunteering", "Photography", "Gardening", "Chess", "History", "Swimming", "Running"];
@@ -260,7 +259,7 @@ export const generateMockClients = (count: number): Client[] => {
             occupation: getRandomElement(PROFESSIONS),
             smoking: Math.random() > 0.9 ? "Yes" : "No",
             headCovering: headCovering,
-            hobbies: getRandomElements(HOBBIES_LIST, getRandomInt(2, 4)),
+            hobbies: getRandomElements(HOBBIES_LIST, getRandomInt(2, 4)).join(", "),
             personality: getRandomElement(["Quiet", "Outgoing", "Serious", "Funny", "Intellectual", "Kind", "Energetic"]),
             medicalHistory: Math.random() > 0.9,
             medicalHistoryDetails: "Minor allergy",
@@ -271,7 +270,6 @@ export const generateMockClients = (count: number): Client[] => {
             preferredHashkafos: preferredHashkafos,
             preferredLearningStatus: preferredLearningStatus,
             preferredHeadCovering: preferredHeadCovering,
-            expectedHeadCovering: isMale ? getRandomElement(["Wig", "Tichel", "I don't mind"]) : "",
             references: `Rabbi ${getRandomElement(LAST_NAMES)}`,
             notes: "Auto-generated personality description for testing purposes.",
             active: true,
@@ -318,17 +316,16 @@ const testClient: Client = {
     occupation: "Teacher",
     smoking: "No",
     headCovering: "Wig",
-    hobbies: ["Reading"],
+    hobbies: "Reading",
     personality: "Quiet",
     medicalHistory: false,
     // lookingFor: "Someone nice", - removed
     willingToRelocate: "No", // Dealbreaker 1
     ageGapPreference: ["1-2 years", "3-5 years"], // Dealbreaker 2
-    preferredEthnicities: ["Ashkenazi", "Sephardi", "Yemenite", "Convert", "Mixed", "Ashkenazi (Strict)", "Sephardi (Strict)", "Yemenite (Strict)", "Other"],
+    preferredEthnicities: ["Ashkenazi", "Sephardi", "Yemenite", "Convert", "Other"],
     preferredHashkafos: ["Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Modern Orthodox", "Hardal", "Chassidish (General)", "Chassidish (Gur)", "Chassidish (Belz)", "Chassidish (Satmar)", "Chassidish (Vizhnitz)", "Litvish (Modern)", "Litvish (Yeshivish)", "Carlebach", "Breslov"],
     preferredLearningStatus: ["Full Time", "Working & Learning", "Working", "Student", "Retired"],
     preferredHeadCovering: ["Kippah", "Black Hat", "None", "Kippah Sruga", "Baseball Cap", "Fedora", "Shtreimel", "Any"], // Dealbreaker 6
-    expectedHeadCovering: "Wig",
     references: "None",
     notes: "For testing scrolling",
     active: true,

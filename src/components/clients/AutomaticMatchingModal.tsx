@@ -36,7 +36,7 @@ export function AutomaticMatchingModal({
 
     return (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-gray-950 rounded-xl shadow-xl max-w-2xl w-full border border-gray-200 dark:border-gray-800 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="bg-white dark:bg-gray-950 rounded-xl shadow-xl max-w-2xl w-full border border-gray-200 dark:border-gray-800 animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[90vh]" dir="ltr">
 
                 {/* Header */}
                 <div className="p-6 pb-2 shrink-0">

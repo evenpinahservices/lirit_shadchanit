@@ -96,20 +96,14 @@ export function findMatches(client: Client, allClients: Client[]): Client[] {
         if (client.preferredHeadCovering && client.preferredHeadCovering.length > 0) {
             const prefs = Array.isArray(client.preferredHeadCovering) ? client.preferredHeadCovering : [client.preferredHeadCovering];
             if (!prefs.some(p => isWildcard(p))) {
-                // Only check head covering match if candidate is female (since we removed male head covering logic)
+                // Only check head covering match if candidate is female
                 if (candidate.gender === "Female") {
-                    if (!prefs.includes(candidate.headCovering) && candidate.headCovering !== "Flexible") return false;
-                }
-            }
-        }
-
-        // 8. Expected Head Covering (for male clients expecting female head covering)
-        if (client.expectedHeadCovering && client.expectedHeadCovering.length > 0) {
-            const expected = client.expectedHeadCovering;
-            if (!isWildcard(expected)) {
-                // Only apply if candidate is female (checking male's preference for wife's covering)
-                if (candidate.gender === "Female" && candidate.headCovering !== expected && candidate.headCovering !== "Flexible") {
-                    return false;
+                    const candidateCovering = candidate.headCovering || "Flexible";
+                    // If candidate has "Flexible", they match any preference
+                    // If candidate has a specific covering, check if it's in preferences
+                    if (candidateCovering !== "Flexible" && !prefs.includes(candidateCovering)) {
+                        return false;
+                    }
                 }
             }
         }

@@ -72,7 +72,7 @@ export default function SearchPage() {
     const genderOptions = ["Male", "Female"];
     const religiosityOptions = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
     const maritalStatusOptions = ["Single", "Divorced", "Divorced with Kids", "Widowed", "Widowed with Kids"];
-    const ethnicityOptions = ["Ashkenazi", "Sephardi", "Mizrahi", "Yemenite", "Ethiopian", "Convert", "Mixed", "Other"];
+    const ethnicityOptions = ["Ashkenazi", "Sephardi", "Yemenite", "Ethiopian", "Convert", "Other"];
 
     const toggleFilter = (item: string, current: string[], set: (val: string[]) => void) => {
         if (current.includes(item)) {

@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { Client } from "@/lib/mockData";
 import Image from "next/image";
 import { MapPin, Briefcase, Ruler, Heart, BookOpen, GraduationCap, Globe, Users, FileText, ChevronLeft, ChevronRight, User as UserIcon } from "lucide-react";
-import { cn, getTextDirection } from "@/lib/utils";
+import { cn, getTextDirection, detectClientLanguage } from "@/lib/utils";
 import { ImageGalleryModal } from "./ImageGalleryModal";
+import { FormLanguage, t, valueToLabel, getOptions } from "@/lib/translations";
 
 interface ClientProfileViewProps {
     client: Client;
@@ -11,7 +12,9 @@ interface ClientProfileViewProps {
     onDelete: () => void;
 }
 
-const Field = ({ label, value }: { label: string; value: string | string[] | boolean | undefined }) => {
+type OptionKey = keyof typeof import("@/lib/translations").translations.en.options;
+
+const Field = ({ label, value, lang, optionKey }: { label: string; value: string | string[] | boolean | undefined; lang?: FormLanguage; optionKey?: OptionKey }) => {
     if (value === undefined || value === null || value === "") return null;
 
     let displayValue: React.ReactNode = value;
@@ -19,13 +22,24 @@ const Field = ({ label, value }: { label: string; value: string | string[] | boo
 
     if (Array.isArray(value)) {
         if (value.length === 0) return null;
-        displayValue = value.join(", ");
+        // If we have an optionKey and lang, translate the values
+        if (optionKey && lang) {
+            displayValue = value.map(v => valueToLabel(lang, optionKey, v)).join(", ");
+        } else {
+            displayValue = value.join(", ");
+        }
         // Check if any item in array contains Hebrew
         textDirection = value.some(v => typeof v === "string" && getTextDirection(v) === "rtl") ? "rtl" : "ltr";
     } else if (typeof value === "string") {
+        // If we have an optionKey and lang, translate the value
+        if (optionKey && lang) {
+            displayValue = valueToLabel(lang, optionKey, value);
+        } else {
+            displayValue = value;
+        }
         textDirection = getTextDirection(value);
     } else if (typeof value === "boolean") {
-        displayValue = value ? "Yes" : "No";
+        displayValue = value ? (lang === "he" ? "כן" : "Yes") : (lang === "he" ? "לא" : "No");
     }
 
     return (
@@ -49,6 +63,10 @@ const Field = ({ label, value }: { label: string; value: string | string[] | boo
 export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileViewProps) {
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
+    // Determine language from client formLanguage or detect from content
+    const lang: FormLanguage = detectClientLanguage(client);
+    const isRtl = lang === "he";
 
     // Combine profile photo and gallery images
     const allImages = [
@@ -85,85 +103,85 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
 
     const sections = [
         {
-            title: "Appearance",
+            title: t(lang, "profileView.appearance"),
             icon: Ruler,
             content: (
                 <div className="grid grid-cols-2 gap-4">
-                    <Field label="Height" value={`${client.height} cm`} />
-                    <Field label="Eye Color" value={client.eyeColor} />
-                    <Field label="Hair Color" value={client.hairColor} />
-                    <Field label="Vision" value={client.headCovering === "Glasses" ? "Glasses" : undefined} />
+                    <Field label={t(lang, "profileView.height")} value={`${client.height} cm`} lang={lang} />
+                    <Field label={t(lang, "profileView.eyeColor")} value={client.eyeColor} lang={lang} optionKey="eyeColor" />
+                    <Field label={t(lang, "profileView.hairColor")} value={client.hairColor} lang={lang} optionKey="hairColor" />
+                    <Field label={t(lang, "profileView.vision")} value={client.headCovering === "Glasses" ? "Glasses" : undefined} lang={lang} />
                 </div>
             )
         },
         {
-            title: "Background & Heritage",
+            title: t(lang, "profileView.backgroundHeritage"),
             icon: Globe,
             content: (
                 <div className="grid gap-4">
-                    <Field label="Ethnicity" value={client.ethnicity} />
-                    <Field label="Tribal Status" value={client.tribalStatus} />
-                    <Field label="Languages" value={client.languages} />
-                    <Field label="Family" value={client.familyBackground} />
+                    <Field label={t(lang, "profileView.ethnicity")} value={client.ethnicity} lang={lang} optionKey="ethnicity" />
+                    <Field label={t(lang, "profileView.tribalStatus")} value={client.tribalStatus} lang={lang} optionKey="tribalStatus" />
+                    <Field label={t(lang, "profileView.languages")} value={client.languages} lang={lang} optionKey="languages" />
+                    <Field label={t(lang, "profileView.family")} value={client.familyBackground} lang={lang} />
                 </div>
             )
         },
         {
-            title: "Religious & Personal",
+            title: t(lang, "profileView.religiousPersonal"),
             icon: BookOpen,
             content: (
                 <div className="grid gap-4">
-                    <Field label="Affiliation" value={client.religiousAffiliation} />
-                    <Field label="Learning Status" value={client.learningStatus} />
-                    <Field label="Head Covering" value={client.headCovering} />
-                    <Field label="Smoking" value={client.smoking} />
+                    <Field label={t(lang, "profileView.affiliation")} value={client.religiousAffiliation} lang={lang} optionKey="religiousAffiliation" />
+                    <Field label={t(lang, "profileView.learningStatus")} value={client.learningStatus} lang={lang} optionKey="learningStatus" />
+                    <Field label={t(lang, "profileView.headCovering")} value={client.headCovering} lang={lang} optionKey="headCovering" />
+                    <Field label={t(lang, "profileView.smoking")} value={client.smoking} lang={lang} optionKey="smoking" />
                     <div className="col-span-full">
-                        <Field label="Hobbies" value={client.hobbies} />
+                        <Field label={t(lang, "profileView.hobbies")} value={client.hobbies} lang={lang} />
                     </div>
                 </div>
             )
         },
         {
-            title: "Education & Work",
+            title: t(lang, "profileView.educationWork"),
             icon: GraduationCap,
             content: (
                 <div className="grid gap-4">
-                    <Field label="Education" value={client.education} />
-                    <Field label="Occupation" value={client.occupation} />
+                    <Field label={t(lang, "profileView.education")} value={client.education} lang={lang} />
+                    <Field label={t(lang, "profileView.occupation")} value={client.occupation} lang={lang} />
                 </div>
             )
         },
         {
-            title: "Medical",
+            title: t(lang, "profileView.medical"),
             icon: Heart,
             content: (
                 <div className="grid gap-4">
-                    <Field label="Medical History" value={client.medicalHistory} />
+                    <Field label={t(lang, "profileView.medicalHistory")} value={client.medicalHistory} lang={lang} />
                     {client.medicalHistory && (
-                        <Field label="Details" value={client.medicalHistoryDetails} />
+                        <Field label={t(lang, "profileView.details")} value={client.medicalHistoryDetails} lang={lang} />
                     )}
                 </div>
             )
         },
         {
-            title: "The Search",
+            title: t(lang, "profileView.theSearch"),
             icon: Users,
             content: (
                 <div className="grid gap-4">
-                    <Field label="Age Gap Preference" value={client.ageGapPreference} />
-                    <Field label="Willing to Relocate" value={client.willingToRelocate} />
-                    <Field label="Preferred Ethnicities" value={client.preferredEthnicities} />
-                    <Field label="Preferred Hashkafos" value={client.preferredHashkafos} />
+                    <Field label={t(lang, "profileView.ageGapPreference")} value={client.ageGapPreference} lang={lang} optionKey="ageGapPreference" />
+                    <Field label={t(lang, "profileView.willingToRelocate")} value={client.willingToRelocate} lang={lang} optionKey="willingToRelocate" />
+                    <Field label={t(lang, "profileView.preferredEthnicities")} value={client.preferredEthnicities} lang={lang} optionKey="ethnicity" />
+                    <Field label={t(lang, "profileView.preferredHashkafos")} value={client.preferredHashkafos} lang={lang} optionKey="religiousAffiliation" />
                 </div>
             )
         },
         {
-            title: "Admin Notes",
+            title: t(lang, "profileView.adminNotes"),
             icon: FileText,
             content: (
                 <div className="grid gap-4">
-                    <Field label="References" value={client.references} />
-                    <Field label="Internal Notes" value={client.notes} />
+                    <Field label={t(lang, "profileView.references")} value={client.references} lang={lang} />
+                    <Field label={t(lang, "profileView.internalNotes")} value={client.notes} lang={lang} />
                 </div>
             )
         }
@@ -233,7 +251,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
     const CurrentIcon = sections[currentSectionIndex].icon;
 
     return (
-        <div className="w-full flex flex-col h-full overflow-hidden pb-4">
+        <div className={`w-full flex flex-col h-full overflow-hidden pb-4 ${isRtl ? "rtl" : "ltr"}`} dir={isRtl ? "rtl" : "ltr"}>
             {/* Header / Top Card (Fixed Info) */}
             <div className="w-full bg-white dark:bg-gray-950 p-4 rounded-xl shrink-0">
                 <div className="flex flex-col items-center text-center space-y-3">
@@ -267,7 +285,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                             onClick={() => setIsGalleryOpen(true)}
                             className="mt-2 text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full border border-blue-100 font-medium hover:bg-blue-100 transition-colors"
                         >
-                            View Resume ({allImages.length})
+                            {lang === "he" ? `צפה בקורות חיים (${allImages.length})` : `View Resume (${allImages.length})`}
                         </button>
                     )}
 
@@ -299,13 +317,13 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                             onClick={onEdit}
                             className="flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
                         >
-                            Edit
+                            {lang === "he" ? "עריכה" : "Edit"}
                         </button>
                         <button
                             onClick={onDelete}
                             className="flex-1 sm:flex-none px-4 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none"
                         >
-                            Delete
+                            {lang === "he" ? "מחיקה" : "Delete"}
                         </button>
                     </div>
                 </div>
@@ -320,7 +338,11 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                         className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                         aria-label="Previous section"
                     >
-                        <ChevronLeft className="h-5 w-5 text-gray-500" />
+                        {isRtl ? (
+                            <ChevronRight className="h-5 w-5 text-gray-500" />
+                        ) : (
+                            <ChevronLeft className="h-5 w-5 text-gray-500" />
+                        )}
                     </button>
 
                     <div className="flex flex-col items-center">
@@ -346,7 +368,11 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                         className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
                         aria-label="Next section"
                     >
-                        <ChevronRight className="h-5 w-5 text-gray-500" />
+                        {isRtl ? (
+                            <ChevronLeft className="h-5 w-5 text-gray-500" />
+                        ) : (
+                            <ChevronRight className="h-5 w-5 text-gray-500" />
+                        )}
                     </button>
                 </div>
 
@@ -355,7 +381,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                     ref={scrollContainerRef}
                     className={cn(
                         "flex-1 p-4 animate-in fade-in duration-300 touch-pan-y",
-                        isScrollable ? "overflow-y-auto" : "overflow-hidden"
+                        isScrollable ? "overflow-y-auto custom-scrollbar" : "overflow-hidden"
                     )}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}

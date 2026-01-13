@@ -1,9 +1,13 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { compareLocationsEnhanced, areLocationsCompatible, areLocationsInSameCountry, getLocationCountry } from "./locationMapping";
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
+
+// Re-export location functions for convenience
+export { areLocationsCompatible, areLocationsInSameCountry, getLocationCountry };
 
 /**
  * Detects if a string contains Hebrew characters
@@ -34,15 +38,42 @@ export function normalizeForComparison(text: string): string {
 
 /**
  * Hebrew-aware string comparison for location matching
- * Handles mixed Hebrew/English text and case-insensitive matching
+ * Uses the location mapping to match Hebrew and English location names
  */
 export function compareLocations(location1: string, location2: string): boolean {
-    if (!location1 || !location2) return false;
+    return compareLocationsEnhanced(location1, location2);
+}
+
+/**
+ * Detects the likely form language from client data
+ * Checks key text fields for Hebrew content
+ */
+export function detectClientLanguage(client: { 
+    fullName?: string; 
+    location?: string; 
+    personality?: string; 
+    hobbies?: string;
+    formLanguage?: string;
+}): "en" | "he" {
+    // If formLanguage is explicitly set, use it
+    if (client.formLanguage === "he" || client.formLanguage === "en") {
+        return client.formLanguage;
+    }
     
-    const norm1 = normalizeForComparison(location1);
-    const norm2 = normalizeForComparison(location2);
+    // Check key fields for Hebrew content
+    const fieldsToCheck = [
+        client.fullName,
+        client.location,
+        client.personality,
+        client.hobbies,
+    ].filter(Boolean);
     
-    // Case-insensitive comparison
-    return norm1.toLowerCase().includes(norm2.toLowerCase()) || 
-           norm2.toLowerCase().includes(norm1.toLowerCase());
+    // If any field contains Hebrew, assume Hebrew form
+    for (const field of fieldsToCheck) {
+        if (field && isHebrew(field)) {
+            return "he";
+        }
+    }
+    
+    return "en";
 }

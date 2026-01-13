@@ -7,6 +7,7 @@ import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { Client } from "@/lib/mockData";
+import { detectClientLanguage } from "@/lib/utils";
 
 function ClientDetailsContent() {
     const params = useParams();
@@ -46,14 +47,27 @@ function ClientDetailsContent() {
         }
     };
 
+    // Detect language early so it can be used in both view and edit modes
+    const clientLang = detectClientLanguage(client);
+    const isRtl = clientLang === "he";
+
     const getBackInfo = () => {
         switch (source) {
             case "matching":
-                return { text: "Back to Matching", link: "/matching" };
+                return { 
+                    text: isRtl ? "חזרה להתאמות" : "Back to Matching", 
+                    link: "/matching" 
+                };
             case "search":
-                return { text: "Back to Search", link: "/search" };
+                return { 
+                    text: isRtl ? "חזרה לחיפוש" : "Back to Search", 
+                    link: "/search" 
+                };
             default:
-                return { text: "Back to Clients", link: "/clients" };
+                return { 
+                    text: isRtl ? "חזרה ללקוחות" : "Back to Clients", 
+                    link: "/clients" 
+                };
         }
     };
 
@@ -61,12 +75,12 @@ function ClientDetailsContent() {
 
     if (isViewMode) {
         return (
-            <div className="w-full max-w-4xl mx-auto h-[calc(100dvh-8rem)] flex flex-col space-y-2">
+            <div className={`w-full max-w-4xl mx-auto h-[calc(100dvh-8rem)] flex flex-col space-y-2 ${isRtl ? "rtl" : "ltr"}`} dir={isRtl ? "rtl" : "ltr"}>
                 <button
                     onClick={() => router.push(backLink)}
                     className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1 shrink-0"
                 >
-                    &larr; {backText}
+                    {isRtl ? `${backText} →` : `← ${backText}`}
                 </button>
                 <div className="w-full flex-1 min-h-0">
                     <ClientProfileView
@@ -79,9 +93,9 @@ function ClientDetailsContent() {
                     isOpen={deleteModalOpen}
                     onClose={() => setDeleteModalOpen(false)}
                     onConfirm={confirmDelete}
-                    title="Delete Client"
-                    message="Are you sure you want to delete this client? This action cannot be undone."
-                    confirmText="Delete"
+                    title={isRtl ? "מחיקת לקוח" : "Delete Client"}
+                    message={isRtl ? "האם אתה בטוח שברצונך למחוק לקוח זה? פעולה זו אינה ניתנת לביטול." : "Are you sure you want to delete this client? This action cannot be undone."}
+                    confirmText={isRtl ? "מחק" : "Delete"}
                     isDangerous={true}
                 />
             </div>
@@ -89,21 +103,27 @@ function ClientDetailsContent() {
     }
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className={`w-full space-y-6 ${isRtl ? "rtl" : "ltr"}`} dir={isRtl ? "rtl" : "ltr"}>
             <button
                 onClick={() => setIsViewMode(true)}
                 className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1"
             >
-                &larr; Back to Profile
+                {isRtl ? "חזרה לפרופיל →" : "← Back to Profile"}
             </button>
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Edit Client</h1>
-                <p className="text-muted-foreground">Update the client profile details.</p>
+                <h1 className="text-3xl font-bold tracking-tight">
+                    {isRtl ? "עריכת לקוח" : "Edit Client"}
+                </h1>
+                <p className="text-muted-foreground">
+                    {isRtl ? "עדכן את פרטי הפרופיל של הלקוח." : "Update the client profile details."}
+                </p>
             </div>
             <ClientForm
+                key={`${client.id}-${clientLang}`}
                 client={client}
                 isEditing
                 onCancel={() => setIsViewMode(true)}
+                language={clientLang}
             />
             <ConfirmationModal
                 isOpen={deleteModalOpen}

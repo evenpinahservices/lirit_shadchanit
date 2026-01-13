@@ -28,6 +28,8 @@ export async function getClients(): Promise<Client[]> {
                 preferredHashkafos: doc.preferredHashkafos || [],
                 preferredLearningStatus: doc.preferredLearningStatus || [],
                 preferredHeadCovering: doc.preferredHeadCovering || [],
+                // Ensure formLanguage is included
+                formLanguage: doc.formLanguage || "en",
             } as Client;
         });
     } catch (error: any) {
