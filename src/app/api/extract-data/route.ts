@@ -130,23 +130,77 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // Call Gemini API
-        const geminiResponse = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            parts: contentParts,
+        // Call Gemini API - Try Gemini 3.0 Flash first, then fallback
+        let geminiResponse: Response;
+        try {
+            // Try gemini-3-flash-preview first (Gemini 3.0 Flash)
+            geminiResponse = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        contents: [
+                            {
+                                parts: contentParts,
+                            },
+                        ],
+                    }),
+                }
+            );
+            
+            // If 404, try gemini-2.0-flash-exp
+            if (geminiResponse.status === 404) {
+                console.log("gemini-3-flash-preview not found, trying gemini-2.0-flash-exp");
+                geminiResponse = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        contents: [
+                            {
+                                parts: contentParts,
+                            },
+                        ],
+                    }),
+                }
+            );
+            
+            // If 404, try v1 API with gemini-1.5-flash (stable fallback)
+            if (geminiResponse.status === 404) {
+                console.log("gemini-2.0-flash-exp not found, trying v1 API with gemini-1.5-flash");
+                geminiResponse = await fetch(
+                    `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
                         },
-                    ],
-                }),
+                        body: JSON.stringify({
+                            contents: [
+                                {
+                                    parts: contentParts,
+                                },
+                            ],
+                        }),
+                    }
+                );
             }
-        );
+        } catch (error: any) {
+            console.error("Gemini API fetch error:", error);
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: `Failed to call Gemini API: ${error.message}`,
+                },
+                { status: 500 }
+            );
+        }
 
         if (!geminiResponse.ok) {
             const errorText = await geminiResponse.text();
