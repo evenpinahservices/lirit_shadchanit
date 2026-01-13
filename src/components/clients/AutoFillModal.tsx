@@ -203,17 +203,35 @@ export function AutoFillModal({
             // Step 3: Query AI
             setProcessingSubStatus("Querying AI model...");
             
-            // Call FastAPI via Next.js API route
-            const response = await fetch("/api/extract-data", {
-                method: "POST",
-                body: formData,
-            });
+            // Call Next.js API route
+            setProcessingSubStatus("Calling AI service...");
+            
+            let response: Response;
+            try {
+                response = await fetch("/api/extract-data", {
+                    method: "POST",
+                    body: formData,
+                });
+            } catch (fetchError: any) {
+                console.error("Fetch error:", fetchError);
+                throw new Error(`Network error: ${fetchError.message || "Failed to connect to server"}`);
+            }
             
             setProcessingSubStatus("Checking AI response...");
             
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-                throw new Error(errorData.error || "Failed to extract data from images");
+                let errorMessage = "Failed to extract data from images";
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                    if (errorData.details) {
+                        console.error("API error details:", errorData.details);
+                    }
+                } catch (parseError) {
+                    const text = await response.text();
+                    errorMessage = `Server error (${response.status}): ${text.substring(0, 200)}`;
+                }
+                throw new Error(errorMessage);
             }
             
             const result = await response.json();
