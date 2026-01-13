@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useClients } from "@/context/ClientContext";
-import { resetAndSeedDatabase } from "@/actions/client";
 import { Plus, Pencil, Trash2, MapPin, Briefcase, Search, ChevronLeft, ChevronRight, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
@@ -13,8 +12,6 @@ export default function ClientsPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(4);
-    const [isSeeding, setIsSeeding] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
 
     // Dynamic items per page based on viewport height
     useEffect(() => {
@@ -54,28 +51,6 @@ export default function ClientsPage() {
         }
     };
 
-    const handleDeleteAllExceptBatEl = async () => {
-        if (!confirm("Are you sure you want to delete all clients except בת אל?")) {
-            return;
-        }
-        setIsDeleting(true);
-        try {
-            const response = await fetch("/api/clients/delete-all-except-bat-el", {
-                method: "POST",
-            });
-            const result = await response.json();
-            if (result.success) {
-                alert("Successfully deleted all clients except בת אל");
-                window.location.reload();
-            } else {
-                alert(`Error: ${result.error}`);
-            }
-        } catch (error: any) {
-            alert(`Error: ${error.message}`);
-        } finally {
-            setIsDeleting(false);
-        }
-    };
 
     const filteredClients = clients.filter(client =>
         client.fullName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -123,33 +98,6 @@ export default function ClientsPage() {
                     <p className="text-muted-foreground hidden md:block">Manage your client database.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleDeleteAllExceptBatEl}
-                        disabled={isDeleting}
-                        className="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 px-3 py-2 border border-red-300 dark:border-red-700 rounded-md disabled:opacity-50 disabled:cursor-wait"
-                    >
-                        {isDeleting ? "Deleting..." : "Delete All Except בת אל"}
-                    </button>
-                    <button
-                        onClick={async () => {
-                            if (isSeeding) return;
-                            setIsSeeding(true);
-                            try {
-                                await resetAndSeedDatabase(100);
-                                alert("Reset complete! Added 100 clients.");
-                                window.location.reload();
-                            } catch (err: any) {
-                                console.error(err);
-                                alert("Failed to seed: " + (err.message || err));
-                            } finally {
-                                setIsSeeding(false);
-                            }
-                        }}
-                        disabled={isSeeding}
-                        className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-3 py-2 border rounded-md disabled:opacity-50 disabled:cursor-wait"
-                    >
-                        {isSeeding ? "Seeding..." : "Reset+Seed 100"}
-                    </button>
                     <Link
                         href="/clients/new"
                         className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors"

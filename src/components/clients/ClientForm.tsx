@@ -488,105 +488,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleAutoPopulate = () => {
-        const randomStr = Math.random().toString(36).substring(7);
-        const randomSelection = (options: string[]) => options[Math.floor(Math.random() * options.length)] as any;
-        const randomMultiSelection = (options: string[], max = 3) => {
-            // Filter out "I don't mind" for multi-selects to test specific values, or include it randomly
-            const validOptions = options.filter(o => o !== "I don't mind");
-            const shuffled = [...validOptions].sort(() => 0.5 - Math.random());
-            return shuffled.slice(0, Math.floor(Math.random() * max) + 1) as any;
-        };
-
-        // Get option values from translations (always use English values for data storage)
-        const genderOptions = opts("gender").map(o => o.value);
-        const eyeColorOptions = opts("eyeColor").map(o => o.value);
-        const hairColorOptions = opts("hairColor").map(o => o.value);
-        const maritalStatusOptions = opts("maritalStatus").map(o => o.value);
-        const religiousAffiliationOptions = opts("religiousAffiliation").map(o => o.value);
-        const ethnicityOptions = opts("ethnicity").map(o => o.value);
-        const tribalStatusOptions = opts("tribalStatus").map(o => o.value);
-        const languagesOptions = opts("languages").map(o => o.value);
-        const learningStatusOptions = opts("learningStatus").map(o => o.value);
-        const headCoveringOptions = opts("headCovering").map(o => o.value);
-        const smokingOptions = opts("smoking").map(o => o.value);
-        const ageGapOptions = opts("ageGapPreference").map(o => o.value);
-        const willingToRelocateOptions = opts("willingToRelocate").map(o => o.value);
-
-        // Check if form is in Hebrew mode
-        const isHebrew = lang === "he";
-
-        // Hebrew names for testing
-        const hebrewMaleNames = ["דוד כהן", "משה לוי", "יוסף פרידמן", "אברהם שפירא", "יצחק גולדשטיין"];
-        const hebrewFemaleNames = ["שרה כהן", "רבקה לוי", "רחל פרידמן", "לאה שפירא", "חנה גולדשטיין"];
-        const hebrewLocations = ["ירושלים", "בני ברק", "תל אביב", "בית שמש", "פתח תקווה", "רעננה", "מודיעין"];
-        const hebrewOccupations = ["מורה", "מתכנת", "רואה חשבון", "סטודנט", "אחות", "עורך דין", "רופא"];
-        const hebrewEducation = ["תיכון", "ישיבה", "סמינר", "תואר ראשון", "תואר שני", "דוקטורט"];
-        const hebrewHobbies = ["קריאה, ספורט, מוזיקה", "טיולים, בישול, נסיעות", "אומנות, כתיבה, צילום", "לימוד תורה, שחמט, היסטוריה"];
-
-        // Set name based on gender (we'll set gender first)
-        const selectedGender = randomSelection(genderOptions);
-        setValue("gender", selectedGender);
-        
-        if (isHebrew) {
-            setValue("fullName", selectedGender === "Male" ? randomSelection(hebrewMaleNames) : randomSelection(hebrewFemaleNames));
-            setValue("location", randomSelection(hebrewLocations));
-            setValue("occupation", randomSelection(hebrewOccupations));
-            setValue("education", randomSelection(hebrewEducation));
-            setValue("familyBackground", "משפחה חמה ותומכת. הורים נשואים, אחים ואחיות.");
-            setValue("personality", "אדם חם, אכפתי ונעים הליכות. אוהב לעזור לאחרים.");
-            setValue("hobbies", randomSelection(hebrewHobbies));
-            setValue("references", "הרב כהן: 050-1234567\nגב׳ לוי: 052-7654321");
-            setValue("notes", "הערות פנימיות: נוצר באמצעות מילוי אוטומטי.");
-        } else {
-            setValue("fullName", `Test Client ${randomStr}`);
-            setValue("location", randomSelection(["Jerusalem", "Tel Aviv", "Haifa", "Beit Shemesh", "Petach Tikva", "Raanana", "Modiin"]));
-            setValue("occupation", randomSelection(["Developer", "Teacher", "Accountant", "Student", "Nurse", "Lawyer", "Doctor", "Sales"]));
-            setValue("education", randomSelection(["High School", "Yeshiva", "Seminary", "Degree", "Masters", "PhD"]));
-            setValue("familyBackground", "Standard family background description with some details about parents and siblings.");
-            setValue("personality", "Auto-generated personality description: Kind, outgoing, and thoughtful.");
-            setValue("hobbies", randomSelection(["Reading, Sports, Music", "Hiking, Cooking, Traveling", "Art, Writing, Photography", "Learning Torah, Chess, History"]));
-            setValue("references", "Rabbi Cohen: 050-1234567\nMrs. Levy: 052-7654321");
-            setValue("notes", "Internal notes: Created via Dev Fill button.");
-        }
-
-        setValue("email", `test${randomStr}@example.com`);
-        setValue("phone", `050-${Math.floor(Math.random() * 9000000 + 1000000)}`);
-        // Random DOB between 18 and 40 years ago
-        const age = Math.floor(Math.random() * (40 - 18 + 1) + 18);
-        const dob = new Date(new Date().setFullYear(new Date().getFullYear() - age)).toISOString().split('T')[0];
-        setValue("dob", dob);
-
-        setValue("height", 150 + Math.floor(Math.random() * 40)); // 150-190cm
-        setValue("eyeColor", randomSelection(eyeColorOptions));
-        setValue("hairColor", randomSelection(hairColorOptions));
-
-        setValue("maritalStatus", randomSelection(maritalStatusOptions));
-        setValue("active", true);
-        setValue("children", Math.floor(Math.random() * 4));
-
-        setValue("religiousAffiliation", randomMultiSelection(religiousAffiliationOptions));
-        setValue("ethnicity", randomSelection(ethnicityOptions));
-        setValue("tribalStatus", randomSelection(tribalStatusOptions));
-
-        setValue("languages", randomMultiSelection(languagesOptions));
-        setValue("learningStatus", randomSelection(learningStatusOptions));
-
-        setValue("headCovering", randomSelection(headCoveringOptions));
-        setValue("smoking", randomSelection(smokingOptions));
-
-        const hasMedical = Math.random() > 0.8 ? "Yes" : "No";
-        setValue("medicalHistory", hasMedical);
-        setValue("medicalHistoryDetails", hasMedical === "Yes" ? (isHebrew ? "אלרגיות עונתיות קלות" : "Minor seasonal allergies") : "");
-
-        setValue("ageGapPreference", randomMultiSelection(ageGapOptions));
-        setValue("willingToRelocate", randomSelection(willingToRelocateOptions));
-
-        setValue("preferredEthnicities", randomMultiSelection(["I don't mind", ...ethnicityOptions]));
-        setValue("preferredHashkafos", randomMultiSelection(["I don't mind", ...religiousAffiliationOptions]));
-        setValue("preferredLearningStatus", randomMultiSelection(["I don't mind", ...learningStatusOptions]));
-        setValue("preferredHeadCovering", randomMultiSelection(["I don't mind", ...headCoveringOptions]));
-    };
 
     const watchedPhotoUrl = watch("photoUrl");
     const watchedMedical = watch("medicalHistory");
@@ -871,7 +772,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         </button>
                                     </>
                                 )}
-                                <button type="button" onClick={handleAutoPopulate} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-200">{t(lang, "buttons.devFill")}</button>
                             </div>
                             <span className="text-sm text-gray-500">
                                 {t(lang, "messages.step")} {currentStep + 1} {t(lang, "messages.of")} {STEPS.length}

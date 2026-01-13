@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteAllExceptBatEl } from "@/actions/client";
+import dbConnect from "@/lib/db";
+import ClientModel from "@/models/Client";
+import { revalidatePath } from "next/cache";
 
 export async function POST(request: NextRequest) {
     try {
-        await deleteAllExceptBatEl();
+        await dbConnect();
+        // Delete all clients except those with fullName containing "בת אל"
+        const result = await ClientModel.deleteMany({
+            fullName: { $not: /בת אל/ }
+        });
+        revalidatePath("/clients");
+        revalidatePath("/matching");
+        revalidatePath("/search");
         return NextResponse.json({ 
             success: true, 
-            message: "All clients deleted except בת אל" 
+            message: `Deleted ${result.deletedCount} clients. Kept clients with "בת אל" in name.` 
         });
     } catch (error: any) {
         console.error("Error deleting clients:", error);
