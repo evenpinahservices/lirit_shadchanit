@@ -49,7 +49,8 @@ function ClientDetailsContent() {
 
     // Detect language early so it can be used in both view and edit modes
     const clientLang = detectClientLanguage(client);
-    const isRtl = clientLang === "he";
+    // Force RTL for profile view (always read from right to left)
+    const isRtl = true;
 
     const getBackInfo = () => {
         switch (source) {

@@ -201,23 +201,32 @@ export function AutoFillModal({
             }
             
             // Step 3: Query AI
-            setProcessingSubStatus("Querying AI model...");
+            setProcessingSubStatus("Sending images to AI model...");
+            await new Promise(resolve => setTimeout(resolve, 300)); // Small delay to show message
             
-            // Call Next.js API route
-            setProcessingSubStatus("Calling AI service...");
+            setProcessingSubStatus("Querying Gemini AI...");
+            await new Promise(resolve => setTimeout(resolve, 300)); // Small delay to show message
             
             let response: Response;
             try {
-                response = await fetch("/api/extract-data", {
+                // Start the fetch (this is async, so we can update status)
+                setProcessingSubStatus("Waiting for AI response...");
+                const fetchPromise = fetch("/api/extract-data", {
                     method: "POST",
                     body: formData,
                 });
+                
+                // Update status while waiting
+                setProcessingSubStatus("AI is analyzing images...");
+                
+                response = await fetchPromise;
             } catch (fetchError: any) {
                 console.error("Fetch error:", fetchError);
                 throw new Error(`Network error: ${fetchError.message || "Failed to connect to server"}`);
             }
             
-            setProcessingSubStatus("Checking AI response...");
+            setProcessingSubStatus("Received AI response, processing...");
+            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay to show message
             
             if (!response.ok) {
                 let errorMessage = "Failed to extract data from images";
@@ -259,44 +268,87 @@ export function AutoFillModal({
             // Step 6: Format data for form
             setProcessingSubStatus("Formatting extracted data...");
             
-            // The extracted data should already be in the correct format
-            // But we need to ensure arrays are properly formatted
+            // The extracted data should preserve the nested structure {value, confidence, sourceQuote}
+            // This allows the form to extract confidence for color coding
             const finalFormData: any = {
                 ...extractedData,
             };
             
-            // Ensure array fields are arrays
-            if (finalFormData.religiousAffiliation && !Array.isArray(finalFormData.religiousAffiliation)) {
-                finalFormData.religiousAffiliation = [finalFormData.religiousAffiliation];
+            // For nested structures, ensure arrays are properly formatted in the value
+            // But preserve the confidence data
+            const processNestedArray = (fieldData: any, fieldName: string) => {
+                if (!fieldData) return;
+                
+                // If it's a nested structure {value, confidence, sourceQuote}
+                if (typeof fieldData === "object" && "value" in fieldData) {
+                    const value = fieldData.value;
+                    if (value && !Array.isArray(value)) {
+                        // Convert string to array if needed
+                        if (typeof value === "string") {
+                            finalFormData[fieldName] = {
+                                ...fieldData,
+                                value: value.split(",").map((s: string) => s.trim()).filter(Boolean)
+                            };
+                        } else {
+                            finalFormData[fieldName] = {
+                                ...fieldData,
+                                value: [value]
+                            };
+                        }
+                    }
+                }
+                // If it's already a simple value, convert to array
+                else if (fieldData && !Array.isArray(fieldData)) {
+                    if (typeof fieldData === "string") {
+                        finalFormData[fieldName] = {
+                            value: fieldData.split(",").map((s: string) => s.trim()).filter(Boolean),
+                            confidence: undefined,
+                            sourceQuote: null
+                        };
+                    } else {
+                        finalFormData[fieldName] = {
+                            value: [fieldData],
+                            confidence: undefined,
+                            sourceQuote: null
+                        };
+                    }
+                }
+            };
+            
+            // Process array fields while preserving confidence structure
+            if (finalFormData.religiousAffiliation) {
+                processNestedArray(finalFormData.religiousAffiliation, "religiousAffiliation");
             }
-            if (finalFormData.languages && !Array.isArray(finalFormData.languages)) {
-                finalFormData.languages = Array.isArray(finalFormData.languages) 
-                    ? finalFormData.languages 
-                    : String(finalFormData.languages).split(",").map((s: string) => s.trim()).filter(Boolean);
+            if (finalFormData.languages) {
+                processNestedArray(finalFormData.languages, "languages");
             }
-            if (finalFormData.ageGapPreference && !Array.isArray(finalFormData.ageGapPreference)) {
-                finalFormData.ageGapPreference = [finalFormData.ageGapPreference];
+            if (finalFormData.ageGapPreference) {
+                processNestedArray(finalFormData.ageGapPreference, "ageGapPreference");
             }
-            if (finalFormData.preferredEthnicities && !Array.isArray(finalFormData.preferredEthnicities)) {
-                finalFormData.preferredEthnicities = Array.isArray(finalFormData.preferredEthnicities)
-                    ? finalFormData.preferredEthnicities
-                    : String(finalFormData.preferredEthnicities).split(",").map((s: string) => s.trim()).filter(Boolean);
+            if (finalFormData.preferredEthnicities) {
+                processNestedArray(finalFormData.preferredEthnicities, "preferredEthnicities");
             }
-            if (finalFormData.preferredHashkafos && !Array.isArray(finalFormData.preferredHashkafos)) {
-                finalFormData.preferredHashkafos = Array.isArray(finalFormData.preferredHashkafos)
-                    ? finalFormData.preferredHashkafos
-                    : String(finalFormData.preferredHashkafos).split(",").map((s: string) => s.trim()).filter(Boolean);
+            if (finalFormData.preferredHashkafos) {
+                processNestedArray(finalFormData.preferredHashkafos, "preferredHashkafos");
             }
-            if (finalFormData.preferredLearningStatus && !Array.isArray(finalFormData.preferredLearningStatus)) {
-                finalFormData.preferredLearningStatus = [finalFormData.preferredLearningStatus];
+            if (finalFormData.preferredLearningStatus) {
+                processNestedArray(finalFormData.preferredLearningStatus, "preferredLearningStatus");
             }
-            if (finalFormData.preferredHeadCovering && !Array.isArray(finalFormData.preferredHeadCovering)) {
-                finalFormData.preferredHeadCovering = [finalFormData.preferredHeadCovering];
+            if (finalFormData.preferredHeadCovering) {
+                processNestedArray(finalFormData.preferredHeadCovering, "preferredHeadCovering");
             }
             
-            // Store raw text if available
+            // Store raw text if available (preserve structure if it exists)
             if (extractedData.resumeRawText) {
-                finalFormData.resumeRawText = extractedData.resumeRawText;
+                if (typeof extractedData.resumeRawText === "object" && "value" in extractedData.resumeRawText) {
+                    finalFormData.resumeRawText = extractedData.resumeRawText;
+                } else {
+                    finalFormData.resumeRawText = {
+                        value: extractedData.resumeRawText,
+                        confidence: 1.0,
+                        sourceQuote: "Full extracted text from images"
+                    };
+                }
             }
             
             // Step 7: Populate form

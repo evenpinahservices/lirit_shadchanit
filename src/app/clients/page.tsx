@@ -14,6 +14,7 @@ export default function ClientsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(4);
     const [isSeeding, setIsSeeding] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Dynamic items per page based on viewport height
     useEffect(() => {
@@ -50,6 +51,29 @@ export default function ClientsPage() {
         if (clientToDelete) {
             deleteClient(clientToDelete);
             setClientToDelete(null);
+        }
+    };
+
+    const handleDeleteAllExceptBatEl = async () => {
+        if (!confirm("Are you sure you want to delete all clients except בת אל?")) {
+            return;
+        }
+        setIsDeleting(true);
+        try {
+            const response = await fetch("/api/clients/delete-all-except-bat-el", {
+                method: "POST",
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert("Successfully deleted all clients except בת אל");
+                window.location.reload();
+            } else {
+                alert(`Error: ${result.error}`);
+            }
+        } catch (error: any) {
+            alert(`Error: ${error.message}`);
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -99,6 +123,13 @@ export default function ClientsPage() {
                     <p className="text-muted-foreground hidden md:block">Manage your client database.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleDeleteAllExceptBatEl}
+                        disabled={isDeleting}
+                        className="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 px-3 py-2 border border-red-300 dark:border-red-700 rounded-md disabled:opacity-50 disabled:cursor-wait"
+                    >
+                        {isDeleting ? "Deleting..." : "Delete All Except בת אל"}
+                    </button>
                     <button
                         onClick={async () => {
                             if (isSeeding) return;

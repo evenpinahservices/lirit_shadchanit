@@ -239,24 +239,40 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Extract values from nested structure (value/confidence/sourceQuote)
-        // Convert to flat structure for frontend
-        const flatData: any = {};
+        // Preserve nested structure with confidence data for color coding
+        // The ClientForm's handleAutoFill function expects {value, confidence, sourceQuote} structure
+        // Don't flatten - keep the nested structure so confidence can be extracted for color coding
+        const processedData: any = {};
+        
+        // Process each field, preserving confidence data
         for (const [key, value] of Object.entries(extractedData)) {
+            // Skip helper fields
+            if (key.startsWith("_")) {
+                continue;
+            }
+            
+            // If it's already in the correct nested format, keep it
             if (typeof value === "object" && value !== null && "value" in value) {
-                flatData[key] = (value as any).value;
-            } else {
-                flatData[key] = value;
+                processedData[key] = value;
+            } 
+            // If it's a simple value, wrap it (no confidence data available)
+            else {
+                processedData[key] = {
+                    value: value,
+                    confidence: undefined,
+                    sourceQuote: null
+                };
             }
         }
 
         // Detect language
         const detectedLanguage = detectLanguageFromJSON(extractedData);
-        flatData.formLanguage = detectedLanguage;
+        // Add formLanguage as a simple value (not nested structure)
+        processedData.formLanguage = detectedLanguage;
 
         return NextResponse.json({
             success: true,
-            data: flatData,
+            data: processedData, // Keep nested structure for confidence extraction
             language: detectedLanguage,
             raw_response: responseText.substring(0, 1000), // First 1000 chars for debugging
         });

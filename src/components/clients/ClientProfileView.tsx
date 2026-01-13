@@ -66,7 +66,8 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
 
     // Determine language from client formLanguage or detect from content
     const lang: FormLanguage = detectClientLanguage(client);
-    const isRtl = lang === "he";
+    // Force RTL for profile view (always read from right to left)
+    const isRtl = true;
 
     // Combine profile photo and gallery images
     const allImages = [
