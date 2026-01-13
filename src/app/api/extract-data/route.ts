@@ -170,26 +170,27 @@ export async function POST(request: NextRequest) {
                         }),
                     }
                 );
-            
-            // If 404, try v1 API with gemini-1.5-flash (stable fallback)
-            if (geminiResponse.status === 404) {
-                console.log("gemini-2.0-flash-exp not found, trying v1 API with gemini-1.5-flash");
-                geminiResponse = await fetch(
-                    `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            contents: [
-                                {
-                                    parts: contentParts,
-                                },
-                            ],
-                        }),
-                    }
-                );
+                
+                // If still 404, try v1 API with gemini-1.5-flash (stable fallback)
+                if (geminiResponse.status === 404) {
+                    console.log("gemini-2.0-flash-exp not found, trying v1 API with gemini-1.5-flash");
+                    geminiResponse = await fetch(
+                        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                contents: [
+                                    {
+                                        parts: contentParts,
+                                    },
+                                ],
+                            }),
+                        }
+                    );
+                }
             }
         } catch (error: any) {
             console.error("Gemini API fetch error:", error);
