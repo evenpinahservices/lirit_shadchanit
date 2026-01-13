@@ -317,10 +317,11 @@
       "options": ["Male", "Female"]
     },
     "location": {
-      "required": true,
+      "required": false,
       "minLength": 2,
-      "message": "Location is required"
+      "message": "Location is optional"
     }
   }
 }
+
 

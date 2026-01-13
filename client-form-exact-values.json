@@ -47,10 +47,10 @@
   
   "location": {
     "type": "string",
-    "required": true,
+    "required": false,
     "minLength": 2,
     "restricted": false,
-    "description": "OPEN TEXT - Any string with minimum 2 characters"
+    "description": "OPEN TEXT - Any string with minimum 2 characters (optional field)"
   },
   
   "height": {
@@ -311,4 +311,5 @@
     "default": true
   }
 }
+
 

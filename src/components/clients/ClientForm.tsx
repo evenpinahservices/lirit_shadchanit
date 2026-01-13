@@ -592,19 +592,36 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const watchedMedical = watch("medicalHistory");
     const watchedGender = watch("gender");
 
-    // Helper function to get color based on confidence (red to green spectrum)
+    // Helper function to get color based on confidence (red, orange, yellow)
     const getConfidenceColor = (confidence: number | undefined): string => {
         if (confidence === undefined || confidence === null) {
             return ""; // No color if no confidence data
         }
         // Clamp confidence between 0 and 1
         const clamped = Math.max(0, Math.min(1, confidence));
-        // Red (low confidence) to Green (high confidence)
-        // Red: rgb(239, 68, 68) -> Green: rgb(34, 197, 94)
-        const red = Math.round(239 - (239 - 34) * clamped);
-        const green = Math.round(68 + (197 - 68) * clamped);
-        const blue = Math.round(68 - (68 - 94) * clamped);
-        return `rgb(${red}, ${green}, ${blue})`;
+        
+        let color: string;
+        // Red: < 0.3
+        if (clamped < 0.3) {
+            color = "#ef4444"; // red-500
+        }
+        // Orange: 0.3 to 0.7
+        else if (clamped >= 0.3 && clamped < 0.7) {
+            color = "#f97316"; // orange-500
+        }
+        // Yellow: 0.7 to < 1.0
+        else if (clamped >= 0.7 && clamped < 1.0) {
+            color = "#eab308"; // yellow-500
+        }
+        // Perfect confidence (1.0) - green
+        else {
+            color = "#22c55e"; // green-500
+        }
+        
+        // Debug logging
+        console.log(`Confidence: ${clamped.toFixed(2)}, Color: ${color}`);
+        
+        return color;
     };
 
     // Helper function to get field border style based on confidence
@@ -614,7 +631,11 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             return {};
         }
         const borderColor = getConfidenceColor(confidence);
+        if (!borderColor) return {};
+        
+        // Return style object - inline styles override Tailwind classes
         return {
+            border: `2px solid ${borderColor}`,
             borderColor: borderColor,
             borderWidth: '2px',
             borderStyle: 'solid'

@@ -5,8 +5,7 @@
     "fullName",
     "phone",
     "dob",
-    "gender",
-    "location"
+    "gender"
   ],
   
   "fullName": "string (min 2 characters) - OPEN TEXT",
@@ -15,7 +14,7 @@
   "dob": "string - Supports: Gregorian (YYYY-MM-DD), Hebrew (Hebrew: Day Month Year), or Year only (YYYY) - OPEN TEXT",
   "gender": "Male",
   "_gender_options": ["Male", "Female"],
-  "location": "string (min 2 characters) - OPEN TEXT",
+  "location": "string (min 2 characters) - OPEN TEXT (optional)",
   
   "height": 0,
   "_height_type": "number (in cm)",

@@ -26,3 +26,4 @@ export async function translateHebrewToEnglish(text: string): Promise<string> {
 }
 
 
+

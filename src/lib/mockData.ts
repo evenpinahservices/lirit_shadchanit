@@ -72,7 +72,7 @@ export const ClientSchema = z.object({
     phone: z.string().min(9, "Phone number is required"),
     dob: z.string().min(1, "Date of birth is required"),
     gender: z.enum(["Male", "Female"]),
-    location: z.string().min(2, "Location is required"),
+    location: z.string().optional().default(""),
 
     height: z.coerce.number().optional().default(0),
     eyeColor: z.string().optional().default(""),
