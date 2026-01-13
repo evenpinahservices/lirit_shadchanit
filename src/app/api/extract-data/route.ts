@@ -156,20 +156,20 @@ export async function POST(request: NextRequest) {
                 console.log("gemini-3-flash-preview not found, trying gemini-2.0-flash-exp");
                 geminiResponse = await fetch(
                     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        contents: [
-                            {
-                                parts: contentParts,
-                            },
-                        ],
-                    }),
-                }
-            );
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            contents: [
+                                {
+                                    parts: contentParts,
+                                },
+                            ],
+                        }),
+                    }
+                );
             
             // If 404, try v1 API with gemini-1.5-flash (stable fallback)
             if (geminiResponse.status === 404) {
