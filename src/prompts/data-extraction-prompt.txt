@@ -103,6 +103,12 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null"
   },
+  "age": {
+    "value": "integer (number of years) - Extract age directly if explicitly stated in resume",
+    "confidence": 0.0-1.0,
+    "sourceQuote": "string or null",
+    "_note": "Extract age as a number if explicitly mentioned (e.g., 'Age: 25', '25 years old', 'גיל 25'). If only DOB is given, calculate age and include the calculation method in sourceQuote. If age is not mentioned, set to null."
+  },
   "gender": {
     "value": "Selection",
     "confidence": 0.0-1.0,

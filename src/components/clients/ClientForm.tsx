@@ -939,6 +939,27 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                     newSourceQuotes[key] = sourceQuote;
                 }
                 
+                // Special handling for age: convert to DOB
+                if (key === "age") {
+                    if (value !== null && value !== undefined && value !== "") {
+                        const ageNum = typeof value === "number" ? value : parseInt(String(value));
+                        if (!isNaN(ageNum) && ageNum >= 18 && ageNum <= 60) {
+                            const currentDob = watch("dob") || "";
+                            const newDob = calculateDobFromAge(ageNum, currentDob);
+                            if (newDob) {
+                                setValue("dob", newDob);
+                                confidences["dob"] = confidence !== undefined ? confidence : 0.8;
+                                if (sourceQuote) {
+                                    newSourceQuotes["dob"] = sourceQuote;
+                                }
+                                trigger("dob");
+                                fieldsSet++;
+                            }
+                        }
+                    }
+                    return; // Don't try to set "age" as a field since it's not in the schema
+                }
+                
                 // Special handling for headCovering: default to "Flexible" if not mentioned
                 if (key === "headCovering" && (value === null || value === undefined || value === "")) {
                     setValue("headCovering", "Flexible");
