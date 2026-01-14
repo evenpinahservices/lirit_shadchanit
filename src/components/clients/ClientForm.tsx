@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, Check, UploadCloud, X, FileJson } from "luci
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { useUploadWithProgress } from "@/hooks/useUploadWithProgress";
 import Image from "next/image";
-import { cn, detectClientLanguage } from "@/lib/utils";
+import { cn, detectClientLanguage, convertHebrewYearToLetters, parseHebrewYearToNumber } from "@/lib/utils";
 import { AutomaticMatchingModal } from "./AutomaticMatchingModal";
 import { AutoFillModal } from "./AutoFillModal";
 import { JsonFillModal } from "./JsonFillModal";
@@ -156,6 +156,9 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const [dateMode, setDateMode] = useState<"Gregorian" | "Hebrew" | "Year">("Gregorian");
     const [lastGregorianDate, setLastGregorianDate] = useState<string>(""); // Store last known Gregorian date
     const currentDob = watch("dob");
+    const [age, setAge] = useState<number | "">("");
+    const isUpdatingFromAgeRef = useRef(false);
+    const isUpdatingFromDobRef = useRef(false);
     
     // Scroll detection for conditional gradient fade
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -211,36 +214,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         }
     }, [currentDob, dateMode]);
 
-    // Helper function to parse Hebrew numerals to number
-    const parseHebrewYearToNumber = (hebrewYear: string): number => {
-        const onesMap: { [key: string]: number } = {
-            "א": 1, "ב": 2, "ג": 3, "ד": 4, "ה": 5, "ו": 6, "ז": 7, "ח": 8, "ט": 9
-        };
-        const tensMap: { [key: string]: number } = {
-            "י": 10, "כ": 20, "ך": 20, "ל": 30, "מ": 40, "ם": 40, "נ": 50, "ן": 50, 
-            "ס": 60, "ע": 70, "פ": 80, "ף": 80, "צ": 90, "ץ": 90
-        };
-        const hundredsMap: { [key: string]: number } = {
-            "ק": 100, "ר": 200, "ש": 300, "ת": 400
-        };
-        
-        // Remove gershayim and geresh
-        const cleaned = hebrewYear.replace(/[״׳"']/g, "");
-        
-        let total = 0;
-        for (const char of cleaned) {
-            if (onesMap[char]) total += onesMap[char];
-            else if (tensMap[char]) total += tensMap[char];
-            else if (hundredsMap[char]) total += hundredsMap[char];
-        }
-        
-        // Add 5000 for the current millennium (Hebrew years 5xxx)
-        if (total < 1000) {
-            total += 5000;
-        }
-        
-        return total;
-    };
 
     // Helper function to convert between date formats
     const convertDateFormat = (currentDob: string, fromMode: "Gregorian" | "Hebrew" | "Year", toMode: "Gregorian" | "Hebrew" | "Year"): string => {
@@ -271,7 +244,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             if (toMode === "Hebrew") {
                 // Convert to Hebrew year (approximate)
                 const hebrewYear = year + 3760;
-                return `Hebrew: א תשרי ${hebrewYear}`;
+                const hebrewYearLetters = convertHebrewYearToLetters(hebrewYear);
+                return `Hebrew: א תשרי ${hebrewYearLetters}`;
             }
         }
 
@@ -292,7 +266,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             if (toMode === "Hebrew") {
                 // Approximate conversion: Gregorian + 3760
                 const hebrewYear = year + 3760;
-                // Approximate Hebrew day and month (simplified - just use same numbers)
+                const hebrewYearLetters = convertHebrewYearToLetters(hebrewYear);
+                // Use Hebrew letters for day and month
                 const hebrewDays = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י",
                     "יא", "יב", "יג", "יד", "טו", "טז", "יז", "יח", "יט", "כ",
                     "כא", "כב", "כג", "כד", "כה", "כו", "כז", "כח", "כט", "ל"];
@@ -304,7 +279,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                 const monthIndex = month <= 12 ? (month + 5) % 12 : 0;
                 const hebrewMonth = hebrewMonths[monthIndex] || "תשרי";
                 
-                return `Hebrew: ${hebrewDay} ${hebrewMonth} ${hebrewYear}`;
+                return `Hebrew: ${hebrewDay} ${hebrewMonth} ${hebrewYearLetters}`;
             }
         }
 
@@ -358,6 +333,102 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
 
         return currentDob;
     };
+
+    // Calculate age from DOB
+    const calculateAgeFromDob = (dob: string): number | "" => {
+        if (!dob || dob.trim() === "") return "";
+        
+        // Handle Year Only (YYYY)
+        if (/^\d{4}$/.test(dob)) {
+            const year = parseInt(dob);
+            if (isNaN(year)) return "";
+            return new Date().getFullYear() - year;
+        }
+        
+        // Handle Hebrew Date
+        if (dob.includes("Hebrew:")) {
+            const parts = dob.trim().split(" ");
+            const hebrewYearStr = parts[parts.length - 1];
+            let numericYear = parseInt(hebrewYearStr);
+            
+            if (isNaN(numericYear) || numericYear < 1000) {
+                numericYear = parseHebrewYearToNumber(hebrewYearStr);
+            }
+            
+            const gregorianYear = numericYear - 3760;
+            return new Date().getFullYear() - gregorianYear;
+        }
+        
+        // Handle Standard Date (YYYY-MM-DD)
+        const birthDate = new Date(dob);
+        if (isNaN(birthDate.getTime())) return "";
+        
+        const ageDifMs = Date.now() - birthDate.getTime();
+        const ageDate = new Date(ageDifMs);
+        return Math.abs(ageDate.getUTCFullYear() - 1970);
+    };
+
+    // Calculate DOB from age (using current year)
+    const calculateDobFromAge = (age: number | "", currentDob: string): string => {
+        if (age === "" || typeof age !== "number") return currentDob || "";
+        if (isNaN(age) || age < 18 || age > 60) return currentDob || "";
+        
+        const currentYear = new Date().getFullYear();
+        const birthYear = currentYear - age;
+        
+        // Preserve the date mode and format
+        if (dateMode === "Year") {
+            return birthYear.toString();
+        } else if (dateMode === "Hebrew") {
+            const hebrewYear = birthYear + 3760;
+            const hebrewYearLetters = convertHebrewYearToLetters(hebrewYear);
+            // Try to preserve Hebrew day/month from current DOB if available
+            if (currentDob && currentDob.includes("Hebrew:")) {
+                const parts = currentDob.replace("Hebrew: ", "").split(" ");
+                if (parts.length >= 2) {
+                    // Preserve the Hebrew day and month letters
+                    return `Hebrew: ${parts[0]} ${parts[1]} ${hebrewYearLetters}`;
+                }
+            }
+            // Default to first day of Tishrei with Hebrew letters
+            return `Hebrew: א תשרי ${hebrewYearLetters}`;
+        } else {
+            // Gregorian mode - try to preserve month/day from current DOB
+            if (currentDob && !currentDob.includes("Hebrew:") && !/^\d{4}$/.test(currentDob)) {
+                const date = new Date(currentDob);
+                if (!isNaN(date.getTime())) {
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    return `${birthYear}-${month}-${day}`;
+                }
+            }
+            // Fallback: Use January 1st
+            return `${birthYear}-01-01`;
+        }
+    };
+
+    // Sync DOB -> Age
+    useEffect(() => {
+        if (isUpdatingFromAgeRef.current) return; // Don't update if age is being changed
+        
+        const calculatedAge = calculateAgeFromDob(currentDob || "");
+        if (calculatedAge !== age) {
+            isUpdatingFromDobRef.current = true;
+            setAge(calculatedAge);
+            // Reset flag after state update
+            setTimeout(() => {
+                isUpdatingFromDobRef.current = false;
+            }, 0);
+        }
+    }, [currentDob, dateMode]);
+
+    // Initialize age from client DOB
+    useEffect(() => {
+        if (client?.dob) {
+            const calculatedAge = calculateAgeFromDob(client.dob);
+            setAge(calculatedAge);
+        }
+    }, [client]);
 
 
 
@@ -954,7 +1025,10 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                     onClick={() => {
                                                         const converted = convertDateFormat(currentDob || "", dateMode, "Hebrew");
                                                         setDateMode("Hebrew");
-                                                        setValue("dob", converted || `Hebrew: א תשרי ${new Date().getFullYear() + 3760}`);
+                                                        const currentYear = new Date().getFullYear();
+                                                        const hebrewYear = currentYear + 3760;
+                                                        const hebrewYearLetters = convertHebrewYearToLetters(hebrewYear);
+                                                        setValue("dob", converted || `Hebrew: א תשרי ${hebrewYearLetters}`);
                                                     }}
                                                     className={`px-2 py-1 rounded-sm transition-colors ${dateMode === "Hebrew" ? "bg-white dark:bg-gray-600 shadow-sm font-medium" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
                                                 >
@@ -976,6 +1050,99 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                             )}
                                         />
                                         {errors.dob && <p className="text-red-500 text-xs">{errors.dob?.message}</p>}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-medium">{lang === "he" ? "גיל" : "Age"}</label>
+                                        <input
+                                            type="number"
+                                            min="18"
+                                            max="60"
+                                            value={age}
+                                            onChange={(e) => {
+                                                const inputValue = e.target.value;
+                                                // Allow typing any value, including empty and values outside range
+                                                if (inputValue === "") {
+                                                    setAge("");
+                                                    return;
+                                                }
+                                                
+                                                const parsedAge = parseInt(inputValue);
+                                                if (!isNaN(parsedAge)) {
+                                                    setAge(parsedAge);
+                                                    
+                                                    // Update DOB for valid ages (within range)
+                                                    const MIN_AGE = 18;
+                                                    const MAX_AGE = 60;
+                                                    if (parsedAge >= MIN_AGE && parsedAge <= MAX_AGE) {
+                                                        if (!isUpdatingFromDobRef.current) {
+                                                            isUpdatingFromAgeRef.current = true;
+                                                            const newDob = calculateDobFromAge(parsedAge, currentDob || "");
+                                                            if (newDob) {
+                                                                setValue("dob", newDob);
+                                                                trigger("dob");
+                                                            }
+                                                            setTimeout(() => {
+                                                                isUpdatingFromAgeRef.current = false;
+                                                            }, 100);
+                                                        }
+                                                    }
+                                                } else {
+                                                    setAge("");
+                                                }
+                                            }}
+                                            onBlur={(e) => {
+                                                // Clamp values when user finishes typing
+                                                const inputValue = e.target.value;
+                                                if (inputValue === "") {
+                                                    return;
+                                                }
+                                                
+                                                const parsedAge = parseInt(inputValue);
+                                                if (isNaN(parsedAge)) {
+                                                    return;
+                                                }
+                                                
+                                                const MIN_AGE = 18;
+                                                const MAX_AGE = 60;
+                                                let clampedAge = parsedAge;
+                                                
+                                                if (parsedAge < MIN_AGE) {
+                                                    clampedAge = MIN_AGE;
+                                                } else if (parsedAge > MAX_AGE) {
+                                                    clampedAge = MAX_AGE;
+                                                }
+                                                
+                                                // Only update if value was clamped
+                                                if (clampedAge !== parsedAge) {
+                                                    setAge(clampedAge);
+                                                }
+                                                
+                                                // Update DOB with the (possibly clamped) age
+                                                if (!isUpdatingFromDobRef.current) {
+                                                    isUpdatingFromAgeRef.current = true;
+                                                    const newDob = calculateDobFromAge(clampedAge, currentDob || "");
+                                                    if (newDob) {
+                                                        setValue("dob", newDob);
+                                                        trigger("dob");
+                                                    }
+                                                    setTimeout(() => {
+                                                        isUpdatingFromAgeRef.current = false;
+                                                    }, 100);
+                                                }
+                                            }}
+                                            onKeyDown={(e) => {
+                                                // Update DOB when Enter is pressed
+                                                if (e.key === "Enter") {
+                                                    e.currentTarget.blur();
+                                                }
+                                            }}
+                                            className="w-full p-2 border rounded-md dark:bg-gray-900"
+                                            placeholder={lang === "he" ? "גיל" : "Age"}
+                                            dir={rtl ? "rtl" : "ltr"}
+                                        />
+                                        <p className="text-xs text-gray-500 dark:text-gray-400" dir={rtl ? "rtl" : "ltr"}>
+                                            {lang === "he" ? "גיל מסונכרן אוטומטית עם תאריך הלידה (מינימום 18)" : "Age automatically syncs with date of birth (minimum 18)"}
+                                        </p>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.gender")}</label>

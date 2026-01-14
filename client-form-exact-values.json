@@ -20,10 +20,11 @@
   
   "phone": {
     "type": "string",
-    "required": true,
+    "required": false,
     "minLength": 9,
     "restricted": false,
-    "description": "OPEN TEXT - Any string with minimum 9 characters"
+    "description": "OPEN TEXT - Any string with minimum 9 characters or empty string \"\"",
+    "note": "Can be empty string if not provided"
   },
   
   "dob": {

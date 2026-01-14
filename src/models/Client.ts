@@ -5,7 +5,7 @@ const ClientSchema = new Schema<Client>(
     {
         fullName: { type: String, required: true },
         email: { type: String },
-        phone: { type: String, required: true },
+        phone: { type: String },
         dob: { type: String, required: true },
         location: { type: String },
         gender: { type: String, enum: ["Male", "Female"], required: true },

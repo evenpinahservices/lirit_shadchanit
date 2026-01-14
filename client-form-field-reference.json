@@ -304,9 +304,9 @@
       "message": "Invalid email (or can be empty string)"
     },
     "phone": {
-      "required": true,
+      "required": false,
       "minLength": 9,
-      "message": "Phone number is required"
+      "message": "Invalid phone number (or can be empty string)"
     },
     "dob": {
       "required": true,

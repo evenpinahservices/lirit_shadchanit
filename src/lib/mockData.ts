@@ -69,7 +69,7 @@ export interface Client {
 export const ClientSchema = z.object({
     fullName: z.string().min(2, "Name is required"),
     email: z.string().email("Invalid email").or(z.literal("")),
-    phone: z.string().min(9, "Phone number is required"),
+    phone: z.union([z.string().min(9, "Invalid phone number"), z.literal("")]),
     dob: z.string().min(1, "Date of birth is required"),
     gender: z.enum(["Male", "Female"]),
     location: z.string().optional().default(""),

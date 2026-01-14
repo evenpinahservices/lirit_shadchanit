@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Client } from "@/lib/mockData";
 import Image from "next/image";
 import { MapPin, Briefcase, Ruler, Heart, BookOpen, GraduationCap, Globe, Users, FileText, ChevronLeft, ChevronRight, User as UserIcon } from "lucide-react";
-import { cn, getTextDirection, detectClientLanguage } from "@/lib/utils";
+import { cn, getTextDirection, detectClientLanguage, parseHebrewYearToNumber } from "@/lib/utils";
 import { ImageGalleryModal } from "./ImageGalleryModal";
 import { FormLanguage, t, valueToLabel, getOptions } from "@/lib/translations";
 
@@ -87,10 +87,17 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
         if (dob.includes("Hebrew:")) {
             // Extract year from "Hebrew: Day Month Year"
             const parts = dob.trim().split(" ");
-            const hebrewYear = parseInt(parts[parts.length - 1]);
+            const hebrewYearStr = parts[parts.length - 1];
+            let numericYear = parseInt(hebrewYearStr);
+            
+            // If parsing fails, try to parse Hebrew letters
+            if (isNaN(numericYear) || numericYear < 1000) {
+                numericYear = parseHebrewYearToNumber(hebrewYearStr);
+            }
+            
             // Approximate Gregorian year: Hebrew Year - 3760
-            if (!isNaN(hebrewYear)) {
-                return new Date().getFullYear() - (hebrewYear - 3760);
+            if (!isNaN(numericYear) && numericYear > 1000) {
+                return new Date().getFullYear() - (numericYear - 3760);
             }
             return "N/A";
         }
