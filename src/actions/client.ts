@@ -109,3 +109,14 @@ export async function resetAndSeedDatabase(count: number = 100): Promise<void> {
     revalidatePath("/search");
 }
 
+export async function deleteAllExceptBatEl(): Promise<void> {
+    await dbConnect();
+    // Delete all clients except those with fullName containing "בת אל"
+    const result = await ClientModel.deleteMany({
+        fullName: { $not: /בת אל/ }
+    });
+    revalidatePath("/clients");
+    revalidatePath("/matching");
+    revalidatePath("/search");
+    return;
+}

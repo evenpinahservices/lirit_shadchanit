@@ -3,12 +3,35 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 
+// Helper function to detect if device is a laptop (not mobile/tablet)
+function isLaptop(): boolean {
+    if (typeof window === 'undefined') return false;
+    
+    // Check for touch capability - laptops typically don't have touch screens
+    const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    // Check screen width - laptops typically have larger screens
+    const isLargeScreen = window.innerWidth >= 1024;
+    
+    // Check for pointer device (mouse) - laptops have pointer devices
+    const hasPointerDevice = window.matchMedia('(pointer: fine)').matches;
+    
+    // Laptop detection: large screen, has pointer device, and typically no touch (or limited touch)
+    // Some modern laptops have touch screens, so we check if it's primarily a pointer device
+    return isLargeScreen && hasPointerDevice && (!hasTouchScreen || window.matchMedia('(any-pointer: fine)').matches);
+}
+
 export function AutoFullscreen() {
     const pathname = usePathname();
 
     useEffect(() => {
         // Don't auto-fullscreen on login page
         if (pathname === "/login") {
+            return;
+        }
+
+        // Don't auto-fullscreen on laptop mode
+        if (isLaptop()) {
             return;
         }
 

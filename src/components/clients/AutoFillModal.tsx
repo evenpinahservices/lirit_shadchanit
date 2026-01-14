@@ -33,6 +33,8 @@ export function AutoFillModal({
     const [extractedText, setExtractedText] = useState<string>("");
     const [translatedText, setTranslatedText] = useState<string>("");
     const [selectedProfileIndex, setSelectedProfileIndex] = useState<number | null>(null);
+    const [isDraggingTextImages, setIsDraggingTextImages] = useState(false);
+    const [isDraggingProfileImages, setIsDraggingProfileImages] = useState(false);
     
     const textImageInputRef = useRef<HTMLInputElement>(null);
     const profileImageInputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +74,30 @@ export function AutoFillModal({
             setSelectedProfileIndex(null);
         } else if (selectedProfileIndex !== null && selectedProfileIndex > index) {
             setSelectedProfileIndex(selectedProfileIndex - 1);
+        }
+    };
+
+    const handleTextImageDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        setIsDraggingTextImages(false);
+        
+        if (isProcessing) return;
+        
+        const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
+        if (files.length > 0) {
+            setTextImages(prev => [...prev, ...files]);
+        }
+    };
+
+    const handleProfileImageDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        setIsDraggingProfileImages(false);
+        
+        if (isProcessing) return;
+        
+        const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
+        if (files.length > 0) {
+            setProfileImages(prev => [...prev, ...files]);
         }
     };
 
@@ -452,11 +478,25 @@ export function AutoFillModal({
                                 </div>
                             ))}
                             <label
-                                className={`relative flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed border-gray-300 hover:border-gray-400 cursor-pointer bg-gray-50 dark:bg-gray-800 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`relative flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed cursor-pointer bg-gray-50 dark:bg-gray-800 transition-colors ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''} ${
+                                    isDraggingTextImages 
+                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                        : 'border-gray-300 hover:border-gray-400'
+                                }`}
                                 style={{ pointerEvents: isProcessing ? 'none' : 'auto' }}
+                                onDrop={handleTextImageDrop}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    if (!isProcessing) {
+                                        setIsDraggingTextImages(true);
+                                    }
+                                }}
+                                onDragLeave={() => setIsDraggingTextImages(false)}
                             >
                                 <UploadCloud className="h-6 w-6 text-gray-400" />
-                                <span className="text-xs text-gray-500 mt-1">Add Text Image</span>
+                                <span className="text-xs text-gray-500 mt-1">
+                                    {isDraggingTextImages ? "Drop images here" : "Add Text Image"}
+                                </span>
                                 <input
                                     ref={textImageInputRef}
                                     type="file"
@@ -521,11 +561,25 @@ export function AutoFillModal({
                                 </div>
                             ))}
                             <label
-                                className={`relative flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed border-gray-300 hover:border-gray-400 cursor-pointer bg-gray-50 dark:bg-gray-800 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`relative flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed cursor-pointer bg-gray-50 dark:bg-gray-800 transition-colors ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''} ${
+                                    isDraggingProfileImages 
+                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                        : 'border-gray-300 hover:border-gray-400'
+                                }`}
                                 style={{ pointerEvents: isProcessing ? 'none' : 'auto' }}
+                                onDrop={handleProfileImageDrop}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    if (!isProcessing) {
+                                        setIsDraggingProfileImages(true);
+                                    }
+                                }}
+                                onDragLeave={() => setIsDraggingProfileImages(false)}
                             >
                                 <UploadCloud className="h-6 w-6 text-gray-400" />
-                                <span className="text-xs text-gray-500 mt-1">Add Profile Image</span>
+                                <span className="text-xs text-gray-500 mt-1">
+                                    {isDraggingProfileImages ? "Drop images here" : "Add Profile Image"}
+                                </span>
                                 <input
                                     ref={profileImageInputRef}
                                     type="file"

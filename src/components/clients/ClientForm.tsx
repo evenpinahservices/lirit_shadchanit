@@ -147,6 +147,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const [matchResults, setMatchResults] = useState<Client[]>([]);
     const [showAutoFillModal, setShowAutoFillModal] = useState(false);
     const [showJsonFillModal, setShowJsonFillModal] = useState(false);
+    const [isDraggingProfile, setIsDraggingProfile] = useState(false);
+    const [isDraggingGallery, setIsDraggingGallery] = useState(false);
 
     const [createdClient, setCreatedClient] = useState<Client | null>(null);
 
@@ -434,6 +436,113 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         }
         // Reset the input so the same file can be selected again if needed
         e.target.value = "";
+    };
+
+    const handleProfileImageDrop = async (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingProfile(false);
+        
+        if (profileUpload.isUploading) return;
+        
+        const file = e.dataTransfer.files?.[0];
+        if (!file || !file.type.startsWith("image/")) {
+            console.log("No valid image file in drop");
+            return;
+        }
+
+        console.log("Dropped file:", file.name, file.type, file.size);
+        setUploadError(null);
+        setCurrentUploadFile(file);
+
+        try {
+            const result = await profileUpload.uploadWithProgress(file);
+            
+            if (result.url) {
+                const newPhotoUrl = result.url;
+                setValue("photoUrl", newPhotoUrl);
+                setUploadError(null);
+                trigger("photoUrl");
+                
+                // Auto-save: If editing, save immediately to database
+                if (isEditing && client) {
+                    try {
+                        await updateClient(client.id, { photoUrl: newPhotoUrl });
+                    } catch (err) {
+                        console.error("Failed to auto-save photo:", err);
+                    }
+                }
+            } else {
+                const errorMsg = result.error || "Failed to upload image.";
+                setUploadError(errorMsg);
+                console.error("Upload error:", errorMsg);
+            }
+        } catch (error) {
+            console.error("Failed to upload image:", error);
+            setUploadError("Failed to upload image. Please try again.");
+        } finally {
+            setCurrentUploadFile(null);
+        }
+    };
+
+    const handleGalleryImageDrop = async (e: React.DragEvent<HTMLLabelElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingGallery(false);
+        
+        if (galleryUpload.isUploading) return;
+        
+        const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith("image/"));
+        if (files.length === 0) {
+            console.log("No valid image files in drop");
+            return;
+        }
+
+        console.log("Dropped files:", files.map(f => ({ name: f.name, type: f.type, size: f.size })));
+        setUploadError(null);
+
+        // Upload one by one
+        const uploadedUrls: string[] = [];
+        for (const file of files) {
+            setGalleryUploadFile(file);
+            try {
+                const result = await galleryUpload.uploadWithProgress(file);
+                if (result.url) {
+                    uploadedUrls.push(result.url);
+                    setUploadError(null);
+                } else {
+                    const errorMsg = result.error || "Failed to upload image.";
+                    setUploadError(errorMsg);
+                    console.error("Upload error:", errorMsg);
+                    break;
+                }
+            } catch (err: any) {
+                console.error("Upload failed", err);
+                const errorMsg = err?.message || "Failed to upload image. Please try again.";
+                setUploadError(errorMsg);
+                break;
+            }
+        }
+
+        // Update gallery images with all uploaded URLs
+        if (uploadedUrls.length > 0) {
+            const current = watch("galleryImages") || [];
+            const updated = [...current, ...uploadedUrls];
+            setValue("galleryImages", updated);
+            trigger("galleryImages");
+            
+            // Auto-save: If editing, save immediately to database
+            if (isEditing && client) {
+                try {
+                    await updateClient(client.id, { galleryImages: updated });
+                } catch (err) {
+                    console.error("Failed to auto-save gallery images:", err);
+                }
+            }
+        }
+
+        setGalleryUploadFile(null);
+        galleryUpload.reset();
     };
 
     const handleDeletePhoto = () => {
@@ -912,7 +1021,37 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                             )}
                                         </div>
                                         <div className="flex-1">
-                                            <label className="relative inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 w-full mb-2 disabled:opacity-50 disabled:cursor-not-allowed" style={{ pointerEvents: profileUpload.isUploading ? 'none' : 'auto' }}>
+                                            <label 
+                                                className={cn(
+                                                    "relative inline-flex items-center justify-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700 w-full mb-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
+                                                    isDraggingProfile ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" : "border-gray-300"
+                                                )}
+                                                style={{ pointerEvents: profileUpload.isUploading ? 'none' : 'auto' }}
+                                                onDrop={handleProfileImageDrop}
+                                                onDragOver={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (!profileUpload.isUploading) {
+                                                        setIsDraggingProfile(true);
+                                                    }
+                                                }}
+                                                onDragEnter={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (!profileUpload.isUploading) {
+                                                        setIsDraggingProfile(true);
+                                                    }
+                                                }}
+                                                onDragLeave={(e) => {
+                                                    // Only set false if we're actually leaving the label element
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    const x = e.clientX;
+                                                    const y = e.clientY;
+                                                    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                                                        setIsDraggingProfile(false);
+                                                    }
+                                                }}
+                                            >
                                                 {profileUpload.isUploading ? (
                                                     <CircularProgress 
                                                         progress={profileUpload.progress} 
@@ -927,6 +1066,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                 <span>
                                                     {profileUpload.isUploading 
                                                         ? "..." 
+                                                        : isDraggingProfile
+                                                        ? t(lang, "messages.dropImage") || "Drop image here"
                                                         : t(lang, "buttons.uploadPhoto")}
                                                 </span>
                                                 <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} disabled={profileUpload.isUploading} />
@@ -981,7 +1122,39 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                             </div>
                                         ))}
                                         <div className="flex flex-col">
-                                            <label className="relative flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed border-gray-300 hover:border-gray-400 cursor-pointer bg-gray-50 dark:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed" style={{ pointerEvents: galleryUpload.isUploading ? 'none' : 'auto' }}>
+                                            <label 
+                                                className={cn(
+                                                    "relative flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed cursor-pointer bg-gray-50 dark:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
+                                                    isDraggingGallery 
+                                                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                                                        : "border-gray-300 hover:border-gray-400"
+                                                )}
+                                                style={{ pointerEvents: galleryUpload.isUploading ? 'none' : 'auto' }}
+                                                onDrop={handleGalleryImageDrop}
+                                                onDragOver={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (!galleryUpload.isUploading) {
+                                                        setIsDraggingGallery(true);
+                                                    }
+                                                }}
+                                                onDragEnter={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (!galleryUpload.isUploading) {
+                                                        setIsDraggingGallery(true);
+                                                    }
+                                                }}
+                                                onDragLeave={(e) => {
+                                                    // Only set false if we're actually leaving the label element
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    const x = e.clientX;
+                                                    const y = e.clientY;
+                                                    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+                                                        setIsDraggingGallery(false);
+                                                    }
+                                                }}
+                                            >
                                                 {galleryUpload.isUploading ? (
                                                     <>
                                                         <CircularProgress 
@@ -995,7 +1168,11 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                 ) : (
                                                     <>
                                                         <UploadCloud className="h-6 w-6 text-gray-400" />
-                                                        <span className="text-xs text-gray-500 mt-1">{t(lang, "buttons.add")}</span>
+                                                        <span className="text-xs text-gray-500 mt-1">
+                                                            {isDraggingGallery 
+                                                                ? t(lang, "messages.dropImage") || "Drop images here"
+                                                                : t(lang, "buttons.add")}
+                                                        </span>
                                                     </>
                                                 )}
                                                 <input
