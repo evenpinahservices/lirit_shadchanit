@@ -6,34 +6,13 @@ import { useClients } from "@/context/ClientContext";
 import { Plus, Pencil, Trash2, MapPin, Briefcase, Search, ChevronLeft, ChevronRight, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import { ItemsPerPageSelector } from "@/components/ui/ItemsPerPageSelector";
 
 export default function ClientsPage() {
     const { clients, deleteClient, error, clearError, isLoading } = useClients();
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(4);
-
-    // Dynamic items per page based on viewport height
-    useEffect(() => {
-        const calculateItemsPerPage = () => {
-            const viewportHeight = window.innerHeight;
-            const viewportWidth = window.innerWidth;
-            const isMobile = viewportWidth < 768;
-            // Match the container max-h-[calc(100dvh-12rem)]
-            // Using rem for consistency: 1rem = 16px
-            const remToPixels = parseFloat(getComputedStyle(document.documentElement).fontSize);
-            const reservedRem = isMobile ? 22 : 28.5; // 22rem mobile, 28.5rem tablet
-            const reservedHeight = reservedRem * remToPixels;
-            const availableHeight = viewportHeight - reservedHeight;
-            const itemHeightRem = isMobile ? 6.25 : 3.5; // 6.25rem mobile card, 3.5rem table row
-            const itemHeight = itemHeightRem * remToPixels;
-            const calculated = Math.max(2, Math.floor(availableHeight / itemHeight));
-            setItemsPerPage(calculated);
-        };
-        calculateItemsPerPage();
-        window.addEventListener('resize', calculateItemsPerPage);
-        return () => window.removeEventListener('resize', calculateItemsPerPage);
-    }, []);
+    const [itemsPerPage, setItemsPerPage] = useState<number | "all">(5);
 
     // Delete Modal State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -57,15 +36,21 @@ export default function ClientsPage() {
     );
 
     // Calculate pagination
-    const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedClients = filteredClients.slice(startIndex, startIndex + itemsPerPage);
+    const effectiveItemsPerPage = itemsPerPage === "all" ? filteredClients.length : itemsPerPage;
+    const totalPages = itemsPerPage === "all" ? 1 : Math.ceil(filteredClients.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * effectiveItemsPerPage;
+    const paginatedClients = filteredClients.slice(startIndex, startIndex + effectiveItemsPerPage);
 
     const handlePageChange = (page: number) => {
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
             window.scrollTo({ top: 0, behavior: "smooth" });
         }
+    };
+
+    const handleItemsPerPageChange = (value: number | "all") => {
+        setItemsPerPage(value);
+        setCurrentPage(1); // Reset to first page when changing items per page
     };
 
     // Helper to calculate age from DOB
@@ -123,10 +108,10 @@ export default function ClientsPage() {
             </div>
 
             {/* Desktop Table View */}
-            <div id="tour-client-results-desktop" className="hidden md:block rounded-md border bg-white dark:bg-gray-950 shadow-sm overflow-y-auto flex-1 min-h-0 max-h-[calc(100dvh-12rem)]">
+            <div id="tour-client-results-desktop" className="hidden md:block rounded-md bg-white dark:bg-gray-950 shadow-sm overflow-y-auto flex-1 min-h-0 max-h-[calc(100dvh-12rem)]">
                 <div className="h-full">
                     <table className="w-full text-sm text-left relative">
-                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-b sticky top-0 z-10 shadow-sm">
+                        <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 sticky top-0 z-10 shadow-sm">
                             <tr>
                                 <th className="px-6 py-3 font-medium">Name</th>
                                 <th className="px-6 py-3 font-medium">Age/Gender</th>
@@ -135,7 +120,7 @@ export default function ClientsPage() {
                                 <th className="px-6 py-3 font-medium text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+                        <tbody>
                             {paginatedClients.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
@@ -208,9 +193,9 @@ export default function ClientsPage() {
                     </div>
                 ) : (
                     paginatedClients.map((client, index) => (
-                        <div key={client.id} className="bg-white dark:bg-gray-950 p-4 rounded-xl shadow-sm border flex items-center gap-4">
+                        <div key={client.id} className="bg-white dark:bg-gray-950 p-4 rounded-xl shadow-sm flex items-center gap-4">
                             <Link href={`/clients/${client.id}`} className="shrink-0 relative">
-                                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 dark:border-gray-800">
+                                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
                                     {client.photoUrl ? (
                                         <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
                                     ) : (
@@ -250,29 +235,38 @@ export default function ClientsPage() {
             </div>
 
             {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none">
-                    <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        Prev
-                    </button>
-                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                        Page {currentPage} of {totalPages}
-                    </span>
-                    <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        Next
-                        <ChevronRight className="h-4 w-4" />
-                    </button>
+            <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none overflow-visible">
+                <div className="flex-shrink-0 relative z-30">
+                    <ItemsPerPageSelector
+                        value={itemsPerPage}
+                        onChange={handleItemsPerPageChange}
+                        totalItems={filteredClients.length}
+                    />
                 </div>
-            )}
+                {totalPages > 1 && (
+                    <>
+                        <button
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            Prev
+                        </button>
+                        <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                            Page {currentPage} of {totalPages}
+                        </span>
+                        <button
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Next
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
+                    </>
+                )}
+            </div>
 
             <ConfirmationModal
                 isOpen={deleteModalOpen}

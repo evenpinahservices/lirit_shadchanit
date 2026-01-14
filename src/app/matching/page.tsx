@@ -9,6 +9,7 @@ import { findMatches, calculateAge } from "@/lib/matchingUtils";
 import { Heart, Sparkles, ArrowRight, Check, X, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ItemsPerPageSelector } from "@/components/ui/ItemsPerPageSelector";
 
 export default function MatchingPage() {
     const { clients } = useClients();
@@ -37,33 +38,7 @@ export default function MatchingPage() {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(2);
-
-    // Dynamic items per page based on viewport height
-    useEffect(() => {
-        const calculateItemsPerPage = () => {
-            const viewportHeight = window.innerHeight;
-            const viewportWidth = window.innerWidth;
-            // Determine grid columns: 1 on mobile, 2 on sm (640px+), 3 on lg (1024px+)
-            let columns = 1;
-            if (viewportWidth >= 1024) columns = 3;
-            else if (viewportWidth >= 640) columns = 2;
-
-            // On tablet (md+), reserve less space since no bottom nav
-            const isMdOrLarger = viewportWidth >= 768;
-            // Header ~60px, client section ~150px, pagination ~50px, margins ~40px
-            const reservedHeight = isMdOrLarger ? 280 : 400;
-            const availableHeight = viewportHeight - reservedHeight;
-            const itemHeight = 150; // Match cards are ~150px tall
-            const rows = Math.max(1, Math.floor(availableHeight / itemHeight));
-            // Calculate items as rows × columns for full grid utilization
-            const calculated = rows * columns;
-            setItemsPerPage(calculated);
-        };
-        calculateItemsPerPage();
-        window.addEventListener('resize', calculateItemsPerPage);
-        return () => window.removeEventListener('resize', calculateItemsPerPage);
-    }, []);
+    const [itemsPerPage, setItemsPerPage] = useState<number | "all">(5);
 
     useEffect(() => {
         seedTestClient().catch(console.error);
@@ -108,16 +83,22 @@ export default function MatchingPage() {
     };
 
     // Pagination Logic
-    const totalPages = Math.ceil(matches.length / itemsPerPage);
+    const effectiveItemsPerPage = itemsPerPage === "all" ? matches.length : itemsPerPage;
+    const totalPages = itemsPerPage === "all" ? 1 : Math.ceil(matches.length / itemsPerPage);
     const paginatedMatches = matches.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
+        (currentPage - 1) * effectiveItemsPerPage,
+        currentPage * effectiveItemsPerPage
     );
 
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= totalPages) {
             setCurrentPage(newPage);
         }
+    };
+
+    const handleItemsPerPageChange = (value: number | "all") => {
+        setItemsPerPage(value);
+        setCurrentPage(1); // Reset to first page when changing items per page
     };
 
     const selectedClient = allClients.find((c) => c.id === selectedClientId);
@@ -310,27 +291,36 @@ export default function MatchingPage() {
                             )}
 
                             {/* Pagination Footer - Only show if valid results */}
-                            {matches.length > 0 && totalPages > 1 && (
+                            {matches.length > 0 && (
                                 <div className="shrink-0 pt-2 flex items-center justify-between fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pt-2 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none">
-                                    <button
-                                        onClick={() => handlePageChange(currentPage - 1)}
-                                        disabled={currentPage === 1}
-                                        className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                        Prev
-                                    </button>
-                                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                                        Page {currentPage} of {totalPages}
-                                    </span>
-                                    <button
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        disabled={currentPage === totalPages}
-                                        className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        Next
-                                        <ChevronRight className="h-4 w-4" />
-                                    </button>
+                                    <ItemsPerPageSelector
+                                        value={itemsPerPage}
+                                        onChange={handleItemsPerPageChange}
+                                        totalItems={matches.length}
+                                    />
+                                    {totalPages > 1 && (
+                                        <>
+                                            <button
+                                                onClick={() => handlePageChange(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                                            >
+                                                <ChevronLeft className="h-4 w-4" />
+                                                Prev
+                                            </button>
+                                            <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                                                Page {currentPage} of {totalPages}
+                                            </span>
+                                            <button
+                                                onClick={() => handlePageChange(currentPage + 1)}
+                                                disabled={currentPage === totalPages}
+                                                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                Next
+                                                <ChevronRight className="h-4 w-4" />
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>

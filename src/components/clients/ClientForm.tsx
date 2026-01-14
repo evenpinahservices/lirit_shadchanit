@@ -216,6 +216,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const [currentStep, setCurrentStep] = useState(0);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isSubmitReady, setIsSubmitReady] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [fieldConfidences, setFieldConfidences] = useState<Record<string, number>>({});
     const [sourceQuotes, setSourceQuotes] = useState<Record<string, string | null>>({});
     
@@ -532,6 +533,13 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     }, [currentStep]);
 
     const onSubmit = async (values: z.output<typeof formSchema>) => {
+        // Prevent duplicate submissions
+        if (isSubmitting) {
+            console.warn("Submission already in progress, ignoring duplicate submit");
+            return;
+        }
+
+        setIsSubmitting(true);
         try {
             // Always include the form language
             const valuesWithLang = { ...values, formLanguage: lang };
@@ -551,6 +559,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         } catch (error: any) {
             console.error("Failed to submit client:", error);
             alert("Failed to save client: " + (error.message || error));
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -1037,7 +1047,13 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                 rtl && "rtl"
             )} dir={rtl ? "rtl" : "ltr"}>
                 <form
-                    onSubmit={handleSubmit(onSubmit)}
+                    onSubmit={handleSubmit((data) => {
+                        // Additional guard: prevent submission if already submitting
+                        if (isSubmitting) {
+                            return;
+                        }
+                        onSubmit(data);
+                    })}
                     onKeyDown={(e) => {
                         // Prevent implicit submission on Enter, allow inside textareas
                         if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
@@ -1893,13 +1909,23 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                         />
                         <div className="flex gap-2 relative z-10">
                             {isEditing && onCancel && (
-                                <button
-                                    type="button"
-                                    onClick={onCancel}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
-                                >
-                                    {t(lang, "buttons.cancel")}
-                                </button>
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={onCancel}
+                                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                                    >
+                                        {t(lang, "buttons.cancel")}
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={!isSubmitReady || isSubmitting}
+                                        className={`flex items-center gap-1 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSubmitReady && !isSubmitting ? 'bg-green-600 hover:bg-green-700' : 'bg-green-400 cursor-not-allowed'}`}
+                                    >
+                                        {isSubmitting ? t(lang, "buttons.saving") || "Saving..." : t(lang, "buttons.save")}
+                                        {!isSubmitting && <Check className="h-4 w-4" />}
+                                    </button>
+                                </>
                             )}
                             <button
                                 type="button"
@@ -1929,11 +1955,14 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                         ) : (
                             <button
                                 type="submit"
-                                disabled={!isSubmitReady}
-                                className={`flex items-center gap-1 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSubmitReady ? 'bg-green-600 hover:bg-green-700' : 'bg-green-400 cursor-not-allowed'}`}
+                                disabled={!isSubmitReady || isSubmitting}
+                                className={`flex items-center gap-1 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSubmitReady && !isSubmitting ? 'bg-green-600 hover:bg-green-700' : 'bg-green-400 cursor-not-allowed'}`}
                             >
-                                {isEditing ? t(lang, "buttons.update") : t(lang, "buttons.submit")}
-                                <Check className="h-4 w-4" />
+                                {isSubmitting 
+                                    ? (t(lang, "buttons.saving") || (isEditing ? "Updating..." : "Submitting..."))
+                                    : (isEditing ? t(lang, "buttons.update") : t(lang, "buttons.submit"))
+                                }
+                                {!isSubmitting && <Check className="h-4 w-4" />}
                             </button>
                         )}
                     </div>
