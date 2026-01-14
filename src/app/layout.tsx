@@ -10,7 +10,12 @@ import { AutoFullscreen } from "@/components/AutoFullscreen";
 import { cn } from "@/lib/utils";
 import { Suspense } from "react";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  display: "swap", // Optimize font loading - shows fallback font until custom font loads
+  preload: false, // Disable preload to avoid the warning (font will still load, just not preloaded)
+  adjustFontFallback: true, // Better fallback font matching
+});
 
 export const metadata: Metadata = {
   title: "ShadchanitDB - Matchmaking Database",

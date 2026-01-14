@@ -24,6 +24,7 @@ export function MultiSelect({
     style,
 }: MultiSelectProps) {
     const [isOpen, setIsOpen] = React.useState(false);
+    const [actualDirection, setActualDirection] = React.useState<"top" | "bottom">(direction);
     const containerRef = React.useRef<HTMLDivElement>(null);
 
     // Get display label for a value
@@ -48,6 +49,24 @@ export function MultiSelect({
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
+
+    // Auto-detect direction based on position in viewport
+    React.useEffect(() => {
+        if (isOpen && containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const spaceBelow = viewportHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            const dropdownHeight = 240; // Approximate dropdown height
+            
+            // If near bottom of viewport (within 300px) or not enough space below, open upward
+            if (rect.bottom > viewportHeight - 300 || (spaceBelow < dropdownHeight && spaceAbove > spaceBelow)) {
+                setActualDirection("top");
+            } else {
+                setActualDirection("bottom");
+            }
+        }
+    }, [isOpen]);
 
     const toggleOption = (option: string) => {
         if (selected.includes(option)) {
@@ -90,8 +109,8 @@ export function MultiSelect({
             </div>
             {isOpen && (
                 <div className={cn(
-                    "absolute z-10 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto",
-                    direction === "top" ? "bottom-full mb-1" : "mt-1"
+                    "absolute z-50 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto",
+                    actualDirection === "top" ? "bottom-full mb-1" : "mt-1"
                 )}>
                     <div className="sticky top-0 right-0 z-20 flex justify-end p-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
                         <button

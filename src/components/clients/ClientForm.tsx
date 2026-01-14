@@ -23,6 +23,87 @@ import { FormLanguage, translations, t, getOptions, isRTL } from "@/lib/translat
 
 const formSchema = ClientSchema;
 
+// Tooltip component for showing source quotes with smart positioning
+function FieldWithTooltip({ 
+    children, 
+    sourceQuote, 
+    fieldName 
+}: { 
+    children: React.ReactNode; 
+    sourceQuote: string | null | undefined; 
+    fieldName: string;
+}) {
+    const [showTooltip, setShowTooltip] = useState(false);
+    const [position, setPosition] = useState<"top" | "bottom">("bottom");
+    const fieldRef = useRef<HTMLDivElement>(null);
+    
+    // Only show tooltip if sourceQuote exists and is not empty
+    if (!sourceQuote || (typeof sourceQuote === 'string' && sourceQuote.trim() === '') || sourceQuote === 'null') {
+        return <>{children}</>;
+    }
+    
+    const handleMouseEnter = () => {
+        if (fieldRef.current) {
+            const rect = fieldRef.current.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            const spaceAbove = rect.top;
+            const spaceBelow = viewportHeight - rect.bottom;
+            const tooltipHeight = 250; // Approximate tooltip height with padding
+            
+            // Always show below if field is within 300px from top of viewport
+            if (rect.top < 300) {
+                setPosition("bottom");
+            } 
+            // Or if not enough space above (less than tooltip height)
+            else if (spaceAbove < tooltipHeight) {
+                setPosition("bottom");
+            } 
+            // Or if there's more space below than above
+            else if (spaceBelow > spaceAbove) {
+                setPosition("bottom");
+            } 
+            // Otherwise show above
+            else {
+                setPosition("top");
+            }
+        }
+        setShowTooltip(true);
+    };
+    
+    return (
+        <div 
+            ref={fieldRef}
+            className="relative w-full group"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={() => setShowTooltip(false)}
+        >
+            {children}
+            {showTooltip && (
+                <div 
+                    className={`absolute z-50 w-80 max-w-[90vw] p-3 text-sm bg-white dark:bg-gray-100 text-gray-900 dark:text-gray-800 rounded-lg shadow-xl border border-gray-300 dark:border-gray-400 pointer-events-none`}
+                    style={position === "top" ? {
+                        bottom: 'calc(100% + 8px)',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                    } : {
+                        top: 'calc(100% + 8px)',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                    }}
+                >
+                    <div className="font-semibold mb-2 text-xs text-gray-600 dark:text-gray-700 uppercase tracking-wide">AI Source Quote:</div>
+                    <div className="text-xs whitespace-pre-wrap wrap-break-word leading-relaxed text-gray-800 dark:text-gray-900">{sourceQuote}</div>
+                    {position === "top" ? (
+                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-white dark:border-t-gray-100"></div>
+                    ) : (
+                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[6px] border-transparent border-b-white dark:border-b-gray-100"></div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 interface ClientFormProps {
     client?: Client;
     isEditing?: boolean;
@@ -118,7 +199,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         if (client && formLanguageFromForm !== detectedLang) {
             setValue("formLanguage", detectedLang, { shouldDirty: false });
         }
-    }, [client, detectedLang, formLanguageFromForm, setValue]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [client, detectedLang, formLanguageFromForm]);
     
     // Memoize translated step titles
     const STEPS = useMemo(() => STEP_KEYS.map(step => ({
@@ -135,6 +217,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isSubmitReady, setIsSubmitReady] = useState(false);
     const [fieldConfidences, setFieldConfidences] = useState<Record<string, number>>({});
+    const [sourceQuotes, setSourceQuotes] = useState<Record<string, string | null>>({});
     
     // Upload progress tracking
     const profileUpload = useUploadWithProgress();
@@ -420,6 +503,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                 isUpdatingFromDobRef.current = false;
             }, 0);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentDob, dateMode]);
 
     // Initialize age from client DOB
@@ -729,8 +813,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         
         const confidences: Record<string, number> = {};
         
-        // Helper function to extract value and confidence from nested structure
-        const extractValueAndConfidence = (fieldData: any): { value: any; confidence?: number } => {
+        // Helper function to extract value, confidence, and sourceQuote from nested structure
+        const extractValueAndConfidence = (fieldData: any): { value: any; confidence?: number; sourceQuote?: string | null } => {
             // If it's already a simple value (string, number, boolean, array), return it
             if (fieldData === null || fieldData === undefined) {
                 return { value: null };
@@ -740,7 +824,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             if (typeof fieldData === "object" && !Array.isArray(fieldData) && "value" in fieldData) {
                 return {
                     value: fieldData.value,
-                    confidence: typeof fieldData.confidence === "number" ? fieldData.confidence : undefined
+                    confidence: typeof fieldData.confidence === "number" ? fieldData.confidence : undefined,
+                    sourceQuote: fieldData.sourceQuote !== undefined ? fieldData.sourceQuote : null
                 };
             }
             
@@ -776,7 +861,31 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                 };
             }
             
-            // Return as-is for arrays and primitives
+            // Handle arrays - check if it's an array with nested structure
+            if (Array.isArray(fieldData)) {
+                // Check if array items have nested structure { value, confidence, sourceQuote }
+                if (fieldData.length > 0 && typeof fieldData[0] === "object" && !Array.isArray(fieldData[0]) && "value" in fieldData[0]) {
+                    // Extract values and collect sourceQuotes (use first non-null sourceQuote)
+                    const values: any[] = [];
+                    let sourceQuote: string | null = null;
+                    for (const item of fieldData) {
+                        if (item && typeof item === "object" && "value" in item) {
+                            values.push(item.value);
+                            // Use first non-null sourceQuote found
+                            if (!sourceQuote && item.sourceQuote) {
+                                sourceQuote = item.sourceQuote;
+                            }
+                        } else {
+                            values.push(item);
+                        }
+                    }
+                    return { value: values, sourceQuote: sourceQuote };
+                }
+                // Regular array - return as-is
+                return { value: fieldData };
+            }
+            
+            // Return as-is for primitives
             return { value: fieldData };
         };
         
@@ -788,6 +897,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         let fieldsSet = 0;
         let fieldsSkipped = 0;
         const errors: string[] = [];
+        const newSourceQuotes: Record<string, string | null> = {};
 
         // Process all fields
         Object.keys(data).forEach((key) => {
@@ -806,12 +916,17 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             }
 
             try {
-                // Extract the actual value and confidence (handles nested structure)
-                const { value, confidence } = extractValueAndConfidence(fieldData);
+                // Extract the actual value, confidence, and sourceQuote (handles nested structure)
+                const { value, confidence, sourceQuote } = extractValueAndConfidence(fieldData);
                 
                 // Store confidence for color coding
                 if (confidence !== undefined) {
                     confidences[key] = confidence;
+                }
+                
+                // Collect sourceQuote for batch update
+                if (sourceQuote !== undefined) {
+                    newSourceQuotes[key] = sourceQuote;
                 }
                 
                 // Special handling for headCovering: default to "Flexible" if not mentioned
@@ -864,6 +979,11 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
 
         // Store confidence scores for color coding
         setFieldConfidences(confidences);
+        
+        // Batch update all sourceQuotes at once to avoid multiple re-renders
+        if (Object.keys(newSourceQuotes).length > 0) {
+            setSourceQuotes(prev => ({ ...prev, ...newSourceQuotes }));
+        }
         
         console.log(`Form fill complete: ${fieldsSet} fields set, ${fieldsSkipped} fields skipped`);
         if (errors.length > 0) {
@@ -968,7 +1088,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                     {/* Steps Content - Scrollable on Mobile and Desktop with EXTRA padding for validation errors */}
                     <div 
                         ref={scrollContainerRef}
-                        className="flex-1 overflow-y-auto min-h-0 bg-white dark:bg-gray-950 p-6 space-y-6 custom-scrollbar pb-48 md:pb-28"
+                        className="flex-1 overflow-y-auto min-h-0 bg-white dark:bg-gray-950 p-6 space-y-6 custom-scrollbar pb-52 md:pb-36"
                     >
 
                         {/* STEP 0: BASIC INFO */}
@@ -977,17 +1097,23 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.fullName")}</label>
-                                        <input {...register("fullName")} style={getFieldStyle("fullName")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.fullName")} dir={rtl ? "rtl" : "ltr"} />
+                                        <FieldWithTooltip sourceQuote={sourceQuotes.fullName} fieldName="fullName">
+                                            <input {...register("fullName")} style={getFieldStyle("fullName")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.fullName")} dir={rtl ? "rtl" : "ltr"} />
+                                        </FieldWithTooltip>
                                         {errors.fullName && <p className="text-red-500 text-xs">{errors.fullName?.message}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.email")}</label>
-                                        <input {...register("email")} style={getFieldStyle("email")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.email")} dir="ltr" />
+                                        <FieldWithTooltip sourceQuote={sourceQuotes.email} fieldName="email">
+                                            <input {...register("email")} style={getFieldStyle("email")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.email")} dir="ltr" />
+                                        </FieldWithTooltip>
                                         {errors.email && <p className="text-red-500 text-xs">{errors.email?.message}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.phone")}</label>
-                                        <input {...register("phone")} style={getFieldStyle("phone")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.phone")} dir="ltr" />
+                                        <FieldWithTooltip sourceQuote={sourceQuotes.phone} fieldName="phone">
+                                            <input {...register("phone")} style={getFieldStyle("phone")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.phone")} dir="ltr" />
+                                        </FieldWithTooltip>
                                         {errors.phone && <p className="text-red-500 text-xs">{errors.phone?.message}</p>}
                                     </div>
                                     <div className="space-y-2">
@@ -1146,15 +1272,19 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.gender")}</label>
-                                        <select {...register("gender")} style={getFieldStyle("gender")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                            {opts("gender").map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
+                                        <FieldWithTooltip sourceQuote={sourceQuotes.gender} fieldName="gender">
+                                            <select {...register("gender")} style={getFieldStyle("gender")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                                {opts("gender").map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
+                                        </FieldWithTooltip>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.location")}</label>
-                                        <input {...register("location")} style={getFieldStyle("location")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.location")} dir={rtl ? "rtl" : "ltr"} />
+                                        <FieldWithTooltip sourceQuote={sourceQuotes.location} fieldName="location">
+                                            <input {...register("location")} style={getFieldStyle("location")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.location")} dir={rtl ? "rtl" : "ltr"} />
+                                        </FieldWithTooltip>
                                         {errors.location && <p className="text-red-500 text-xs">{errors.location?.message}</p>}
                                     </div>
                                 </div>
@@ -1250,23 +1380,29 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.height")}</label>
-                                        <input type="number" {...register("height", { valueAsNumber: true })} style={getFieldStyle("height")} className="w-full p-2 border rounded-md dark:bg-gray-900" dir="ltr" />
+                                        <FieldWithTooltip sourceQuote={sourceQuotes.height} fieldName="height">
+                                            <input type="number" {...register("height", { valueAsNumber: true })} style={getFieldStyle("height")} className="w-full p-2 border rounded-md dark:bg-gray-900" dir="ltr" />
+                                        </FieldWithTooltip>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.eyeColor")}</label>
-                                        <select {...register("eyeColor")} style={getFieldStyle("eyeColor")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                            {opts("eyeColor").map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
+                                        <FieldWithTooltip sourceQuote={sourceQuotes.eyeColor} fieldName="eyeColor">
+                                            <select {...register("eyeColor")} style={getFieldStyle("eyeColor")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                                {opts("eyeColor").map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
+                                        </FieldWithTooltip>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.hairColor")}</label>
-                                        <select {...register("hairColor")} style={getFieldStyle("hairColor")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                            {opts("hairColor").map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
+                                        <FieldWithTooltip sourceQuote={sourceQuotes.hairColor} fieldName="hairColor">
+                                            <select {...register("hairColor")} style={getFieldStyle("hairColor")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                                {opts("hairColor").map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
+                                        </FieldWithTooltip>
                                     </div>
                                 </div>
 
@@ -1416,58 +1552,72 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.ethnicity")}</label>
-                                    <select {...register("ethnicity")} style={getFieldStyle("ethnicity")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                        {opts("ethnicity").map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.ethnicity} fieldName="ethnicity">
+                                        <select {...register("ethnicity")} style={getFieldStyle("ethnicity")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            {opts("ethnicity").map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.tribalStatus")}</label>
-                                    <select {...register("tribalStatus")} style={getFieldStyle("tribalStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                        <option value="">{t(lang, "messages.selectOption")}</option>
-                                        {opts("tribalStatus").map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.tribalStatus} fieldName="tribalStatus">
+                                        <select {...register("tribalStatus")} style={getFieldStyle("tribalStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            <option value="">{t(lang, "messages.selectOption")}</option>
+                                            {opts("tribalStatus").map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.maritalStatus")}</label>
-                                    <select {...register("maritalStatus")} style={getFieldStyle("maritalStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                        {opts("maritalStatus").map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.maritalStatus} fieldName="maritalStatus">
+                                        <select {...register("maritalStatus")} style={getFieldStyle("maritalStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            {opts("maritalStatus").map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.occupation")}</label>
-                                    <input {...register("occupation")} style={getFieldStyle("occupation")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.occupation")} dir={rtl ? "rtl" : "ltr"} />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.occupation} fieldName="occupation">
+                                        <input {...register("occupation")} style={getFieldStyle("occupation")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.occupation")} dir={rtl ? "rtl" : "ltr"} />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.languages")}</label>
-                                    <Controller
-                                        name="languages"
-                                        control={control}
-                                        defaultValue={[]}
-                                        render={({ field }) => (
-                                            <MultiSelect
-                                                options={opts("languages").map(o => o.value)}
-                                                optionLabels={opts("languages").map(o => o.label)}
-                                                selected={Array.isArray(field.value) ? field.value : []}
-                                                onChange={field.onChange}
-                                                placeholder={t(lang, "placeholders.selectLanguages")}
-                                                style={getFieldStyle("languages")}
-                                            />
-                                        )}
-                                    />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.languages} fieldName="languages">
+                                        <Controller
+                                            name="languages"
+                                            control={control}
+                                            defaultValue={[]}
+                                            render={({ field }) => (
+                                                <MultiSelect
+                                                    options={opts("languages").map(o => o.value)}
+                                                    optionLabels={opts("languages").map(o => o.label)}
+                                                    selected={Array.isArray(field.value) ? field.value : []}
+                                                    onChange={field.onChange}
+                                                    placeholder={t(lang, "placeholders.selectLanguages")}
+                                                    style={getFieldStyle("languages")}
+                                                />
+                                            )}
+                                        />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.familyBackground")}</label>
-                                    <textarea {...register("familyBackground")} style={getFieldStyle("familyBackground")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" placeholder={t(lang, "placeholders.familyBackground")} dir={rtl ? "rtl" : "ltr"} />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.familyBackground} fieldName="familyBackground">
+                                        <textarea {...register("familyBackground")} style={getFieldStyle("familyBackground")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" placeholder={t(lang, "placeholders.familyBackground")} dir={rtl ? "rtl" : "ltr"} />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.education")}</label>
-                                    <input {...register("education")} style={getFieldStyle("education")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.education")} dir={rtl ? "rtl" : "ltr"} />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.education} fieldName="education">
+                                        <input {...register("education")} style={getFieldStyle("education")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.education")} dir={rtl ? "rtl" : "ltr"} />
+                                    </FieldWithTooltip>
                                 </div>
                             </div>
                         )}
@@ -1477,45 +1627,53 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.religiousAffiliation")}</label>
-                                    <Controller
-                                        name="religiousAffiliation"
-                                        control={control}
-                                        defaultValue={[]}
-                                        render={({ field }) => (
-                                            <MultiSelect
-                                                options={opts("religiousAffiliation").map(o => o.value)}
-                                                optionLabels={opts("religiousAffiliation").map(o => o.label)}
-                                                selected={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])}
-                                                onChange={field.onChange}
-                                                placeholder={t(lang, "placeholders.selectAffiliations")}
-                                                style={getFieldStyle("religiousAffiliation")}
-                                            />
-                                        )}
-                                    />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.religiousAffiliation} fieldName="religiousAffiliation">
+                                        <Controller
+                                            name="religiousAffiliation"
+                                            control={control}
+                                            defaultValue={[]}
+                                            render={({ field }) => (
+                                                <MultiSelect
+                                                    options={opts("religiousAffiliation").map(o => o.value)}
+                                                    optionLabels={opts("religiousAffiliation").map(o => o.label)}
+                                                    selected={Array.isArray(field.value) ? field.value : (field.value ? [field.value] : [])}
+                                                    onChange={field.onChange}
+                                                    placeholder={t(lang, "placeholders.selectAffiliations")}
+                                                    style={getFieldStyle("religiousAffiliation")}
+                                                />
+                                            )}
+                                        />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.learningStatus")}</label>
-                                    <select {...register("learningStatus")} style={getFieldStyle("learningStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                        {opts("learningStatus").map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.learningStatus} fieldName="learningStatus">
+                                        <select {...register("learningStatus")} style={getFieldStyle("learningStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            {opts("learningStatus").map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.headCovering")}</label>
-                                    <select {...register("headCovering")} style={getFieldStyle("headCovering")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                        {opts("headCovering").map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.headCovering} fieldName="headCovering">
+                                        <select {...register("headCovering")} style={getFieldStyle("headCovering")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            {opts("headCovering").map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.smoking")}</label>
-                                    <select {...register("smoking")} style={getFieldStyle("smoking")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                        {opts("smoking").map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.smoking} fieldName="smoking">
+                                        <select {...register("smoking")} style={getFieldStyle("smoking")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            {opts("smoking").map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </FieldWithTooltip>
                                 </div>
                             </div>
                         )}
@@ -1525,17 +1683,21 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.personality")}</label>
-                                    <textarea {...register("personality")} style={getFieldStyle("personality")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" placeholder={t(lang, "placeholders.personality")} dir={rtl ? "rtl" : "ltr"} />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.personality} fieldName="personality">
+                                        <textarea {...register("personality")} style={getFieldStyle("personality")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" placeholder={t(lang, "placeholders.personality")} dir={rtl ? "rtl" : "ltr"} />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.hobbies")}</label>
-                                    <textarea 
-                                        {...register("hobbies")} 
-                                        style={getFieldStyle("hobbies")}
-                                        className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" 
-                                        placeholder={t(lang, "placeholders.hobbies")} 
-                                        dir={rtl ? "rtl" : "ltr"}
-                                    />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.hobbies} fieldName="hobbies">
+                                        <textarea 
+                                            {...register("hobbies")} 
+                                            style={getFieldStyle("hobbies")}
+                                            className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" 
+                                            placeholder={t(lang, "placeholders.hobbies")} 
+                                            dir={rtl ? "rtl" : "ltr"}
+                                        />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-4 border-t pt-4">
                                     <label className="text-sm font-medium block">{t(lang, "labels.medicalHistory")}</label>
@@ -1552,7 +1714,9 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     {watchedMedical === "Yes" && (
                                         <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                                             <label className="text-sm font-medium">{t(lang, "labels.medicalHistoryDetails")}</label>
-                                            <textarea {...register("medicalHistoryDetails")} style={getFieldStyle("medicalHistoryDetails")} className="w-full p-2 border rounded-md dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
+                                            <FieldWithTooltip sourceQuote={sourceQuotes.medicalHistoryDetails} fieldName="medicalHistoryDetails">
+                                                <textarea {...register("medicalHistoryDetails")} style={getFieldStyle("medicalHistoryDetails")} className="w-full p-2 border rounded-md dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
+                                            </FieldWithTooltip>
                                         </div>
                                     )}
                                 </div>
@@ -1565,101 +1729,113 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
 
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.ageGapPreference")}</label>
-                                    <Controller
-                                        name="ageGapPreference"
-                                        control={control}
-                                        defaultValue={[]}
-                                        render={({ field }) => (
-                                            <MultiSelect
-                                                options={opts("ageGapPreference").map(o => o.value)}
-                                                optionLabels={opts("ageGapPreference").map(o => o.label)}
-                                                selected={Array.isArray(field.value) ? field.value : [String(field.value)]}
-                                                onChange={field.onChange}
-                                                placeholder={t(lang, "placeholders.selectAgeGap")}
-                                                style={getFieldStyle("ageGapPreference")}
-                                            />
-                                        )}
-                                    />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.ageGapPreference} fieldName="ageGapPreference">
+                                        <Controller
+                                            name="ageGapPreference"
+                                            control={control}
+                                            defaultValue={[]}
+                                            render={({ field }) => (
+                                                <MultiSelect
+                                                    options={opts("ageGapPreference").map(o => o.value)}
+                                                    optionLabels={opts("ageGapPreference").map(o => o.label)}
+                                                    selected={Array.isArray(field.value) ? field.value : [String(field.value)]}
+                                                    onChange={field.onChange}
+                                                    placeholder={t(lang, "placeholders.selectAgeGap")}
+                                                    style={getFieldStyle("ageGapPreference")}
+                                                />
+                                            )}
+                                        />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.willingToRelocate")}</label>
-                                    <select {...register("willingToRelocate")} style={getFieldStyle("willingToRelocate")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                        {opts("willingToRelocate").map(opt => (
-                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                        ))}
-                                    </select>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.willingToRelocate} fieldName="willingToRelocate">
+                                        <select {...register("willingToRelocate")} style={getFieldStyle("willingToRelocate")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            {opts("willingToRelocate").map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.preferredEthnicities")}</label>
-                                    <Controller
-                                        name="preferredEthnicities"
-                                        control={control}
-                                        defaultValue={[]}
-                                        render={({ field }) => (
-                                            <MultiSelect
-                                                options={["I don't mind", ...opts("ethnicity").map(o => o.value)]}
-                                                optionLabels={[lang === "he" ? "לא משנה לי" : "I don't mind", ...opts("ethnicity").map(o => o.label)]}
-                                                selected={Array.isArray(field.value) ? field.value : []}
-                                                onChange={field.onChange}
-                                                placeholder={t(lang, "placeholders.selectEthnicities")}
-                                                style={getFieldStyle("preferredEthnicities")}
-                                            />
-                                        )}
-                                    />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.preferredEthnicities} fieldName="preferredEthnicities">
+                                        <Controller
+                                            name="preferredEthnicities"
+                                            control={control}
+                                            defaultValue={[]}
+                                            render={({ field }) => (
+                                                <MultiSelect
+                                                    options={["I don't mind", ...opts("ethnicity").map(o => o.value)]}
+                                                    optionLabels={[lang === "he" ? "לא משנה לי" : "I don't mind", ...opts("ethnicity").map(o => o.label)]}
+                                                    selected={Array.isArray(field.value) ? field.value : []}
+                                                    onChange={field.onChange}
+                                                    placeholder={t(lang, "placeholders.selectEthnicities")}
+                                                    style={getFieldStyle("preferredEthnicities")}
+                                                />
+                                            )}
+                                        />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.preferredHashkafos")}</label>
-                                    <Controller
-                                        name="preferredHashkafos"
-                                        control={control}
-                                        defaultValue={[]}
-                                        render={({ field }) => (
-                                            <MultiSelect
-                                                options={["I don't mind", ...opts("religiousAffiliation").map(o => o.value)]}
-                                                optionLabels={[lang === "he" ? "לא משנה לי" : "I don't mind", ...opts("religiousAffiliation").map(o => o.label)]}
-                                                selected={Array.isArray(field.value) ? field.value : []}
-                                                onChange={field.onChange}
-                                                placeholder={t(lang, "placeholders.selectHashkafos")}
-                                                style={getFieldStyle("preferredHashkafos")}
-                                            />
-                                        )}
-                                    />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.preferredHashkafos} fieldName="preferredHashkafos">
+                                        <Controller
+                                            name="preferredHashkafos"
+                                            control={control}
+                                            defaultValue={[]}
+                                            render={({ field }) => (
+                                                <MultiSelect
+                                                    options={["I don't mind", ...opts("religiousAffiliation").map(o => o.value)]}
+                                                    optionLabels={[lang === "he" ? "לא משנה לי" : "I don't mind", ...opts("religiousAffiliation").map(o => o.label)]}
+                                                    selected={Array.isArray(field.value) ? field.value : []}
+                                                    onChange={field.onChange}
+                                                    placeholder={t(lang, "placeholders.selectHashkafos")}
+                                                    style={getFieldStyle("preferredHashkafos")}
+                                                />
+                                            )}
+                                        />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.preferredLearningStatus")}</label>
-                                    <Controller
-                                        name="preferredLearningStatus"
-                                        control={control}
-                                        defaultValue={[]}
-                                        render={({ field }) => (
-                                            <MultiSelect
-                                                options={["I don't mind", ...opts("learningStatus").map(o => o.value)]}
-                                                optionLabels={[lang === "he" ? "לא משנה לי" : "I don't mind", ...opts("learningStatus").map(o => o.label)]}
-                                                selected={Array.isArray(field.value) ? field.value : []}
-                                                onChange={field.onChange}
-                                                placeholder={t(lang, "placeholders.selectLearningStatus")}
-                                                style={getFieldStyle("preferredLearningStatus")}
-                                            />
-                                        )}
-                                    />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.preferredLearningStatus} fieldName="preferredLearningStatus">
+                                        <Controller
+                                            name="preferredLearningStatus"
+                                            control={control}
+                                            defaultValue={[]}
+                                            render={({ field }) => (
+                                                <MultiSelect
+                                                    options={["I don't mind", ...opts("learningStatus").map(o => o.value)]}
+                                                    optionLabels={[lang === "he" ? "לא משנה לי" : "I don't mind", ...opts("learningStatus").map(o => o.label)]}
+                                                    selected={Array.isArray(field.value) ? field.value : []}
+                                                    onChange={field.onChange}
+                                                    placeholder={t(lang, "placeholders.selectLearningStatus")}
+                                                    style={getFieldStyle("preferredLearningStatus")}
+                                                />
+                                            )}
+                                        />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.preferredHeadCovering")}</label>
-                                    <Controller
-                                        name="preferredHeadCovering"
-                                        control={control}
-                                        defaultValue={[]}
-                                        render={({ field }) => (
-                                            <MultiSelect
-                                                options={["I don't mind", ...opts("headCovering").map(o => o.value)]}
-                                                optionLabels={[lang === "he" ? "לא משנה לי" : "I don't mind", ...opts("headCovering").map(o => o.label)]}
-                                                selected={Array.isArray(field.value) ? field.value : []}
-                                                onChange={field.onChange}
-                                                placeholder={t(lang, "placeholders.selectHeadCovering")}
-                                                style={getFieldStyle("preferredHeadCovering")}
-                                            />
-                                        )}
-                                    />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.preferredHeadCovering} fieldName="preferredHeadCovering">
+                                        <Controller
+                                            name="preferredHeadCovering"
+                                            control={control}
+                                            defaultValue={[]}
+                                            render={({ field }) => (
+                                                <MultiSelect
+                                                    options={["I don't mind", ...opts("headCovering").map(o => o.value)]}
+                                                    optionLabels={[lang === "he" ? "לא משנה לי" : "I don't mind", ...opts("headCovering").map(o => o.label)]}
+                                                    selected={Array.isArray(field.value) ? field.value : []}
+                                                    onChange={field.onChange}
+                                                    placeholder={t(lang, "placeholders.selectHeadCovering")}
+                                                    style={getFieldStyle("preferredHeadCovering")}
+                                                />
+                                            )}
+                                        />
+                                    </FieldWithTooltip>
                                 </div>
                             </div>
                         )}
@@ -1669,21 +1845,27 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.references")}</label>
-                                    <textarea {...register("references")} style={getFieldStyle("references")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.references} fieldName="references">
+                                        <textarea {...register("references")} style={getFieldStyle("references")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.notes")}</label>
-                                    <textarea {...register("notes")} style={getFieldStyle("notes")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.notes} fieldName="notes">
+                                        <textarea {...register("notes")} style={getFieldStyle("notes")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
+                                    </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.resumeRawText")}</label>
-                                    <textarea 
-                                        {...register("resumeRawText")} 
-                                        style={getFieldStyle("resumeRawText")}
-                                        className="w-full p-2 border rounded-md h-32 dark:bg-gray-900 font-mono text-xs" 
-                                        placeholder={t(lang, "placeholders.resumeRawText")}
-                                        dir="auto"
-                                    />
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.resumeRawText} fieldName="resumeRawText">
+                                        <textarea 
+                                            {...register("resumeRawText")} 
+                                            style={getFieldStyle("resumeRawText")}
+                                            className="w-full p-2 border rounded-md h-32 dark:bg-gray-900 font-mono text-xs" 
+                                            placeholder={t(lang, "placeholders.resumeRawText")}
+                                            dir="auto"
+                                        />
+                                    </FieldWithTooltip>
                                 </div>
                             </div>
                         )}
@@ -1696,8 +1878,19 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                         {hasOverflow && (
                             <div className="pointer-events-none absolute -top-16 left-0 right-0 h-16 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-gray-950 dark:via-gray-950/80" />
                         )}
-                        {/* Background for buttons */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-white via-white to-white/95 dark:from-gray-950 dark:via-gray-950 dark:to-gray-950/95 -z-10" />
+                        {/* Background for buttons - extends to bottom of viewport */}
+                        <div 
+                            className="absolute top-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/95 dark:from-gray-950 dark:via-gray-950 dark:to-gray-950/95 -z-10"
+                            style={{
+                                bottom: 'calc(-4rem - env(safe-area-inset-bottom))',
+                            }}
+                        />
+                        <div 
+                            className="absolute top-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/95 dark:from-gray-950 dark:via-gray-950 dark:to-gray-950/95 -z-10 hidden md:block"
+                            style={{
+                                bottom: '-1rem',
+                            }}
+                        />
                         <div className="flex gap-2 relative z-10">
                             {isEditing && onCancel && (
                                 <button
