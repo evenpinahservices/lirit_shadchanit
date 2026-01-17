@@ -123,7 +123,7 @@ const STEP_KEYS = [
     { titleKey: "basicInfo", fields: ["fullName", "email", "phone", "dob", "gender", "location"] },
     { titleKey: "appearance", fields: ["height", "eyeColor", "hairColor", "photoUrl"] },
     { titleKey: "background", fields: ["ethnicity", "tribalStatus", "maritalStatus", "languages", "familyBackground", "education", "occupation"] },
-    { titleKey: "religiousDetails", fields: ["religiousAffiliation", "learningStatus", "headCovering"] },
+    { titleKey: "religiousDetails", fields: ["religiousAffiliation", "learningStatus", "headCovering", "religiousDetailsFreeText"] },
     { titleKey: "personal", fields: ["hobbies", "personality", "smoking", "medicalHistory", "medicalHistoryDetails"] },
     { titleKey: "preferences", fields: ["ageGapPreference", "willingToRelocate", "preferredEthnicities", "preferredHashkafos", "preferredLearningStatus", "preferredHeadCovering", "preferencesFreeText"] },
     { titleKey: "admin", fields: ["references", "notes"] },
@@ -157,6 +157,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         children: 0,
         religiousAffiliation: [], // Changed to array
         learningStatus: "Full Time", // Changed generic default
+        headCovering: "",
+        religiousDetailsFreeText: "",
         ethnicity: "Ashkenazi",
         education: "",
         occupation: "",
@@ -1260,6 +1262,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                             <div><span className="font-medium">{t(lang, "labels.religiousAffiliation")}:</span> {(() => { const aff = watch("religiousAffiliation"); return Array.isArray(aff) ? aff.join(", ") || "—" : aff || "—"; })()}</div>
                                             <div><span className="font-medium">{t(lang, "labels.learningStatus")}:</span> {watch("learningStatus") || "—"}</div>
                                             <div><span className="font-medium">{t(lang, "labels.headCovering")}:</span> {watch("headCovering") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.religiousDetailsFreeText")}:</span> {watch("religiousDetailsFreeText") || "—"}</div>
                                         </div>
                                     </div>
 
@@ -1870,6 +1873,12 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                                             ))}
                                         </select>
+                                    </FieldWithTooltip>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">{t(lang, "labels.religiousDetailsFreeText")}</label>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.religiousDetailsFreeText} fieldName="religiousDetailsFreeText">
+                                        <textarea {...register("religiousDetailsFreeText")} style={getFieldStyle("religiousDetailsFreeText")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" placeholder={t(lang, "placeholders.religiousDetailsFreeText")} dir={rtl ? "rtl" : "ltr"} />
                                     </FieldWithTooltip>
                                 </div>
                             </div>

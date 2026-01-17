@@ -50,20 +50,63 @@ function containsHebrew(text: string): boolean {
     return hebrewRegex.test(text);
 }
 
-// Detect language from extracted data
+// Detect language from extracted data based on majority of text
 function detectLanguageFromJSON(jsonData: any): string {
-    const hebrewFields = [
+    // Fields that typically contain text (Hebrew or English)
+    const textFields = [
         "fullName",
         "location",
         "familyBackground",
         "education",
         "occupation",
         "personality",
+        "hobbies",
         "notes",
         "references",
+        "preferencesFreeText",
+        "medicalHistoryDetails",
+        "religiousDetailsFreeText",
     ];
 
-    for (const field of hebrewFields) {
+    let hebrewCharCount = 0;
+    let englishCharCount = 0;
+    let totalFieldsChecked = 0;
+
+    // Count Hebrew vs English characters across all text fields
+    for (const field of textFields) {
+        if (jsonData[field]) {
+            const value = jsonData[field];
+            const text = typeof value === "object" && value.value ? String(value.value) : String(value);
+            
+            if (text && text.trim().length > 0) {
+                totalFieldsChecked++;
+                // Count Hebrew characters
+                const hebrewMatches = text.match(/[\u0590-\u05FF]/g);
+                const hebrewChars = hebrewMatches ? hebrewMatches.length : 0;
+                
+                // Count English characters (letters only, excluding numbers and punctuation)
+                const englishMatches = text.match(/[a-zA-Z]/g);
+                const englishChars = englishMatches ? englishMatches.length : 0;
+                
+                hebrewCharCount += hebrewChars;
+                englishCharCount += englishChars;
+            }
+        }
+    }
+
+    // If we have text fields, determine language by majority
+    if (totalFieldsChecked > 0) {
+        // If Hebrew characters are majority, return Hebrew
+        if (hebrewCharCount > englishCharCount) {
+            return "he";
+        }
+        // If English characters are majority or equal, return English
+        // (default to English if equal)
+        return "en";
+    }
+
+    // Fallback: check if any field contains Hebrew (for edge cases)
+    for (const field of textFields) {
         if (jsonData[field]) {
             const value = jsonData[field];
             const text = typeof value === "object" && value.value ? String(value.value) : String(value);
@@ -72,6 +115,7 @@ function detectLanguageFromJSON(jsonData: any): string {
             }
         }
     }
+    
     return "en";
 }
 

@@ -11,7 +11,7 @@ export default function NewClientPage() {
     // Language selection screen
     if (!selectedLanguage) {
         return (
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="max-w-3xl mx-auto space-y-6 pt-4">
                 <div className="text-center">
                     <h1 className="text-3xl font-bold tracking-tight">Add New Client</h1>
                     <p className="text-muted-foreground mt-2">הוספת לקוח חדש</p>
@@ -54,7 +54,7 @@ export default function NewClientPage() {
     // Form with selected language
     return (
         <div className={`w-full h-full flex flex-col flex-1 min-h-0 ${selectedLanguage === "he" ? "rtl" : "ltr"}`} dir={selectedLanguage === "he" ? "rtl" : "ltr"}>
-            <div className="flex items-center justify-between shrink-0 mb-2">
+            <div className="flex items-center justify-between shrink-0 mb-2 pt-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">
                         {selectedLanguage === "he" ? "הוספת לקוח חדש" : "Add New Client"}

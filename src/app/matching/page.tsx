@@ -38,7 +38,17 @@ export default function MatchingPage() {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState<number | "all">(5);
+    const [itemsPerPage, setItemsPerPage] = useState<number | "all">(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("itemsPerPage");
+            if (saved) {
+                if (saved === "all") return "all";
+                const num = parseInt(saved, 10);
+                if (!isNaN(num)) return num;
+            }
+        }
+        return 5;
+    });
 
     useEffect(() => {
         seedTestClient().catch(console.error);
@@ -99,6 +109,10 @@ export default function MatchingPage() {
     const handleItemsPerPageChange = (value: number | "all") => {
         setItemsPerPage(value);
         setCurrentPage(1); // Reset to first page when changing items per page
+        // Save to localStorage
+        if (typeof window !== "undefined") {
+            localStorage.setItem("itemsPerPage", value === "all" ? "all" : value.toString());
+        }
     };
 
     const selectedClient = allClients.find((c) => c.id === selectedClientId);

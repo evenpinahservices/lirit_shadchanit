@@ -12,7 +12,7 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
             * *Example 1:* If "personality" field in the resume image shows "בחור טוב לב" (Hebrew), you MUST output "בחור טוב לב" (Hebrew) - NOT "good-hearted guy" or any translation.
             * *Example 2:* If "familyBackground" field in the resume image shows "Family from Jerusalem" (English), you MUST output "Family from Jerusalem" (English) - NOT translate to Hebrew.
             * *Example 3:* If "education" field shows mixed language "לומד ב-Yeshiva University", output exactly "לומד ב-Yeshiva University" - preserve the mixed format.
-            * **This applies to ALL open text fields:** fullName, email, phone, dob, location, familyBackground, education, occupation, personality, medicalHistoryDetails, references, notes, resumeRawText, shadchanName, fatherDetails.name, fatherDetails.occupation, motherDetails.name, motherDetails.occupation, etc.
+            * **This applies to ALL open text fields:** fullName, email, phone, dob, location, familyBackground, education, occupation, personality, medicalHistoryDetails, religiousDetailsFreeText, references, notes, resumeRawText, shadchanName, fatherDetails.name, fatherDetails.occupation, motherDetails.name, motherDetails.occupation, etc.
     * **SELECTION Fields:** (Fields with `_options` in the schema).
         * **Rule:** You must **MAP** the meaning from the resume to the **EXACT English string** provided in the option list.
         * *Example:* If the resume says "ספרדי" (Sephardi), and the options are `["Ashkenazi", "Sephardi"]`, you must output `"Sephardi"`.
@@ -216,6 +216,12 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "sourceQuote": "string or null",
     "_headCovering_options": ["N/A", "None", "Wig", "Tichel", "Hat", "Scarf", "Flexible"],
     "_note": "IMPORTANT: This field indicates how the candidate (typically a woman) plans to cover her hair AFTER marriage. For unmarried women, this is their intended/planned head covering practice once married. For men, use 'N/A'. Look for phrases like 'will cover with', 'plans to wear', 'intends to use', or descriptions of future marital head covering practices."
+  },
+  "religiousDetailsFreeText": {
+    "value": "string - OPEN TEXT",
+    "confidence": 0.0-1.0,
+    "sourceQuote": "string or null",
+    "_note": "This field captures any additional religious details, practices, background, or information about the candidate's religious observance that doesn't fit into the structured fields (religiousAffiliation, learningStatus, headCovering). Look for descriptions of religious practices, background, community involvement, or any other religious-related information. Preserve the exact language from the resume (Hebrew/English/mixed)."
   },
   "smoking": {
     "value": "Selection",

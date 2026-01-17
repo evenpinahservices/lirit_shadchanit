@@ -22,6 +22,8 @@ const ClientSchema = new Schema<Client>(
         tribalStatus: { type: String },
         religiousAffiliation: { type: [String], default: [] },
         learningStatus: { type: String },
+        headCovering: { type: String },
+        religiousDetailsFreeText: { type: String },
         maritalStatus: { type: String },
         children: { type: Number, default: 0 }, // Added missing field
         languages: { type: [String], default: [] },
@@ -29,7 +31,6 @@ const ClientSchema = new Schema<Client>(
         education: { type: String },
         occupation: { type: String },
         smoking: { type: String },
-        headCovering: { type: String },
 
         // Personal
         hobbies: { type: String }, // String field for hobbies

@@ -12,7 +12,17 @@ export default function ClientsPage() {
     const { clients, deleteClient, error, clearError, isLoading } = useClients();
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState<number | "all">(5);
+    const [itemsPerPage, setItemsPerPage] = useState<number | "all">(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("itemsPerPage");
+            if (saved) {
+                if (saved === "all") return "all";
+                const num = parseInt(saved, 10);
+                if (!isNaN(num)) return num;
+            }
+        }
+        return 5;
+    });
 
     // Delete Modal State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -51,6 +61,10 @@ export default function ClientsPage() {
     const handleItemsPerPageChange = (value: number | "all") => {
         setItemsPerPage(value);
         setCurrentPage(1); // Reset to first page when changing items per page
+        // Save to localStorage
+        if (typeof window !== "undefined") {
+            localStorage.setItem("itemsPerPage", value === "all" ? "all" : value.toString());
+        }
     };
 
     // Helper to calculate age from DOB

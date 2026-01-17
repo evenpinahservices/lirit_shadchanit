@@ -31,6 +31,8 @@ export interface Client {
     tribalStatus: string; // Drop-down
     religiousAffiliation: string[]; // Multi-select
     learningStatus: string; // Single-select
+    headCovering: string; // Drop-down
+    religiousDetailsFreeText?: string; // Open text field for additional religious details
     maritalStatus: string;
     children?: number;
     languages: string[]; // Multi-select
@@ -38,7 +40,6 @@ export interface Client {
     education: string;
     occupation: string;
     smoking: string; // Drop-down
-    headCovering: string; // Drop-down
 
     // Personal
     hobbies: string; // Open text field
@@ -98,6 +99,7 @@ export const ClientSchema = z.object({
     occupation: z.string().optional().default(""),
     learningStatus: z.string().optional().default(""),
     headCovering: z.string().optional().default(""),
+    religiousDetailsFreeText: z.string().optional().default(""),
     smoking: z.string().optional().default(""),
 
     personality: z.string().optional().default(""),

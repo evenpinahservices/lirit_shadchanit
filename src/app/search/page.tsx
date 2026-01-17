@@ -62,7 +62,17 @@ export default function SearchPage() {
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState<number | "all">(5);
+    const [itemsPerPage, setItemsPerPage] = useState<number | "all">(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("itemsPerPage");
+            if (saved) {
+                if (saved === "all") return "all";
+                const num = parseInt(saved, 10);
+                if (!isNaN(num)) return num;
+            }
+        }
+        return 5;
+    });
 
     // Filters
     const [keyword, setKeyword] = useState("");
@@ -180,6 +190,10 @@ export default function SearchPage() {
     const handleItemsPerPageChange = (value: number | "all") => {
         setItemsPerPage(value);
         setCurrentPage(1); // Reset to first page when changing items per page
+        // Save to localStorage
+        if (typeof window !== "undefined") {
+            localStorage.setItem("itemsPerPage", value === "all" ? "all" : value.toString());
+        }
     };
 
     return (
@@ -218,7 +232,7 @@ export default function SearchPage() {
             </div>
 
             <div className="flex-1 min-h-0 overflow-hidden relative">
-                <div className="h-full min-h-0 overflow-hidden flex flex-col md:flex-row md:gap-8 max-w-7xl mx-auto md:p-4 md:pb-20">
+                <div className="h-full min-h-0 overflow-hidden flex flex-col md:flex-row md:gap-8 max-w-7xl mx-auto md:p-4 md:pb-20" style={{ height: "100%" }}>
 
                     {/* FILTERS COLUMN - Now with internal scroll and fixed button */}
                     <div className={cn(
@@ -410,7 +424,7 @@ export default function SearchPage() {
                                         <button onClick={() => { setShowResults(false); router.push("/search"); }} className="mt-2 text-red-600 underline">Adjust Filters</button>
                                     </div>
                                 ) : (
-                                    <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-1 md:pr-4 pb-20 md:pb-0 custom-scrollbar relative">
+                                    <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-1 md:pr-4 pb-24 md:pb-0 custom-scrollbar relative" style={{ height: "100%", maxHeight: "calc(100vh - 12rem)", WebkitOverflowScrolling: "touch" }}>
                                         <div 
                                             ref={scrollContainerRef}
                                             className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
