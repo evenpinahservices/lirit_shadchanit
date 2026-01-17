@@ -1247,7 +1247,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         <div className="space-y-2 text-sm">
                                             <div><span className="font-medium">{t(lang, "labels.ethnicity")}:</span> {watch("ethnicity") || "—"}</div>
                                             <div><span className="font-medium">{t(lang, "labels.maritalStatus")}:</span> {watch("maritalStatus") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.languages")}:</span> {Array.isArray(watch("languages")) ? watch("languages").join(", ") || "—" : watch("languages") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.languages")}:</span> {(() => { const langs = watch("languages"); return Array.isArray(langs) ? langs.join(", ") || "—" : langs || "—"; })()}</div>
                                             <div><span className="font-medium">{t(lang, "labels.education")}:</span> {watch("education") || "—"}</div>
                                             <div><span className="font-medium">{t(lang, "labels.occupation")}:</span> {watch("occupation") || "—"}</div>
                                         </div>
