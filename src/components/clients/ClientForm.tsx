@@ -1257,7 +1257,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     <div className="space-y-4">
                                         <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.religiousDetails")}</h4>
                                         <div className="space-y-2 text-sm">
-                                            <div><span className="font-medium">{t(lang, "labels.religiousAffiliation")}:</span> {Array.isArray(watch("religiousAffiliation")) ? watch("religiousAffiliation").join(", ") || "—" : watch("religiousAffiliation") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.religiousAffiliation")}:</span> {(() => { const aff = watch("religiousAffiliation"); return Array.isArray(aff) ? aff.join(", ") || "—" : aff || "—"; })()}</div>
                                             <div><span className="font-medium">{t(lang, "labels.learningStatus")}:</span> {watch("learningStatus") || "—"}</div>
                                             <div><span className="font-medium">{t(lang, "labels.headCovering")}:</span> {watch("headCovering") || "—"}</div>
                                         </div>
@@ -1278,9 +1278,9 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     <div className="space-y-4">
                                         <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.preferences")}</h4>
                                         <div className="space-y-2 text-sm">
-                                            <div><span className="font-medium">{t(lang, "labels.ageGapPreference")}:</span> {Array.isArray(watch("ageGapPreference")) ? watch("ageGapPreference").join(", ") || "—" : watch("ageGapPreference") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.ageGapPreference")}:</span> {(() => { const gap = watch("ageGapPreference"); return Array.isArray(gap) ? gap.join(", ") || "—" : gap || "—"; })()}</div>
                                             <div><span className="font-medium">{t(lang, "labels.willingToRelocate")}:</span> {watch("willingToRelocate") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.preferredEthnicities")}:</span> {Array.isArray(watch("preferredEthnicities")) ? watch("preferredEthnicities").join(", ") || "—" : watch("preferredEthnicities") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.preferredEthnicities")}:</span> {(() => { const ethnicities = watch("preferredEthnicities"); return Array.isArray(ethnicities) ? ethnicities.join(", ") || "—" : ethnicities || "—"; })()}</div>
                                             {watch("preferencesFreeText") && (
                                                 <div><span className="font-medium">{t(lang, "labels.preferencesFreeText")}:</span> {watch("preferencesFreeText") || "—"}</div>
                                             )}
