@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { saveNote, getNote } from "@/actions/noteActions";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, StickyNote } from "lucide-react";
 import { useDebounce } from "@/lib/hooks"; // Assuming hooks exist, or I'll implement debounce locally if not
 
 export default function NotesPage() {
@@ -45,16 +45,25 @@ export default function NotesPage() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            <div className="flex items-center justify-center h-full min-h-screen">
+                <div className="text-center">
+                    <Loader2 className="h-12 w-12 animate-spin text-red-600 mx-auto mb-4" />
+                    <p className="text-muted-foreground">Loading notes...</p>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="flex flex-col h-[calc(100vh-8rem)]">
-            <div className="flex items-center justify-between mb-4">
-                <h1 className="text-2xl font-bold">My Notes</h1>
+            <div className="flex items-center justify-between shrink-0 px-1 pt-4 mb-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                        <StickyNote className="h-8 w-8 text-red-600" />
+                        My Notes
+                    </h1>
+                    <p className="text-muted-foreground hidden md:block">Keep your personal notes and reminders.</p>
+                </div>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                     {isSaving ? (
                         <span className="flex items-center gap-1 text-blue-500">

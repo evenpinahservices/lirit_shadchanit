@@ -1,6 +1,6 @@
 
 import React from "react";
-import { X, AlertTriangle } from "lucide-react";
+import { X, AlertTriangle, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ConfirmationModalProps {
@@ -28,20 +28,41 @@ export function ConfirmationModal({
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-gray-950 rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-gray-800 animate-in zoom-in-95 duration-200 overflow-hidden">
+            <div className={cn(
+                "bg-white dark:bg-gray-950 rounded-lg shadow-xl max-w-md w-full border animate-in zoom-in-95 duration-200 overflow-hidden",
+                isDangerous 
+                    ? "border-red-300 dark:border-red-800 shadow-red-500/20" 
+                    : "border-gray-200 dark:border-gray-800"
+            )}>
                 <div className="p-6">
                     <div className="flex items-start gap-4">
                         <div className={cn(
-                            "flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center",
-                            isDangerous ? "bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400" : "bg-blue-100 text-blue-600"
+                            "flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center",
+                            isDangerous 
+                                ? "bg-red-200 text-red-700 dark:bg-red-900/50 dark:text-red-300" 
+                                : "bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
                         )}>
-                            <AlertTriangle className="h-5 w-5" />
+                            {isDangerous ? (
+                                <AlertCircle className="h-6 w-6" />
+                            ) : (
+                                <AlertTriangle className="h-5 w-5" />
+                            )}
                         </div>
                         <div className="flex-1 pt-1">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <h3 className={cn(
+                                "text-lg font-semibold",
+                                isDangerous 
+                                    ? "text-red-900 dark:text-red-100" 
+                                    : "text-gray-900 dark:text-gray-100"
+                            )}>
                                 {title}
                             </h3>
-                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            <p className={cn(
+                                "mt-2 text-sm",
+                                isDangerous 
+                                    ? "text-red-700 dark:text-red-300 font-medium" 
+                                    : "text-gray-500 dark:text-gray-400"
+                            )}>
                                 {message}
                             </p>
                         </div>

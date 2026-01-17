@@ -1,7 +1,16 @@
 import mongoose, { Schema, Model } from "mongoose";
 import { Client } from "@/lib/mockData";
 
-const ClientSchema = new Schema<Client>(
+// PendingClient interface extends Client with pending-specific fields
+export interface PendingClient extends Client {
+    submittedAt: string;
+    submittedBy?: string; // Email or identifier of who submitted
+    token?: string; // Token used for external form submission
+    source?: "client_form" | "whatsapp" | "admin_manual"; // Source of the submission
+    sourceDescription?: string; // Human-readable description of the source
+}
+
+const PendingClientSchema = new Schema<PendingClient>(
     {
         fullName: { type: String, required: true },
         email: { type: String },
@@ -11,7 +20,7 @@ const ClientSchema = new Schema<Client>(
         gender: { type: String, enum: ["Male", "Female"], required: true },
 
         // Appearance
-        height: { type: Number }, // Changed to Number to match interface
+        height: { type: Number },
         eyeColor: { type: String },
         hairColor: { type: String },
         photoUrl: { type: String },
@@ -23,7 +32,7 @@ const ClientSchema = new Schema<Client>(
         religiousAffiliation: { type: [String], default: [] },
         learningStatus: { type: String },
         maritalStatus: { type: String },
-        children: { type: Number, default: 0 }, // Added missing field
+        children: { type: Number, default: 0 },
         languages: { type: [String], default: [] },
         familyBackground: { type: String },
         education: { type: String },
@@ -32,29 +41,35 @@ const ClientSchema = new Schema<Client>(
         headCovering: { type: String },
 
         // Personal
-        hobbies: { type: String }, // String field for hobbies
+        hobbies: { type: String },
         personality: { type: String },
         medicalHistory: { type: Boolean, default: false },
         medicalHistoryDetails: { type: String },
 
         // Preferences
-
         willingToRelocate: { type: String },
         ageGapPreference: { type: [String], default: [] },
         preferredEthnicities: { type: [String], default: [] },
         preferredHashkafos: { type: [String], default: [] },
         preferredLearningStatus: { type: [String], default: [] },
         preferredHeadCovering: { type: [String], default: [] },
-        preferencesFreeText: { type: String },
 
         // Meta
         references: { type: String },
         notes: { type: String },
         resumeRawText: { type: String },
-        active: { type: Boolean, default: true }, // Added missing field
-        status: { type: String }, // Deprecated but kept for type signature
-        formLanguage: { type: String, enum: ["en", "he"], default: "en" }, // Language the form was filled in
-        createdAt: { type: String }, // Storing as string YYYY-MM-DD
+        active: { type: Boolean, default: true },
+        status: { type: String },
+        formLanguage: { type: String, enum: ["en", "he"], default: "en" },
+        createdAt: { type: String },
+        
+    // Pending-specific fields
+    submittedAt: { type: String, required: true },
+    submittedBy: { type: String },
+    token: { type: String },
+    source: { type: String, enum: ["client_form", "whatsapp", "admin_manual"], default: "admin_manual" },
+    sourceDescription: { type: String },
+    existingApprovedClientId: { type: String }, // ID of approved client that will be overwritten
     },
     {
         timestamps: true,
@@ -63,13 +78,13 @@ const ClientSchema = new Schema<Client>(
     }
 );
 
-// Virtual for 'id' to match our frontend interface which expects 'id' string, not '_id' object
-ClientSchema.virtual('id').get(function (this: any) {
+// Virtual for 'id' to match our frontend interface
+PendingClientSchema.virtual('id').get(function (this: any) {
     return this._id.toHexString();
 });
 
 // Ensure virtuals are included
-ClientSchema.set('toJSON', {
+PendingClientSchema.set('toJSON', {
     virtuals: true,
     versionKey: false,
     transform: function (doc, ret) {
@@ -77,7 +92,6 @@ ClientSchema.set('toJSON', {
     }
 });
 
+const PendingClientModel: Model<PendingClient> = mongoose.models.PendingClient || mongoose.model<PendingClient>("PendingClient", PendingClientSchema);
 
-const ClientModel: Model<Client> = mongoose.models.Client || mongoose.model<Client>("Client", ClientSchema);
-
-export default ClientModel;
+export default PendingClientModel;

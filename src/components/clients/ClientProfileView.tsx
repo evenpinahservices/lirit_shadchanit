@@ -180,6 +180,12 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                     <Field label={t(lang, "profileView.willingToRelocate")} value={client.willingToRelocate} lang={lang} optionKey="willingToRelocate" />
                     <Field label={t(lang, "profileView.preferredEthnicities")} value={client.preferredEthnicities} lang={lang} optionKey="ethnicity" />
                     <Field label={t(lang, "profileView.preferredHashkafos")} value={client.preferredHashkafos} lang={lang} optionKey="religiousAffiliation" />
+                    {client.preferencesFreeText && (
+                        <div>
+                            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t(lang, "profileView.preferencesFreeText")}</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{client.preferencesFreeText}</div>
+                        </div>
+                    )}
                 </div>
             )
         },

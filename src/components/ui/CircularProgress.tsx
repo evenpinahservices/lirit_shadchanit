@@ -57,8 +57,13 @@ export function CircularProgress({
                 />
             </svg>
             {showPercentage && (
-                <span className="absolute text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    {Math.round(progress)}
+                <span 
+                    className="absolute font-semibold text-gray-700 dark:text-gray-300"
+                    style={{ 
+                        fontSize: effectiveSize >= 60 ? '1.25rem' : effectiveSize >= 40 ? '1rem' : '0.75rem'
+                    }}
+                >
+                    {Math.round(progress)}%
                 </span>
             )}
         </div>

@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 
 const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATH_PREFIXES = ["/form/"]; // External form routes
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
     const { user, isAuthenticated } = useAuth();
@@ -14,7 +15,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         // If we are on a public path, we don't need to check auth
-        if (PUBLIC_PATHS.includes(pathname)) {
+        if (PUBLIC_PATHS.includes(pathname) || PUBLIC_PATH_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
             setIsChecking(false);
             return;
         }
@@ -40,7 +41,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
     }, [user, pathname, router]);
 
-    if (isChecking && !PUBLIC_PATHS.includes(pathname)) {
+    if (isChecking && !PUBLIC_PATHS.includes(pathname) && !PUBLIC_PATH_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
         return null; // Or a loading spinner
     }
 

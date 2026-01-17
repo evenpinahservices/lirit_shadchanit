@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useClients } from "@/context/ClientContext";
 import { Client } from "@/lib/mockData";
-import { Search, MapPin, Briefcase, Filter, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, MapPin, Briefcase, Filter, ChevronDown, ChevronLeft, ChevronRight, User as UserIcon, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { cn, compareLocations } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/MultiSelect";
@@ -16,8 +16,45 @@ export default function SearchPage() {
     const searchParams = useSearchParams();
     const [filteredClients, setFilteredClients] = useState<Client[]>(clients);
 
-    // View State
-    const [showResults, setShowResults] = useState(false);
+    // View State - Show results immediately on tablet and desktop
+    const [showResults, setShowResults] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth >= 768; // md breakpoint - show results immediately on tablet/desktop
+        }
+        return false;
+    });
+
+    // Scroll detection for gradient fade effect
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [hasOverflow, setHasOverflow] = useState(false);
+
+    // Check for scroll overflow to show/hide gradient fade
+    useEffect(() => {
+        const checkOverflow = () => {
+            const container = scrollContainerRef.current;
+            if (container) {
+                // Only check if content is scrollable (more content than visible area)
+                const hasScrollableContent = container.scrollHeight > container.clientHeight + 20;
+                setHasOverflow(hasScrollableContent);
+            }
+        };
+        
+        // Initial check with slight delay to ensure DOM is ready
+        const timeoutId = setTimeout(checkOverflow, 100);
+        
+        const container = scrollContainerRef.current;
+        if (container) {
+            container.addEventListener('scroll', checkOverflow);
+            // Use ResizeObserver to detect content changes
+            const resizeObserver = new ResizeObserver(checkOverflow);
+            resizeObserver.observe(container);
+            return () => {
+                clearTimeout(timeoutId);
+                container.removeEventListener('scroll', checkOverflow);
+                resizeObserver.disconnect();
+            };
+        }
+    }, [filteredClients, showResults]);
 
     // Note: Auto-fullscreen is NOT enabled by default
     // It only activates if user explicitly enables it via: localStorage.setItem('autoFullscreen', 'true')
@@ -147,12 +184,13 @@ export default function SearchPage() {
 
     return (
         <div className="flex flex-col h-full min-h-0 overflow-hidden">
-            <div className="shrink-0 px-4 pt-4 pb-2 md:pb-4 border-b bg-white dark:bg-gray-950 z-10 flex justify-between items-center">
+            <div className="flex items-center justify-between shrink-0 px-1 pt-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                        <Search className="h-8 w-8 text-red-600" />
                         {showResults ? `Results (${filteredClients.length})` : "Advanced Search"}
                     </h1>
-                    <p className="text-muted-foreground text-sm hidden md:block">Filter clients by detailed criteria.</p>
+                    <p className="text-muted-foreground hidden md:block">Filter clients by detailed criteria.</p>
                 </div>
                 <button
                     onClick={() => {
@@ -180,17 +218,17 @@ export default function SearchPage() {
             </div>
 
             <div className="flex-1 min-h-0 overflow-hidden relative">
-                <div className="h-full min-h-0 overflow-hidden flex flex-col md:flex-row md:gap-8 max-w-7xl mx-auto md:p-4">
+                <div className="h-full min-h-0 overflow-hidden flex flex-col md:flex-row md:gap-8 max-w-7xl mx-auto md:p-4 md:pb-20">
 
                     {/* FILTERS COLUMN - Now with internal scroll and fixed button */}
                     <div className={cn(
-                        "md:w-80 md:shrink-0 md:border-r md:pr-8 bg-white dark:bg-gray-950 md:bg-transparent transition-all duration-300 ease-in-out flex flex-col",
+                        "md:w-96 lg:w-[28rem] md:shrink-0 transition-all duration-300 ease-in-out flex flex-col",
                         "w-full md:static h-full min-h-0",
                         showResults ? "hidden md:flex" : "flex"
                     )}>
-                        {/* Scrollable filters area */}
-                        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-0 pb-24 md:pb-0 max-h-[calc(100dvh-12rem)]">
-                            <div className="space-y-4">
+                        {/* Scrollable filters area - scrollbar at edge */}
+                        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-0 md:pr-0 pb-24 md:pb-0 max-h-[calc(100dvh-12rem)] custom-scrollbar">
+                            <div className="space-y-5 md:pr-8">
                                 <h3 className="font-semibold flex items-center text-lg">
                                     <Search className="w-5 h-5 mr-2" />
                                     Filter Criteria
@@ -285,7 +323,7 @@ export default function SearchPage() {
                                     </div>
 
                                     {/* Religiosity */}
-                                    <div className="space-y-1 pt-2 border-t border-dashed">
+                                    <div className="space-y-1 pt-2">
                                         <label className="text-xs font-medium text-gray-500">Religiosity</label>
                                         <MultiSelect
                                             options={religiosityOptions}
@@ -344,11 +382,11 @@ export default function SearchPage() {
 
                     {/* RESULTS COLUMN */}
                     <div className={cn(
-                        "flex-1 overflow-hidden px-4 pb-20 md:pb-0 h-full flex flex-col",
+                        "flex-1 min-h-0 overflow-hidden px-4 md:px-4 md:pr-0 pb-20 md:pb-0 flex flex-col md:pt-0 md:max-h-[calc(100vh-12rem)]",
                         !showResults && "hidden md:flex md:items-center md:justify-center"
                     )}>
                         {!showResults ? (
-                            <div className="hidden md:flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 border-2 border-dashed rounded-xl">
+                            <div className="hidden md:flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 bg-gray-50 dark:bg-gray-900/50">
                                 <Search className="h-10 w-10 text-gray-300 mb-2" />
                                 <p className="font-medium">Ready to search?</p>
                                 <p className="text-sm mb-4">Adjust filters to see breakdown.</p>
@@ -365,48 +403,68 @@ export default function SearchPage() {
                             </div>
                         ) : (
                             <>
-                                <div className="mb-4 flex items-center justify-between shrink-0 pt-4 md:pt-0">
-                                    {/* Subheader removed */}
-                                </div>
 
                                 {filteredClients.length === 0 ? (
-                                    <div className="text-center py-12 text-gray-500 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                    <div className="text-center py-12 text-gray-500 bg-gray-50 dark:bg-gray-900">
                                         <p>No clients match your criteria.</p>
                                         <button onClick={() => { setShowResults(false); router.push("/search"); }} className="mt-2 text-red-600 underline">Adjust Filters</button>
                                     </div>
                                 ) : (
-                                    <div className="flex-1 overflow-hidden p-1">
-                                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-4">
-                                            {paginatedClients.map(client => (
-                                                <div key={client.id} className="bg-white dark:bg-gray-950 p-4 rounded-xl border shadow-sm hover:shadow-md transition-shadow">
-                                                    <Link href={`/clients/${client.id}`} className="flex gap-4 items-start">
-                                                        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
-                                                            {client.photoUrl ? (
-                                                                <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <div className="flex items-center justify-center w-full h-full text-gray-400">?</div>
-                                                            )}
-                                                        </div>
-                                                        <div className="min-w-0 flex-1">
-                                                            <h3 className="font-semibold truncate">{client.fullName}</h3>
-                                                            <p className="text-sm text-gray-500">{calculateAge(client.dob)} • {client.gender}</p>
-                                                            <p className="text-xs text-gray-400 truncate mt-1">{client.location}</p>
-                                                            <div className="flex gap-1 mt-2">
-                                                                <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300">
-                                                                    {calculateAge(client.dob)} y/o
-                                                                </span>
+                                    <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-1 md:pr-4 pb-20 md:pb-0 custom-scrollbar relative">
+                                        <div 
+                                            ref={scrollContainerRef}
+                                            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                                        >
+                                            {paginatedClients.map((client) => (
+                                                <Link
+                                                    key={client.id}
+                                                    href={`/clients/${client.id}?source=search`}
+                                                    className="group relative flex flex-col justify-between bg-gray-50 dark:bg-gray-900 p-4 shadow-sm hover:shadow-md transition-all"
+                                                >
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-start justify-between">
+                                                            <div>
+                                                                <h3 className="font-semibold text-base group-hover:text-red-600 transition-colors">{client.fullName}</h3>
+                                                                <p className="text-xs text-muted-foreground">{client.location} • {calculateAge(client.dob)} yo</p>
+                                                            </div>
+                                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                                                                {client.photoUrl ? (
+                                                                    <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
+                                                                ) : (
+                                                                    <UserIcon className="h-4 w-4 text-gray-400" />
+                                                                )}
                                                             </div>
                                                         </div>
-                                                    </Link>
-                                                </div>
+
+                                                        <div className="space-y-1 text-xs">
+                                                            <div className="flex justify-between">
+                                                                <span className="text-muted-foreground">Age/Gender:</span>
+                                                                <span className="text-right">{calculateAge(client.dob)} / {client.gender}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-muted-foreground">Occupation:</span>
+                                                                <span className="text-right truncate max-w-[7.5rem]">{client.occupation}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-4 pt-3 flex items-center justify-end">
+                                                        <span className="text-xs font-medium text-red-600 group-hover:underline flex items-center gap-1">
+                                                            View Profile <ArrowRight className="h-3 w-3" />
+                                                        </span>
+                                                    </div>
+                                                </Link>
                                             ))}
                                         </div>
+                                        {/* Gradient fade - only show when content overflows */}
+                                        {hasOverflow && (
+                                            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-gray-50 via-gray-50/80 to-transparent dark:from-gray-900 dark:via-gray-900/80 z-20" />
+                                        )}
                                     </div>
                                 )}
 
                                 {/* Pagination Controls */}
                                 {filteredClients.length > 0 && (
-                                    <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none">
+                                    <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-900 z-20 md:fixed md:bottom-0 md:left-0 md:right-0 md:px-4 md:py-3 md:bg-gray-50 md:dark:bg-gray-900 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
                                         <ItemsPerPageSelector
                                             value={itemsPerPage}
                                             onChange={handleItemsPerPageChange}

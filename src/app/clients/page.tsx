@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useClients } from "@/context/ClientContext";
-import { Plus, Pencil, Trash2, MapPin, Briefcase, Search, ChevronLeft, ChevronRight, User as UserIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Briefcase, Search, ChevronLeft, ChevronRight, User as UserIcon, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { ItemsPerPageSelector } from "@/components/ui/ItemsPerPageSelector";
@@ -79,7 +79,10 @@ export default function ClientsPage() {
             )}
             <div className="flex items-center justify-between shrink-0 px-1 pt-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                        <Users className="h-8 w-8 text-red-600" />
+                        Clients
+                    </h1>
                     <p className="text-muted-foreground hidden md:block">Manage your client database.</p>
                 </div>
                 <div className="flex items-center gap-2">

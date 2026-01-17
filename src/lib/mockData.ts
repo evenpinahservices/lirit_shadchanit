@@ -54,6 +54,7 @@ export interface Client {
     preferredHashkafos: string | string[]; // Single or Multi
     preferredLearningStatus: string | string[]; // Single or Multi
     preferredHeadCovering: string[]; // Multi-select
+    preferencesFreeText?: string; // Free text field for "what you are looking for"
 
     // Admin / Meta
     references: string;
@@ -119,6 +120,7 @@ export const ClientSchema = z.object({
     }),
     preferredLearningStatus: z.union([z.string(), z.array(z.string())]).optional().transform(val => Array.isArray(val) ? val : typeof val === 'string' ? [val] : []),
     preferredHeadCovering: z.array(z.string()).optional().default([]),
+    preferencesFreeText: z.string().optional().default(""),
 
     references: z.string().optional().default(""),
     notes: z.string().optional().default(""),

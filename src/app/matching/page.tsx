@@ -149,10 +149,13 @@ export default function MatchingPage() {
 
     return (
         <div id="matching-page-root" className="flex flex-col h-full overflow-hidden space-y-4">
-            <div className="shrink-0 flex items-center justify-between">
+            <div className="flex items-center justify-between shrink-0 px-1 pt-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Smart Matching</h1>
-                    <p className="text-muted-foreground">Find compatible matches based on strict deal-breakers.</p>
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                        <Heart className="h-8 w-8 text-red-600 fill-red-600" />
+                        Smart Matching
+                    </h1>
+                    <p className="text-muted-foreground hidden md:block">Find compatible matches based on strict deal-breakers.</p>
                 </div>
             </div>
 
@@ -163,7 +166,7 @@ export default function MatchingPage() {
                     <div className="shrink-0 min-h-0">
                         {!isResultsView ? (
                             // FULL SEARCH CARD
-                            <div className="rounded-xl border bg-white dark:bg-gray-950 p-4 shadow-sm flex flex-col">
+                            <div className="bg-gray-50 dark:bg-gray-900 p-4 shadow-sm flex flex-col">
                                 <h2 className="font-semibold mb-3 shrink-0">Select Client</h2>
                                 <div className="space-y-3 flex flex-col">
                                     <div id="tour-matching-search">
@@ -208,7 +211,7 @@ export default function MatchingPage() {
                             </div>
                         ) : (
                             // COMPACT HEADER (MINIMIZED)
-                            <div className="rounded-xl border bg-white dark:bg-gray-950 p-4 shadow-sm flex items-center justify-between">
+                            <div className="bg-gray-50 dark:bg-gray-900 p-4 shadow-sm flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-semibold text-lg">
                                         {selectedClient?.fullName.charAt(0)}
@@ -240,7 +243,7 @@ export default function MatchingPage() {
                             </div>
 
                             {matches.length === 0 ? (
-                                <div id="tour-matching-results" className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground border rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                                <div id="tour-matching-results" className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground bg-gray-50 dark:bg-gray-900/50">
                                     <p>No matches found matching the strict criteria.</p>
                                     <button onClick={handleReset} className="mt-2 text-red-600 hover:underline">Try another client</button>
                                 </div>
@@ -251,7 +254,7 @@ export default function MatchingPage() {
                                             <Link
                                                 key={match.id}
                                                 href={`/clients/${match.id}?source=matching`}
-                                                className="group relative flex flex-col justify-between rounded-xl border bg-white dark:bg-gray-950 p-4 shadow-sm hover:shadow-md transition-all hover:border-red-200 dark:hover:border-red-900"
+                                                className="group relative flex flex-col justify-between bg-gray-50 dark:bg-gray-900 p-4 shadow-sm hover:shadow-md transition-all"
                                             >
                                                 <div className="space-y-3">
                                                     <div className="flex items-start justify-between">
@@ -279,7 +282,7 @@ export default function MatchingPage() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="mt-4 pt-3 border-t flex items-center justify-end">
+                                                <div className="mt-4 pt-3 flex items-center justify-end">
                                                     <span className="text-xs font-medium text-red-600 group-hover:underline flex items-center gap-1">
                                                         View Profile <ArrowRight className="h-3 w-3" />
                                                     </span>
@@ -328,7 +331,7 @@ export default function MatchingPage() {
 
                     {/* Default state illustration if not searching */}
                     {!isResultsView && (
-                        <div className="flex-1 flex items-center justify-center p-6 text-center border-2 border-dashed rounded-xl bg-gray-50/50 dark:bg-gray-900/50">
+                        <div className="flex-1 flex items-center justify-center p-6 text-center bg-gray-50/50 dark:bg-gray-900/50">
                             <div className="flex flex-col items-center gap-2">
                                 <Heart className="h-8 w-8 text-gray-300" />
                                 <p className="text-muted-foreground font-medium text-sm">Select a client above to start matching</p>

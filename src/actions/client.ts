@@ -60,9 +60,13 @@ export async function createClient(data: ClientInput): Promise<Client> {
 
 export async function updateClient(id: string, updates: Partial<Client>): Promise<void> {
     await dbConnect();
-    await ClientModel.findByIdAndUpdate(id, updates);
+    // Use $set to ensure all fields are properly updated
+    // Exclude id and createdAt from updates to preserve them
+    const { id: _, createdAt: __, ...updateData } = updates;
+    await ClientModel.findByIdAndUpdate(id, { $set: updateData }, { new: true, runValidators: true });
     revalidatePath("/clients");
     revalidatePath("/matching");
+    revalidatePath("/inbox");
 }
 
 export async function deleteClient(id: string): Promise<void> {
@@ -119,4 +123,34 @@ export async function deleteAllExceptBatEl(): Promise<void> {
     revalidatePath("/matching");
     revalidatePath("/search");
     return;
+}
+// Find approved client by email OR phone (for external form editing)
+export async function getApprovedClientByIdentifier(
+    email?: string,
+    phone?: string
+): Promise<Client | null> {
+    await dbConnect();
+    const query: any = {};
+    if (email && email.trim()) {
+        query.email = email.trim().toLowerCase();
+    } else if (phone && phone.trim()) {
+        query.phone = phone.trim();
+    } else {
+        return null;
+    }
+    const client = await ClientModel.findOne(query).sort({ createdAt: -1 }).lean();
+    if (!client) return null;
+    const { _id, __v, ...rest } = client;
+    return {
+        ...rest,
+        id: _id.toString(),
+        religiousAffiliation: client.religiousAffiliation || [],
+        languages: client.languages || [],
+        ageGapPreference: client.ageGapPreference || [],
+        preferredEthnicities: client.preferredEthnicities || [],
+        preferredHashkafos: client.preferredHashkafos || [],
+        preferredLearningStatus: client.preferredLearningStatus || [],
+        preferredHeadCovering: client.preferredHeadCovering || [],
+        formLanguage: client.formLanguage || "en",
+    } as Client;
 }

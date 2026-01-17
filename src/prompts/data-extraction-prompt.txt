@@ -201,7 +201,8 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": ["Selection (Multiple Allowed)"],
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_religiousAffiliation_options": ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"]
+    "_religiousAffiliation_options": ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"],
+    "_note": "IMPORTANT: 'Modern Orthodox' may appear in Hebrew as 'חרדי מודרני' (charedi moderni) - map this to 'Modern Orthodox'. Also recognize 'דתי מודרני' (dati moderni) as 'Modern Orthodox' for backward compatibility."
   },
   "learningStatus": {
     "value": "Selection",
@@ -270,7 +271,8 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": ["Selection (Multiple Allowed)"] | null,
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_preferredHashkafos_options": ["I don't mind", "Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"]
+    "_preferredHashkafos_options": ["I don't mind", "Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"],
+    "_note": "IMPORTANT: 'Modern Orthodox' may appear in Hebrew as 'חרדי מודרני' (charedi moderni) - map this to 'Modern Orthodox'. Also recognize 'דתי מודרני' (dati moderni) as 'Modern Orthodox' for backward compatibility."
   },
   "preferredLearningStatus": {
     "value": ["Selection (Multiple Allowed)"] | null,
@@ -285,6 +287,12 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "sourceQuote": "string or null",
     "_preferredHeadCovering_options": ["I don't mind", "N/A", "None", "Wig", "Tichel", "Hat", "Scarf", "Flexible"],
     "_note": "CRITICAL: Only fill if confidence >= 0.9. Otherwise set to null or []"
+  },
+  "preferencesFreeText": {
+    "value": "string - OPEN TEXT" | null,
+    "confidence": 0.0-1.0,
+    "sourceQuote": "string or null",
+    "_note": "This field captures free-form text describing what the candidate is looking for in a match. Look for phrases like 'looking for', 'seeking', 'wants', 'hopes to find', 'interested in', etc. Preserve the exact language from the resume (Hebrew/English/mixed). This is different from structured preferences - it's a general description of their ideal match."
   },
 
   "references": {

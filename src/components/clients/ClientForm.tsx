@@ -7,7 +7,7 @@ import { Client, ClientSchema } from "@/lib/mockData";
 import { useClients } from "@/context/ClientContext";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { ChevronLeft, ChevronRight, Check, UploadCloud, X, FileJson } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, UploadCloud, X, FileJson, CheckCircle2, Trash2 } from "lucide-react";
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { useUploadWithProgress } from "@/hooks/useUploadWithProgress";
 import Image from "next/image";
@@ -20,6 +20,7 @@ import { MultiSelect } from "@/components/ui/MultiSelect";
 import { DateCarousel } from "@/components/ui/DateCarousel";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { FormLanguage, translations, t, getOptions, isRTL } from "@/lib/translations";
+import { createPendingClient } from "@/actions/pendingClient";
 
 const formSchema = ClientSchema;
 
@@ -109,6 +110,12 @@ interface ClientFormProps {
     isEditing?: boolean;
     onCancel?: () => void;
     language?: FormLanguage;
+    onSubmitToPending?: (values: any) => Promise<void>; // Custom handler for pending submissions
+    isExternalForm?: boolean; // If true, this is an external form (client submission)
+    onApprove?: () => void; // Handler for approving (used in inbox review)
+    onReject?: () => void; // Handler for rejecting (used in inbox review)
+    isApproving?: boolean; // Loading state for approval
+    isRejecting?: boolean; // Loading state for rejection
 }
 
 // Step definitions for the wizard (keys for translation lookup)
@@ -116,13 +123,13 @@ const STEP_KEYS = [
     { titleKey: "basicInfo", fields: ["fullName", "email", "phone", "dob", "gender", "location"] },
     { titleKey: "appearance", fields: ["height", "eyeColor", "hairColor", "photoUrl"] },
     { titleKey: "background", fields: ["ethnicity", "tribalStatus", "maritalStatus", "languages", "familyBackground", "education", "occupation"] },
-    { titleKey: "religiousDetails", fields: ["religiousAffiliation", "learningStatus", "headCovering", "smoking"] },
-    { titleKey: "personal", fields: ["hobbies", "personality", "medicalHistory", "medicalHistoryDetails"] },
-    { titleKey: "preferences", fields: ["ageGapPreference", "willingToRelocate", "preferredEthnicities", "preferredHashkafos", "preferredLearningStatus", "preferredHeadCovering"] },
+    { titleKey: "religiousDetails", fields: ["religiousAffiliation", "learningStatus", "headCovering"] },
+    { titleKey: "personal", fields: ["hobbies", "personality", "smoking", "medicalHistory", "medicalHistoryDetails"] },
+    { titleKey: "preferences", fields: ["ageGapPreference", "willingToRelocate", "preferredEthnicities", "preferredHashkafos", "preferredLearningStatus", "preferredHeadCovering", "preferencesFreeText"] },
     { titleKey: "admin", fields: ["references", "notes"] },
 ];
 
-export function ClientForm({ client, isEditing = false, onCancel, language = "en" }: ClientFormProps) {
+export function ClientForm({ client, isEditing = false, onCancel, language = "en", onSubmitToPending, isExternalForm = false, onApprove, onReject, isApproving = false, isRejecting = false }: ClientFormProps) {
     // Detect language from client data or use provided language
     const detectedLang = client ? detectClientLanguage(client) : language;
     
@@ -170,6 +177,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         preferredHashkafos: [],
         preferredLearningStatus: [],
         preferredHeadCovering: [],
+        preferencesFreeText: "",
         formLanguage: language,
     };
 
@@ -202,11 +210,15 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [client, detectedLang, formLanguageFromForm]);
     
-    // Memoize translated step titles
-    const STEPS = useMemo(() => STEP_KEYS.map(step => ({
-        ...step,
-        title: t(lang, `steps.${step.titleKey}`)
-    })), [lang]);
+    // Memoize translated step titles - include admin step for external forms (but only show references)
+    const STEPS = useMemo(() => {
+        const steps = STEP_KEYS.map(step => ({
+            ...step,
+            title: t(lang, `steps.${step.titleKey}`)
+        }));
+        // Keep all steps for both admin and external forms (external forms will show only references in step 6)
+        return steps;
+    }, [lang]);
 
     // Helper to get option arrays with value/label
     const opts = (key: keyof typeof translations.en.options) => getOptions(lang, key);
@@ -235,6 +247,9 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const [isDraggingGallery, setIsDraggingGallery] = useState(false);
 
     const [createdClient, setCreatedClient] = useState<Client | null>(null);
+    const [filledFromWhatsApp, setFilledFromWhatsApp] = useState(false);
+    const [submitToPending, setSubmitToPending] = useState(false);
+    const [showSummary, setShowSummary] = useState(false);
 
     // Date Logic - Flexible DOB
     const [dateMode, setDateMode] = useState<"Gregorian" | "Hebrew" | "Year">("Gregorian");
@@ -289,7 +304,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             clearTimeout(timeoutId);
             window.removeEventListener('resize', checkOverflow);
         };
-    }, [currentStep]); // Re-check when step changes
+    }, [currentStep, showSummary]); // Re-check when step changes or summary is shown
     
     // Store Gregorian date when it changes (if in Gregorian mode)
     useEffect(() => {
@@ -521,16 +536,34 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
 
     // Reset submit ready state when stepping back or forward, but trigger it for the last step
     useEffect(() => {
-        if (currentStep === STEPS.length - 1) {
-            setIsSubmitReady(false);
-            const timer = setTimeout(() => {
-                setIsSubmitReady(true);
-            }, 500); // 500ms delay to prevent double-tap submission
-            return () => clearTimeout(timer);
+        if (showSummary) {
+            setIsSubmitReady(true); // Summary page is ready to submit
+        } else if (isEditing) {
+            // When editing, enable save button immediately (user can save from any step)
+            setIsSubmitReady(true);
+        } else if (currentStep === STEPS.length - 1) {
+            // For external forms, don't enable submit yet - show summary button instead
+            if (isExternalForm) {
+                setIsSubmitReady(true); // Enable "Review Summary" button
+            } else {
+                // For creating new client, enable submit button after a short delay
+                setIsSubmitReady(false);
+                const timer = setTimeout(() => {
+                    setIsSubmitReady(true);
+                }, 500); // 500ms delay to prevent double-tap submission
+                return () => clearTimeout(timer);
+            }
         } else {
             setIsSubmitReady(false);
         }
-    }, [currentStep]);
+    }, [currentStep, showSummary, isExternalForm, isEditing, STEPS.length]);
+
+    // Scroll to top when summary is shown
+    useEffect(() => {
+        if (showSummary && scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [showSummary]);
 
     const onSubmit = async (values: z.output<typeof formSchema>) => {
         // Prevent duplicate submissions
@@ -544,10 +577,28 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             // Always include the form language
             const valuesWithLang = { ...values, formLanguage: lang };
             
+            // If custom pending submission handler is provided, use it
+            if (onSubmitToPending) {
+                await onSubmitToPending(valuesWithLang);
+                return;
+            }
+            
             if (isEditing && client) {
                 await updateClient(client.id, valuesWithLang);
                 router.push("/clients");
             } else {
+                // If form was filled from WhatsApp and submitToPending is checked, submit to pending
+                if (filledFromWhatsApp && submitToPending) {
+                    await createPendingClient({
+                        ...valuesWithLang,
+                        submittedAt: new Date().toISOString(),
+                        source: "whatsapp",
+                        sourceDescription: "Extracted from WhatsApp images",
+                    });
+                    router.push("/inbox");
+                    return;
+                }
+                
                 const newClient = await addClient(valuesWithLang);
                 // Calculate matches for the new client against existing clients
                 const matches = findMatches(newClient, clients);
@@ -820,6 +871,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     // Auto-fill handlers (for image-based auto-fill)
     const handleAutoFill = (data: any) => {
         console.log("handleAutoFill called with data:", data);
+        setFilledFromWhatsApp(true); // Mark that form was filled from WhatsApp images
+        setSubmitToPending(true); // Default to submitting to pending when filled from WhatsApp
         
         const confidences: Record<string, number> = {};
         
@@ -1064,7 +1117,9 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     return (
         <>
             <div className={cn(
-                "fixed inset-x-0 bottom-0 top-[4rem] z-40 bg-white dark:bg-gray-950 flex flex-col md:relative md:inset-auto md:top-auto md:w-[80%] md:mx-auto md:flex-1 md:h-full md:overflow-hidden md:bg-transparent md:flex",
+                "fixed inset-x-0 bottom-0 z-40 bg-white dark:bg-gray-950 flex flex-col md:relative md:inset-auto md:top-auto md:w-[80%] md:mx-auto md:flex-1 md:h-full md:overflow-hidden md:bg-transparent md:flex",
+                // External forms have no navbar, so start from top-0
+                isExternalForm ? "top-0" : "top-[4rem]",
                 rtl && "rtl"
             )} dir={rtl ? "rtl" : "ltr"}>
                 <form
@@ -1081,14 +1136,22 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                             e.preventDefault();
                         }
                     }}
-                    className="flex flex-col h-full md:h-full md:overflow-hidden relative"
+                    className="flex flex-col h-full overflow-hidden relative"
                 >
                     {/* Wizard Header - Sticky on Mobile */}
                     <div className="shrink-0 bg-white dark:bg-gray-950 p-4 border-b z-30">
                         <div className="flex items-center justify-between mb-2 md:mb-4">
                             <div className="flex items-center gap-2">
-                                <h2 className="text-lg font-semibold">{STEPS[currentStep].title}</h2>
-                                {!isEditing && (
+                                <h2 className="text-lg font-semibold">
+                                    {showSummary 
+                                        ? (lang === "he" ? "סיכום המידע" : "Summary")
+                                        : (isExternalForm && currentStep === 6 
+                                            ? t(lang, "labels.references")
+                                            : STEPS[currentStep].title
+                                          )
+                                    }
+                                </h2>
+                                {!isEditing && !isExternalForm && (
                                     <>
                                         <button 
                                             type="button" 
@@ -1111,13 +1174,16 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 )}
                             </div>
                             <span className="text-sm text-gray-500">
-                                {t(lang, "messages.step")} {currentStep + 1} {t(lang, "messages.of")} {STEPS.length}
+                                {showSummary 
+                                    ? (lang === "he" ? "סקירה סופית" : "Final Review")
+                                    : `${t(lang, "messages.step")} ${currentStep + 1} ${t(lang, "messages.of")} ${STEPS.length}`
+                                }
                             </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-800">
                             <div
                                 className={cn("bg-red-600 h-2 rounded-full transition-all duration-300", rtl && "float-right")}
-                                style={{ width: `${((currentStep + 1) / STEPS.length) * 100}%` }}
+                                style={{ width: showSummary ? "100%" : `${((currentStep + 1) / STEPS.length) * 100}%` }}
                             ></div>
                         </div>
                     </div>
@@ -1125,11 +1191,115 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                     {/* Steps Content - Scrollable on Mobile and Desktop with EXTRA padding for validation errors */}
                     <div 
                         ref={scrollContainerRef}
-                        className="flex-1 overflow-y-auto min-h-0 bg-white dark:bg-gray-950 p-6 space-y-6 custom-scrollbar pb-52 md:pb-36"
+                        className="flex-1 overflow-y-auto min-h-0 bg-white dark:bg-gray-950 p-6 space-y-6 custom-scrollbar"
+                        style={{
+                            paddingBottom: isExternalForm 
+                                ? 'calc(10rem + env(safe-area-inset-bottom))'  // Extra padding for better scrolling
+                                : 'calc(9rem + env(safe-area-inset-bottom))'   // Extra padding for bottom nav + button bar
+                        }}
                     >
+                        {/* SUMMARY VIEW - For external forms */}
+                        {showSummary && isExternalForm && (
+                            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 shrink-0">
+                                    <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                                        {lang === "he" ? "סיכום המידע" : "Review Your Information"}
+                                    </h3>
+                                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                                        {lang === "he" 
+                                            ? "אנא בדוק את כל הפרטים לפני השליחה. לאחר האישור, הטופס יישלח לבדיקה."
+                                            : "Please review all your information before submitting. After confirmation, the form will be sent for review."}
+                                    </p>
+                                </div>
+
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    {/* Basic Info */}
+                                    <div className="space-y-4">
+                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.basicInfo")}</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div><span className="font-medium">{t(lang, "labels.fullName")}:</span> {watch("fullName") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.email")}:</span> {watch("email") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.phone")}:</span> {watch("phone") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.dob")}:</span> {watch("dob") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.gender")}:</span> {watch("gender") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.location")}:</span> {watch("location") || "—"}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Appearance */}
+                                    <div className="space-y-4">
+                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.appearance")}</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div><span className="font-medium">{t(lang, "labels.height")}:</span> {watch("height") ? `${watch("height")} cm` : "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.eyeColor")}:</span> {watch("eyeColor") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.hairColor")}:</span> {watch("hairColor") || "—"}</div>
+                                            {watch("photoUrl") && (
+                                                <div className="mt-2">
+                                                    <img src={watch("photoUrl")} alt="Profile" className="w-24 h-24 rounded-full object-cover border" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Background */}
+                                    <div className="space-y-4">
+                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.background")}</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div><span className="font-medium">{t(lang, "labels.ethnicity")}:</span> {watch("ethnicity") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.maritalStatus")}:</span> {watch("maritalStatus") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.languages")}:</span> {Array.isArray(watch("languages")) ? watch("languages").join(", ") || "—" : watch("languages") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.education")}:</span> {watch("education") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.occupation")}:</span> {watch("occupation") || "—"}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Religious Details */}
+                                    <div className="space-y-4">
+                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.religiousDetails")}</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div><span className="font-medium">{t(lang, "labels.religiousAffiliation")}:</span> {Array.isArray(watch("religiousAffiliation")) ? watch("religiousAffiliation").join(", ") || "—" : watch("religiousAffiliation") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.learningStatus")}:</span> {watch("learningStatus") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.headCovering")}:</span> {watch("headCovering") || "—"}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Personal */}
+                                    <div className="space-y-4">
+                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.personal")}</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div><span className="font-medium">{t(lang, "labels.hobbies")}:</span> {watch("hobbies") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.personality")}:</span> {watch("personality") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.smoking")}:</span> {watch("smoking") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.medicalHistory")}:</span> {watch("medicalHistory") ? (lang === "he" ? "כן" : "Yes") : (lang === "he" ? "לא" : "No")}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Preferences */}
+                                    <div className="space-y-4">
+                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.preferences")}</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div><span className="font-medium">{t(lang, "labels.ageGapPreference")}:</span> {Array.isArray(watch("ageGapPreference")) ? watch("ageGapPreference").join(", ") || "—" : watch("ageGapPreference") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.willingToRelocate")}:</span> {watch("willingToRelocate") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.preferredEthnicities")}:</span> {Array.isArray(watch("preferredEthnicities")) ? watch("preferredEthnicities").join(", ") || "—" : watch("preferredEthnicities") || "—"}</div>
+                                            {watch("preferencesFreeText") && (
+                                                <div><span className="font-medium">{t(lang, "labels.preferencesFreeText")}:</span> {watch("preferencesFreeText") || "—"}</div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* References - For external forms */}
+                                    {watch("references") && (
+                                        <div className="space-y-4">
+                                            <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "labels.references")}</h4>
+                                            <div className="text-sm whitespace-pre-wrap">{watch("references") || "—"}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* STEP 0: BASIC INFO */}
-                        {currentStep === 0 && (
+                        {!showSummary && currentStep === 0 && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
@@ -1330,7 +1500,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                         )}
 
                         {/* STEP 1: APPEARANCE */}
-                        {currentStep === 1 && (
+                        {!showSummary && currentStep === 1 && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-4">
                                     <label className="text-sm font-medium block">{t(lang, "labels.profilePhoto")}</label>
@@ -1585,7 +1755,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                         )}
 
                         {/* STEP 2: BACKGROUND */}
-                        {currentStep === 2 && (
+                        {!showSummary && currentStep === 2 && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.ethnicity")}</label>
@@ -1660,7 +1830,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                         )}
 
                         {/* STEP 3: RELIGIOUS DETAILS */}
-                        {currentStep === 3 && (
+                        {!showSummary && currentStep === 3 && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.religiousAffiliation")}</label>
@@ -1702,21 +1872,11 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         </select>
                                     </FieldWithTooltip>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">{t(lang, "labels.smoking")}</label>
-                                    <FieldWithTooltip sourceQuote={sourceQuotes.smoking} fieldName="smoking">
-                                        <select {...register("smoking")} style={getFieldStyle("smoking")} className="w-full p-2 border rounded-md dark:bg-gray-900">
-                                            {opts("smoking").map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
-                                    </FieldWithTooltip>
-                                </div>
                             </div>
                         )}
 
                         {/* STEP 4: PERSONAL */}
-                        {currentStep === 4 && (
+                        {!showSummary && currentStep === 4 && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.personality")}</label>
@@ -1734,6 +1894,16 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                             placeholder={t(lang, "placeholders.hobbies")} 
                                             dir={rtl ? "rtl" : "ltr"}
                                         />
+                                    </FieldWithTooltip>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">{t(lang, "labels.smoking")}</label>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.smoking} fieldName="smoking">
+                                        <select {...register("smoking")} style={getFieldStyle("smoking")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            {opts("smoking").map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
                                     </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-4 border-t pt-4">
@@ -1761,7 +1931,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                         )}
 
                         {/* STEP 5: PREFERENCES */}
-                        {currentStep === 5 && (
+                        {!showSummary && currentStep === 5 && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
 
                                 <div className="space-y-2">
@@ -1874,11 +2044,23 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         />
                                     </FieldWithTooltip>
                                 </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">{t(lang, "labels.preferencesFreeText")}</label>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.preferencesFreeText} fieldName="preferencesFreeText">
+                                        <textarea 
+                                            {...register("preferencesFreeText")} 
+                                            style={getFieldStyle("preferencesFreeText")} 
+                                            className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" 
+                                            placeholder={t(lang, "placeholders.preferencesFreeText")}
+                                            dir={rtl ? "rtl" : "ltr"} 
+                                        />
+                                    </FieldWithTooltip>
+                                </div>
                             </div>
                         )}
 
-                        {/* STEP 6: ADMIN */}
-                        {currentStep === 6 && (
+                        {/* STEP 6: ADMIN - Show references for external forms, all fields for admin */}
+                        {!showSummary && currentStep === 6 && (
                             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.references")}</label>
@@ -1886,31 +2068,42 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         <textarea {...register("references")} style={getFieldStyle("references")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
                                     </FieldWithTooltip>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">{t(lang, "labels.notes")}</label>
-                                    <FieldWithTooltip sourceQuote={sourceQuotes.notes} fieldName="notes">
-                                        <textarea {...register("notes")} style={getFieldStyle("notes")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
-                                    </FieldWithTooltip>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">{t(lang, "labels.resumeRawText")}</label>
-                                    <FieldWithTooltip sourceQuote={sourceQuotes.resumeRawText} fieldName="resumeRawText">
-                                        <textarea 
-                                            {...register("resumeRawText")} 
-                                            style={getFieldStyle("resumeRawText")}
-                                            className="w-full p-2 border rounded-md h-32 dark:bg-gray-900 font-mono text-xs" 
-                                            placeholder={t(lang, "placeholders.resumeRawText")}
-                                            dir="auto"
-                                        />
-                                    </FieldWithTooltip>
-                                </div>
+                                {/* Notes and resumeRawText only for admin forms */}
+                                {!isExternalForm && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">{t(lang, "labels.notes")}</label>
+                                            <FieldWithTooltip sourceQuote={sourceQuotes.notes} fieldName="notes">
+                                                <textarea {...register("notes")} style={getFieldStyle("notes")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
+                                            </FieldWithTooltip>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">{t(lang, "labels.resumeRawText")}</label>
+                                            <FieldWithTooltip sourceQuote={sourceQuotes.resumeRawText} fieldName="resumeRawText">
+                                                <textarea 
+                                                    {...register("resumeRawText")} 
+                                                    style={getFieldStyle("resumeRawText")}
+                                                    className="w-full p-2 border rounded-md h-32 dark:bg-gray-900 font-mono text-xs" 
+                                                    placeholder={t(lang, "placeholders.resumeRawText")}
+                                                    dir="auto"
+                                                />
+                                            </FieldWithTooltip>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
 
                     </div>
 
                     {/* Footer Navigation - Fixed at bottom on both mobile and desktop */}
-                    <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-50 md:bottom-4 shrink-0 pt-4 px-4 pb-4 flex items-center justify-center gap-4">
+                    <div className={cn(
+                        "fixed left-0 right-0 z-50 md:bottom-4 shrink-0 pt-4 px-4 pb-4 flex items-center justify-center gap-4",
+                        // External forms have no bottom nav, so position closer to bottom
+                        isExternalForm 
+                            ? "bottom-[calc(env(safe-area-inset-bottom))]"
+                            : "bottom-[calc(4rem+env(safe-area-inset-bottom))]"
+                    )}>
                         {/* Gradient fade - only show when content overflows */}
                         {hasOverflow && (
                             <div className="pointer-events-none absolute -top-16 left-0 right-0 h-16 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-gray-950 dark:via-gray-950/80" />
@@ -1919,7 +2112,9 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                         <div 
                             className="absolute top-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/95 dark:from-gray-950 dark:via-gray-950 dark:to-gray-950/95 -z-10"
                             style={{
-                                bottom: 'calc(-4rem - env(safe-area-inset-bottom))',
+                                bottom: isExternalForm 
+                                    ? 'calc(-1rem - env(safe-area-inset-bottom))'
+                                    : 'calc(-4rem - env(safe-area-inset-bottom))',
                             }}
                         />
                         <div 
@@ -1943,7 +2138,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         disabled={!isSubmitReady || isSubmitting}
                                         className={`flex items-center gap-1 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSubmitReady && !isSubmitting ? 'bg-green-600 hover:bg-green-700' : 'bg-green-400 cursor-not-allowed'}`}
                                     >
-                                        {isSubmitting ? t(lang, "buttons.saving") || "Saving..." : t(lang, "buttons.save")}
+                                        {isSubmitting ? t(lang, "buttons.saving") : t(lang, "buttons.save")}
                                         {!isSubmitting && <Check className="h-4 w-4" />}
                                     </button>
                                 </>
@@ -1974,17 +2169,87 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 {rtl ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             </button>
                         ) : (
-                            <button
-                                type="submit"
-                                disabled={!isSubmitReady || isSubmitting}
-                                className={`flex items-center gap-1 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSubmitReady && !isSubmitting ? 'bg-green-600 hover:bg-green-700' : 'bg-green-400 cursor-not-allowed'}`}
-                            >
-                                {isSubmitting 
-                                    ? (t(lang, "buttons.saving") || (isEditing ? "Updating..." : "Submitting..."))
-                                    : (isEditing ? t(lang, "buttons.update") : t(lang, "buttons.submit"))
-                                }
-                                {!isSubmitting && <Check className="h-4 w-4" />}
-                            </button>
+                            <>
+                                {isExternalForm && !showSummary ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSummary(true)}
+                                        disabled={!isSubmitReady}
+                                        className={`flex items-center gap-1 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSubmitReady ? 'bg-green-600 hover:bg-green-700' : 'bg-green-400 cursor-not-allowed'}`}
+                                    >
+                                        {lang === "he" ? "סקירת סיכום" : "Review Summary"}
+                                        {rtl ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                    </button>
+                                ) : (
+                                    <>
+                                        {filledFromWhatsApp && !isEditing && !isExternalForm && (
+                                            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={submitToPending}
+                                                    onChange={(e) => setSubmitToPending(e.target.checked)}
+                                                    className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                                                />
+                                                <span>{lang === "he" ? "שלח לבדיקה" : "Submit for review"}</span>
+                                            </label>
+                                        )}
+                                        {showSummary && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowSummary(false)}
+                                                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                                            >
+                                                {rtl ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                                                {lang === "he" ? "חזור לעריכה" : "Back to Edit"}
+                                            </button>
+                                        )}
+                                        {/* Show approve/reject buttons if handlers provided (inbox review), otherwise show submit button */}
+                                        {onApprove && onReject ? (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    onClick={onReject}
+                                                    disabled={isRejecting || isApproving}
+                                                    className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    {isRejecting 
+                                                        ? (lang === "he" ? "דוחה..." : "Rejecting...")
+                                                        : (lang === "he" ? "דחה" : "Reject")
+                                                    }
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={onApprove}
+                                                    disabled={isApproving || isRejecting}
+                                                    className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                >
+                                                    <CheckCircle2 className="h-4 w-4" />
+                                                    {isApproving 
+                                                        ? (lang === "he" ? "מאשר..." : "Approving...")
+                                                        : (lang === "he" ? "אשר והוסף למסד הנתונים" : "Approve & Add to Database")
+                                                    }
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <button
+                                                type="submit"
+                                                disabled={!isSubmitReady || isSubmitting}
+                                                className={`flex items-center gap-1 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSubmitReady && !isSubmitting ? 'bg-green-600 hover:bg-green-700' : 'bg-green-400 cursor-not-allowed'}`}
+                                            >
+                                                {isSubmitting 
+                                                    ? t(lang, "buttons.saving")
+                                                    : (showSummary 
+                                                        ? (lang === "he" ? "אישור ושליחה" : "Confirm & Submit")
+                                                        : (isEditing ? t(lang, "buttons.update") : t(lang, "buttons.submit"))
+                                                    )
+                                                }
+                                                {!isSubmitting && <Check className="h-4 w-4" />}
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </>
                         )}
                     </div>
                 </form >

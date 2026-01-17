@@ -33,7 +33,16 @@ function ClientDetailsContent() {
         }
     }, [params.id, getClient, router, isViewMode]);
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full min-h-screen">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading client details...</p>
+                </div>
+            </div>
+        );
+    }
     if (!client) return null;
 
     const handleDelete = () => {
@@ -104,20 +113,22 @@ function ClientDetailsContent() {
     }
 
     return (
-        <div className={`w-full space-y-6 ${isRtl ? "rtl" : "ltr"}`} dir={isRtl ? "rtl" : "ltr"}>
-            <button
-                onClick={() => setIsViewMode(true)}
-                className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1"
-            >
-                {isRtl ? "חזרה לפרופיל →" : "← Back to Profile"}
-            </button>
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                    {isRtl ? "עריכת לקוח" : "Edit Client"}
-                </h1>
-                <p className="text-muted-foreground">
-                    {isRtl ? "עדכן את פרטי הפרופיל של הלקוח." : "Update the client profile details."}
-                </p>
+        <div className={`w-full h-full flex flex-col flex-1 min-h-0 ${isRtl ? "rtl" : "ltr"}`} dir={isRtl ? "rtl" : "ltr"}>
+            <div className="shrink-0 mb-2">
+                <button
+                    onClick={() => setIsViewMode(true)}
+                    className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1 mb-2"
+                >
+                    {isRtl ? "חזרה לפרופיל →" : "← Back to Profile"}
+                </button>
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">
+                        {isRtl ? "עריכת לקוח" : "Edit Client"}
+                    </h1>
+                    <p className="text-muted-foreground">
+                        {isRtl ? "עדכן את פרטי הפרופיל של הלקוח." : "Update the client profile details."}
+                    </p>
+                </div>
             </div>
             <ClientForm
                 key={`${client.id}-${clientLang}`}
@@ -141,7 +152,14 @@ function ClientDetailsContent() {
 
 export default function ClientDetailsPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={
+            <div className="flex items-center justify-center h-full min-h-screen">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading...</p>
+                </div>
+            </div>
+        }>
             <ClientDetailsContent />
         </Suspense>
     );

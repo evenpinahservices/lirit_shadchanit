@@ -141,7 +141,7 @@ export default function DashboardAnalytics() {
     return (
         <div className="flex flex-col h-full space-y-4">
             {/* Total Clients Card - Fixed Top */}
-            <div className="shrink-0 rounded-xl border bg-card text-card-foreground shadow p-6">
+            <div className="shrink-0 bg-card text-card-foreground shadow p-6">
                 <div className="text-sm font-medium text-muted-foreground">
                     Total Clients
                 </div>
@@ -150,7 +150,7 @@ export default function DashboardAnalytics() {
 
             {/* Carousel Area */}
             <div
-                className="flex-1 min-h-0 flex flex-col rounded-xl border bg-card text-card-foreground shadow p-4 relative"
+                className="flex-1 min-h-0 flex flex-col bg-card text-card-foreground shadow p-4 relative"
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}

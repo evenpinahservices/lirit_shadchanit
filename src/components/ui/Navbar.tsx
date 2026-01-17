@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Users, Heart, Search, LogOut, User as UserIcon, Maximize, Minimize, HelpCircle, StickyNote } from "lucide-react";
+import { LayoutDashboard, Users, Heart, Search, LogOut, User as UserIcon, Maximize, Minimize, HelpCircle, StickyNote, Hourglass } from "lucide-react";
 import { useOnboardingTour } from "@/components/OnboardingTour";
 import { BugReportButton } from "@/components/ui/BugReportButton";
 
@@ -42,18 +42,19 @@ export function Navbar() {
     const links = [
         { href: "/", label: "Dashboard", icon: LayoutDashboard },
         { href: "/clients", label: "Clients", icon: Users },
+        { href: "/inbox", label: "Pending", icon: Hourglass },
         { href: "/matching", label: "Matching", icon: Heart },
         { href: "/search", label: "Search", icon: Search },
         { href: "/notes", label: "Notes", icon: StickyNote },
     ];
 
-    // Hide navbar on login page
-    if (pathname === "/login") {
+    // Hide navbar on login page and external form pages
+    if (pathname === "/login" || pathname.startsWith("/form/")) {
         return null;
     }
 
     return (
-        <nav className="border-b bg-white dark:bg-gray-950 px-4 py-3 sm:px-6 sm:py-4 sticky top-0 z-50 shadow-sm shrink-0">
+        <nav className="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:py-4 sticky top-0 z-10 shadow-sm shrink-0">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-8">
                     <Link href="/" className="text-xl font-bold text-primary flex items-center gap-2">
@@ -70,8 +71,8 @@ export function Navbar() {
                                         key={link.href}
                                         href={link.href}
                                         className={cn(
-                                            "flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary",
-                                            isActive ? "text-primary" : "text-muted-foreground"
+                                            "flex items-center gap-2 text-sm font-medium transition-colors",
+                                            isActive ? "text-primary" : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                                         )}
                                     >
                                         <Icon className="h-4 w-4" />
