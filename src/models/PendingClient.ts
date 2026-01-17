@@ -8,6 +8,7 @@ export interface PendingClient extends Client {
     token?: string; // Token used for external form submission
     source?: "client_form" | "whatsapp" | "admin_manual"; // Source of the submission
     sourceDescription?: string; // Human-readable description of the source
+    existingApprovedClientId?: string; // ID of approved client that will be overwritten
 }
 
 const PendingClientSchema = new Schema<PendingClient>(
