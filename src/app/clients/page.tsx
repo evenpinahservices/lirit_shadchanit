@@ -21,7 +21,7 @@ export default function ClientsPage() {
                 if (!isNaN(num)) return num;
             }
         }
-        return 5;
+        return "all";
     });
 
     // Delete Modal State

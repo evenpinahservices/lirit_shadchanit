@@ -1121,7 +1121,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             <div className={cn(
                 "fixed inset-x-0 bottom-0 z-40 bg-white dark:bg-gray-950 flex flex-col md:relative md:inset-auto md:top-auto md:w-[80%] md:mx-auto md:flex-1 md:h-full md:overflow-hidden md:bg-transparent md:flex",
                 // External forms have no navbar, so start from top-0
-                isExternalForm ? "top-0" : "top-[4rem]",
+                isExternalForm ? "top-0" : "top-16",
                 rtl && "rtl"
             )} dir={rtl ? "rtl" : "ltr"}>
                 <form

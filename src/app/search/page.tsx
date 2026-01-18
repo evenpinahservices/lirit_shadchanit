@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useClients } from "@/context/ClientContext";
 import { Client } from "@/lib/mockData";
 import { Search, MapPin, Briefcase, Filter, ChevronDown, ChevronLeft, ChevronRight, User as UserIcon, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { cn, compareLocations } from "@/lib/utils";
+import { cn, compareLocations, detectClientLanguage } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/MultiSelect";
 import { ItemsPerPageSelector } from "@/components/ui/ItemsPerPageSelector";
 
@@ -14,10 +14,34 @@ export default function SearchPage() {
     const { clients, isLoading } = useClients();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [filteredClients, setFilteredClients] = useState<Client[]>(clients);
 
-    // View State - Show results immediately on tablet and desktop
+    // Restore search state from sessionStorage synchronously during initialization
+    const getSavedState = () => {
+        if (typeof window !== "undefined") {
+            const savedState = sessionStorage.getItem('searchState');
+            if (savedState) {
+                try {
+                    const state = JSON.parse(savedState);
+                    // Clear the saved state immediately after reading
+                    sessionStorage.removeItem('searchState');
+                    return state;
+                } catch (e) {
+                    console.error('Failed to parse search state:', e);
+                    sessionStorage.removeItem('searchState');
+                }
+            }
+        }
+        return null;
+    };
+
+    const savedState = getSavedState();
+
+    // View State - Show results immediately on tablet and desktop, or if we have saved state
     const [showResults, setShowResults] = useState(() => {
+        // If we have saved state, always show results (even on mobile)
+        if (savedState) {
+            return true;
+        }
         if (typeof window !== 'undefined') {
             return window.innerWidth >= 768; // md breakpoint - show results immediately on tablet/desktop
         }
@@ -29,6 +53,189 @@ export default function SearchPage() {
     const [hasOverflow, setHasOverflow] = useState(false);
 
     // Check for scroll overflow to show/hide gradient fade
+    // (Moved after filteredClients definition to avoid initialization error)
+
+    // Note: Auto-fullscreen is NOT enabled by default
+    // It only activates if user explicitly enables it via: localStorage.setItem('autoFullscreen', 'true')
+    // This is an opt-in feature, not automatic
+
+    // Filters - initialize from saved state if available
+    const [keyword, setKeyword] = useState(savedState?.keyword || "");
+    const [gender, setGender] = useState<string>(savedState?.gender || "All");
+    const [location, setLocation] = useState(savedState?.location || "");
+
+    // New Filters
+    const [minAge, setMinAge] = useState(savedState?.minAge || "");
+    const [maxAge, setMaxAge] = useState(savedState?.maxAge || "");
+    const [minHeight, setMinHeight] = useState(savedState?.minHeight || "");
+    const [maxHeight, setMaxHeight] = useState(savedState?.maxHeight || "");
+
+    const [religiosity, setReligiosity] = useState<string[]>(savedState?.religiosity || []);
+    const [maritalStatus, setMaritalStatus] = useState<string[]>(savedState?.maritalStatus || []);
+    const [ethnicity, setEthnicity] = useState<string[]>(savedState?.ethnicity || []);
+
+    // Pagination State - initialize from saved state if available
+    const [currentPage, setCurrentPage] = useState(savedState?.currentPage || 1);
+    const [itemsPerPage, setItemsPerPage] = useState<number | "all">(() => {
+        if (savedState?.itemsPerPage) {
+            return savedState.itemsPerPage;
+        }
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("itemsPerPage");
+            if (saved) {
+                if (saved === "all") return "all";
+                const num = parseInt(saved, 10);
+                if (!isNaN(num)) return num;
+            }
+        }
+        return 5;
+    });
+
+    // Options
+    // Options
+    const genderOptions = ["Male", "Female"];
+    const religiosityOptions = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
+    const maritalStatusOptions = ["Single", "Divorced", "Divorced with Kids", "Widowed", "Widowed with Kids"];
+    const ethnicityOptions = ["Ashkenazi", "Sephardi", "Yemenite", "Ethiopian", "Convert", "Other"];
+
+    const toggleFilter = (item: string, current: string[], set: (val: string[]) => void) => {
+        if (current.includes(item)) {
+            set(current.filter(i => i !== item));
+        } else {
+            set([...current, item]);
+        }
+    };
+
+    const calculateAge = (dob: string) => {
+        if (!dob) return null;
+        const birthDate = new Date(dob);
+        if (isNaN(birthDate.getTime())) return null;
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age >= 0 ? age : null;
+    };
+
+    // Filter function that can be used synchronously
+    const filterClients = (
+        clientsToFilter: Client[],
+        filterKeyword: string,
+        filterGender: string,
+        filterLocation: string,
+        filterMinAge: string,
+        filterMaxAge: string,
+        filterMinHeight: string,
+        filterMaxHeight: string,
+        filterReligiosity: string[],
+        filterMaritalStatus: string[],
+        filterEthnicity: string[]
+    ): Client[] => {
+        if (!clientsToFilter || clientsToFilter.length === 0) {
+            return [];
+        }
+
+        let results = clientsToFilter;
+
+        // Name filter
+        if (filterKeyword) {
+            const lowerKeyword = filterKeyword.toLowerCase();
+            results = results.filter((c) => c.fullName.toLowerCase().includes(lowerKeyword));
+        }
+
+        // Gender filter
+        if (filterGender !== "All") {
+            results = results.filter((c) => c.gender === filterGender);
+        }
+
+        // Location filter (Hebrew-aware)
+        if (filterLocation) {
+            results = results.filter((c) => compareLocations(c.location, filterLocation));
+        }
+
+        // Age filter
+        if (filterMinAge) {
+            results = results.filter((c) => {
+                const age = calculateAge(c.dob);
+                return age !== null && age >= parseInt(filterMinAge);
+            });
+        }
+        if (filterMaxAge) {
+            results = results.filter((c) => {
+                const age = calculateAge(c.dob);
+                return age !== null && age <= parseInt(filterMaxAge);
+            });
+        }
+
+        // Height filter
+        if (filterMinHeight) {
+            results = results.filter((c) => c.height >= parseInt(filterMinHeight));
+        }
+        if (filterMaxHeight) {
+            results = results.filter((c) => c.height <= parseInt(filterMaxHeight));
+        }
+
+        // Religiosity filter
+        if (filterReligiosity.length > 0) {
+            results = results.filter((c) => {
+                const clientReligiosity = Array.isArray(c.religiousAffiliation)
+                    ? c.religiousAffiliation
+                    : [c.religiousAffiliation];
+                return filterReligiosity.some(r => clientReligiosity.some(cr => cr.includes(r)));
+            });
+        }
+
+        // Marital Status filter
+        if (filterMaritalStatus.length > 0) {
+            results = results.filter((c) => filterMaritalStatus.includes(c.maritalStatus));
+        }
+
+        // Ethnicity filter
+        if (filterEthnicity.length > 0) {
+            results = results.filter((c) => {
+                const clientEthnicity = Array.isArray(c.ethnicity) ? c.ethnicity : [c.ethnicity];
+                return filterEthnicity.some(e => clientEthnicity.includes(e));
+            });
+        }
+
+        return results;
+    };
+
+    // Compute filtered clients synchronously using useMemo to prevent flicker
+    const filteredClients = useMemo(() => {
+        if (!clients || clients.length === 0) {
+            return [];
+        }
+        return filterClients(
+            clients,
+            keyword,
+            gender,
+            location,
+            minAge,
+            maxAge,
+            minHeight,
+            maxHeight,
+            religiosity,
+            maritalStatus,
+            ethnicity
+        );
+    }, [clients, keyword, gender, location, minAge, maxAge, minHeight, maxHeight, religiosity, maritalStatus, ethnicity]);
+
+    // Track if we've restored from saved state to prevent resetting page
+    const hasRestoredState = useRef(!!savedState);
+
+    // Reset to page 1 when filters change (but preserve page if restoring from saved state)
+    useEffect(() => {
+        if (!hasRestoredState.current) {
+            setCurrentPage(1);
+        }
+        // After first render, allow page resets on filter changes
+        hasRestoredState.current = false;
+    }, [keyword, gender, location, minAge, maxAge, minHeight, maxHeight, religiosity, maritalStatus, ethnicity]);
+
+    // Check for scroll overflow to show/hide gradient fade (moved here after filteredClients is defined)
     useEffect(() => {
         const checkOverflow = () => {
             const container = scrollContainerRef.current;
@@ -55,123 +262,6 @@ export default function SearchPage() {
             };
         }
     }, [filteredClients, showResults]);
-
-    // Note: Auto-fullscreen is NOT enabled by default
-    // It only activates if user explicitly enables it via: localStorage.setItem('autoFullscreen', 'true')
-    // This is an opt-in feature, not automatic
-
-    // Pagination State
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState<number | "all">(() => {
-        if (typeof window !== "undefined") {
-            const saved = localStorage.getItem("itemsPerPage");
-            if (saved) {
-                if (saved === "all") return "all";
-                const num = parseInt(saved, 10);
-                if (!isNaN(num)) return num;
-            }
-        }
-        return 5;
-    });
-
-    // Filters
-    const [keyword, setKeyword] = useState("");
-    const [gender, setGender] = useState<string>("All");
-    const [location, setLocation] = useState("");
-
-    // New Filters
-    const [minAge, setMinAge] = useState("");
-    const [maxAge, setMaxAge] = useState("");
-    const [minHeight, setMinHeight] = useState("");
-    const [maxHeight, setMaxHeight] = useState("");
-
-    const [religiosity, setReligiosity] = useState<string[]>([]);
-    const [maritalStatus, setMaritalStatus] = useState<string[]>([]);
-    const [ethnicity, setEthnicity] = useState<string[]>([]);
-
-    // Options
-    // Options
-    const genderOptions = ["Male", "Female"];
-    const religiosityOptions = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
-    const maritalStatusOptions = ["Single", "Divorced", "Divorced with Kids", "Widowed", "Widowed with Kids"];
-    const ethnicityOptions = ["Ashkenazi", "Sephardi", "Yemenite", "Ethiopian", "Convert", "Other"];
-
-    const toggleFilter = (item: string, current: string[], set: (val: string[]) => void) => {
-        if (current.includes(item)) {
-            set(current.filter(i => i !== item));
-        } else {
-            set([...current, item]);
-        }
-    };
-
-    const calculateAge = (dob: string) => {
-        const birthDate = new Date(dob);
-        const ageDifMs = Date.now() - birthDate.getTime();
-        const ageDate = new Date(ageDifMs);
-        return Math.abs(ageDate.getUTCFullYear() - 1970);
-    };
-
-    useEffect(() => {
-        let results = clients;
-
-        // Name filter
-        if (keyword) {
-            const lowerKeyword = keyword.toLowerCase();
-            results = results.filter((c) => c.fullName.toLowerCase().includes(lowerKeyword));
-        }
-
-        // Gender filter
-        if (gender !== "All") {
-            results = results.filter((c) => c.gender === gender);
-        }
-
-        // Location filter (Hebrew-aware)
-        if (location) {
-            results = results.filter((c) => compareLocations(c.location, location));
-        }
-
-        // Age filter
-        if (minAge) {
-            results = results.filter((c) => calculateAge(c.dob) >= parseInt(minAge));
-        }
-        if (maxAge) {
-            results = results.filter((c) => calculateAge(c.dob) <= parseInt(maxAge));
-        }
-
-        // Height filter
-        if (minHeight) {
-            results = results.filter((c) => c.height >= parseInt(minHeight));
-        }
-        if (maxHeight) {
-            results = results.filter((c) => c.height <= parseInt(maxHeight));
-        }
-
-        // Religiosity filter
-        if (religiosity.length > 0) {
-            results = results.filter((c) => {
-                const clientReligiosity = Array.isArray(c.religiousAffiliation)
-                    ? c.religiousAffiliation
-                    : [c.religiousAffiliation];
-                return religiosity.some(r => clientReligiosity.some(cr => cr.includes(r)));
-            });
-        }
-
-        // Marital Status filter
-        if (maritalStatus.length > 0) {
-            results = results.filter((c) => maritalStatus.includes(c.maritalStatus));
-        }
-
-        // Ethnicity filter
-        if (ethnicity.length > 0) {
-            results = results.filter((c) => {
-                const clientEthnicity = Array.isArray(c.ethnicity) ? c.ethnicity : [c.ethnicity];
-                return ethnicity.some(e => clientEthnicity.includes(e));
-            });
-        }
-
-        setFilteredClients(results);
-        setCurrentPage(1);
-    }, [clients, keyword, gender, location, minAge, maxAge, minHeight, maxHeight, religiosity, maritalStatus, ethnicity]);
 
     // Pagination Logic
     const effectiveItemsPerPage = itemsPerPage === "all" ? filteredClients.length : itemsPerPage;
@@ -427,19 +517,39 @@ export default function SearchPage() {
                                     <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-1 md:pr-4 pb-24 md:pb-0 custom-scrollbar relative" style={{ height: "100%", maxHeight: "calc(100vh - 12rem)", WebkitOverflowScrolling: "touch" }}>
                                         <div 
                                             ref={scrollContainerRef}
-                                            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                                            className="grid gap-3 grid-cols-1"
                                         >
                                             {paginatedClients.map((client) => (
                                                 <Link
                                                     key={client.id}
                                                     href={`/clients/${client.id}?source=search`}
+                                                    onClick={() => {
+                                                        // Store current search state in sessionStorage
+                                                        const searchState = {
+                                                            keyword,
+                                                            gender,
+                                                            location,
+                                                            minAge,
+                                                            maxAge,
+                                                            minHeight,
+                                                            maxHeight,
+                                                            religiosity,
+                                                            maritalStatus,
+                                                            ethnicity,
+                                                            currentPage,
+                                                            itemsPerPage,
+                                                        };
+                                                        sessionStorage.setItem('searchState', JSON.stringify(searchState));
+                                                    }}
                                                     className="group relative flex flex-col justify-between bg-gray-50 dark:bg-gray-900 p-4 shadow-sm hover:shadow-md transition-all"
                                                 >
                                                     <div className="space-y-3">
                                                         <div className="flex items-start justify-between">
                                                             <div>
                                                                 <h3 className="font-semibold text-base group-hover:text-red-600 transition-colors">{client.fullName}</h3>
-                                                                <p className="text-xs text-muted-foreground">{client.location} • {calculateAge(client.dob)} yo</p>
+                                                                <p className="text-xs text-muted-foreground" dir="ltr">
+                                                                    {calculateAge(client.dob) !== null ? `${calculateAge(client.dob)} y/o` : 'Age N/A'}
+                                                                </p>
                                                             </div>
                                                             <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
                                                                 {client.photoUrl ? (
@@ -452,8 +562,8 @@ export default function SearchPage() {
 
                                                         <div className="space-y-1 text-xs">
                                                             <div className="flex justify-between">
-                                                                <span className="text-muted-foreground">Age/Gender:</span>
-                                                                <span className="text-right">{calculateAge(client.dob)} / {client.gender}</span>
+                                                                <span className="text-muted-foreground">Location:</span>
+                                                                <span className="text-right truncate max-w-[7.5rem]">{client.location}</span>
                                                             </div>
                                                             <div className="flex justify-between">
                                                                 <span className="text-muted-foreground">Occupation:</span>

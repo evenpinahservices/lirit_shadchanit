@@ -114,12 +114,13 @@ export default function InboxApprovalPage() {
 
     return (
         <div className="flex flex-col h-full min-h-0 gap-4">
-            <div className="flex items-center gap-4 shrink-0">
+            <div className="flex items-center gap-4 shrink-0 px-1 pt-4">
                 <Link
                     href="/inbox"
-                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1"
                 >
-                    <ArrowLeft className="h-5 w-5" />
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Pending
                 </Link>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Review Client Submission</h1>

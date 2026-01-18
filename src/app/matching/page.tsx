@@ -6,7 +6,7 @@ import { useClients } from "@/context/ClientContext";
 import { seedTestClient } from "@/actions/client";
 import { Client, MOCK_CLIENTS } from "@/lib/mockData";
 import { findMatches, calculateAge } from "@/lib/matchingUtils";
-import { Heart, Sparkles, ArrowRight, Check, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, Sparkles, ArrowRight, Check, X, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ItemsPerPageSelector } from "@/components/ui/ItemsPerPageSelector";
@@ -47,7 +47,7 @@ export default function MatchingPage() {
                 if (!isNaN(num)) return num;
             }
         }
-        return 5;
+        return "all";
     });
 
     useEffect(() => {
@@ -174,7 +174,7 @@ export default function MatchingPage() {
             </div>
 
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden pb-24 md:pb-0 relative">
-                <div className="flex flex-col gap-4 h-full min-h-0 overflow-hidden">
+                <div className="flex flex-col gap-4 h-full min-h-0 overflow-hidden flex-1">
 
                     {/* SEARCH / HEADER SECTION */}
                     <div className="shrink-0 min-h-0">
@@ -225,24 +225,42 @@ export default function MatchingPage() {
                             </div>
                         ) : (
                             // COMPACT HEADER (MINIMIZED)
-                            <div className="bg-gray-50 dark:bg-gray-900 p-4 shadow-sm flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-semibold text-lg">
-                                        {selectedClient?.fullName.charAt(0)}
+                            <div className="bg-gray-50 dark:bg-gray-900 p-4 shadow-sm">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400 font-semibold text-lg">
+                                            {selectedClient?.fullName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h2 className="font-bold text-gray-900 dark:text-gray-100">{selectedClient?.fullName}</h2>
+                                            <p className="text-xs text-muted-foreground" dir="ltr">
+                                                {selectedClient?.location ? (
+                                                    <>{selectedClient.location} • {selectedClient && calculateAge(selectedClient.dob)} y/o</>
+                                                ) : (
+                                                    <><span className="italic">Unknown Location</span> • {selectedClient && calculateAge(selectedClient.dob)} y/o</>
+                                                )}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h2 className="font-bold text-gray-900 dark:text-gray-100">{selectedClient?.fullName}</h2>
-                                        <p className="text-xs text-muted-foreground">
-                                            {selectedClient && calculateAge(selectedClient.dob)} y/o • {selectedClient?.location}
-                                        </p>
-                                    </div>
+                                    <button
+                                        onClick={handleReset}
+                                        className="text-sm text-red-600 hover:text-red-700 font-medium px-3 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                    >
+                                        New Search
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={handleReset}
-                                    className="text-sm text-red-600 hover:text-red-700 font-medium px-3 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                >
-                                    New Search
-                                </button>
+                                {activeDealBreakers.length > 0 && (
+                                    <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t border-gray-200 dark:border-gray-700">
+                                        <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1">Deal Breakers:</p>
+                                        <ul className="list-disc pl-4 space-y-0.5">
+                                            {activeDealBreakers.map((item, idx) => (
+                                                <li key={idx}>
+                                                    <span className="font-medium">{item.label}:</span> {item.value}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -250,19 +268,26 @@ export default function MatchingPage() {
                     {/* RESULTS SECTION */}
                     {isResultsView && (
                         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                            <div className="flex items-center justify-between mb-2 shrink-0">
-                                <h3 className="font-semibold text-gray-700 dark:text-gray-300">
-                                    Possible Matches ({matches.length})
-                                </h3>
-                            </div>
+                            {matches.length > 0 && (
+                                <div className="flex items-center justify-between mb-2 shrink-0">
+                                    <h3 className="font-semibold text-gray-500 dark:text-gray-500">
+                                        Possible Matches ({matches.length})
+                                    </h3>
+                                </div>
+                            )}
 
                             {matches.length === 0 ? (
-                                <div id="tour-matching-results" className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground bg-gray-50 dark:bg-gray-900/50">
-                                    <p>No matches found matching the strict criteria.</p>
-                                    <button onClick={handleReset} className="mt-2 text-red-600 hover:underline">Try another client</button>
+                                <div id="tour-matching-results" className="flex-1 flex flex-col items-center justify-center text-center bg-gray-50 dark:bg-gray-900/50 p-8 rounded-lg">
+                                    <Search className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" />
+                                    <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        No matches found
+                                    </p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-500">
+                                        No matches found matching the strict criteria. Try another client.
+                                    </p>
                                 </div>
                             ) : (
-                                <div className="flex-1 min-h-0 overflow-y-auto p-1 pb-20 md:pb-0">
+                                <div className="flex-1 min-h-0 h-0 overflow-y-auto overscroll-contain p-1 pb-28 md:pb-6 custom-scrollbar">
                                     <div id="tour-matching-results-grid" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                         {paginatedMatches.map((match) => (
                                             <Link
@@ -274,7 +299,13 @@ export default function MatchingPage() {
                                                     <div className="flex items-start justify-between">
                                                         <div>
                                                             <h3 className="font-semibold text-base group-hover:text-red-600 transition-colors">{match.fullName}</h3>
-                                                            <p className="text-xs text-muted-foreground">{match.location} • {calculateAge(match.dob)} yo</p>
+                                                            <p className="text-xs text-muted-foreground" dir="ltr">
+                                                                {match.location ? (
+                                                                    <>{match.location} • {calculateAge(match.dob)} y/o</>
+                                                                ) : (
+                                                                    <><span className="italic">Unknown Location</span> • {calculateAge(match.dob)} y/o</>
+                                                                )}
+                                                            </p>
                                                         </div>
                                                         <div className="rounded-full bg-green-100 p-1.5 text-green-600">
                                                             <Check className="h-3 w-3" />
@@ -309,7 +340,7 @@ export default function MatchingPage() {
 
                             {/* Pagination Footer - Only show if valid results */}
                             {matches.length > 0 && (
-                                <div className="shrink-0 pt-2 flex items-center justify-between fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pt-2 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none">
+                                <div className="shrink-0 pt-2 pb-4 flex items-center justify-between fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pt-2 md:pb-4 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none">
                                     <ItemsPerPageSelector
                                         value={itemsPerPage}
                                         onChange={handleItemsPerPageChange}
@@ -343,15 +374,6 @@ export default function MatchingPage() {
                         </div>
                     )}
 
-                    {/* Default state illustration if not searching */}
-                    {!isResultsView && (
-                        <div className="flex-1 flex items-center justify-center p-6 text-center bg-gray-50/50 dark:bg-gray-900/50">
-                            <div className="flex flex-col items-center gap-2">
-                                <Heart className="h-8 w-8 text-gray-300" />
-                                <p className="text-muted-foreground font-medium text-sm">Select a client above to start matching</p>
-                            </div>
-                        </div>
-                    )}
 
                 </div>
             </div>

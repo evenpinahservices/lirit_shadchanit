@@ -101,13 +101,22 @@ export default function BugReportsPage() {
     return (
         <div className="flex flex-col h-full gap-4 overflow-hidden p-4">
             <div className="flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                    <Bug className="h-8 w-8 text-orange-500" />
-                    <div>
-                        <h1 className="text-2xl font-bold">Bug Reports</h1>
-                        <p className="text-sm text-muted-foreground">
-                            {reports.length} {showArchived ? "archived" : "active"} reports
-                        </p>
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/"
+                        className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 flex items-center gap-1"
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                        Back to Dashboard
+                    </Link>
+                    <div className="flex items-center gap-3">
+                        <Bug className="h-8 w-8 text-orange-500" />
+                        <div>
+                            <h1 className="text-2xl font-bold">Bug Reports</h1>
+                            <p className="text-sm text-muted-foreground">
+                                {reports.length} {showArchived ? "archived" : "active"} reports
+                            </p>
+                        </div>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -134,13 +143,6 @@ export default function BugReportsPage() {
                             </>
                         )}
                     </button>
-                    <Link
-                        href="/"
-                        className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        Back to Dashboard
-                    </Link>
                 </div>
             </div>
 

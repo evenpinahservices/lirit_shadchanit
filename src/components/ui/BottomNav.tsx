@@ -23,8 +23,8 @@ export function BottomNav() {
     ];
 
     return (
-        <div id="mobile-bottom-nav" className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-white dark:bg-gray-950 z-50 pb-[env(safe-area-inset-bottom)]">
-            <div className="flex items-center justify-around h-16">
+        <div id="mobile-bottom-nav" className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-50 dark:bg-gray-900 z-50 pb-[env(safe-area-inset-bottom)] shadow-sm border-t border-gray-200/50 dark:border-gray-700/50">
+            <div className="flex items-center justify-around h-16 px-2">
                 {links.map((link) => {
                     const Icon = link.icon;
                     const isActive =
@@ -35,11 +35,13 @@ export function BottomNav() {
                             key={link.href}
                             href={link.href}
                             className={cn(
-                                "flex flex-col items-center justify-center w-full h-full space-y-1 text-xs font-medium transition-colors hover:text-red-600",
-                                isActive ? "text-red-600" : "text-muted-foreground"
+                                "flex flex-col items-center justify-center w-full h-full space-y-1 text-xs font-medium transition-colors",
+                                isActive 
+                                    ? "text-primary" 
+                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                             )}
                         >
-                            <Icon className="h-5 w-5" />
+                            <Icon className="h-4 w-4" />
                             <span>{link.label}</span>
                         </Link>
                     );

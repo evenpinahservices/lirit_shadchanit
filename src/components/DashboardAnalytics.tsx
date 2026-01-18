@@ -1,23 +1,27 @@
 "use client";
 
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-    LabelList,
-} from "recharts";
 import { useClients } from "@/context/ClientContext";
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, Circle, CircleDot } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User as UserIcon, ArrowRight, Clock, Hourglass } from "lucide-react";
+import Link from "next/link";
+import { getPendingClients } from "@/actions/pendingClient";
+
+interface PendingClient {
+    id: string;
+    fullName: string;
+    dob: string;
+    location: string;
+    occupation: string;
+    photoUrl?: string;
+    gender: "Male" | "Female";
+    submittedAt: string;
+}
 
 export default function DashboardAnalytics() {
     const { clients } = useClients();
-    const [currentSlide, setCurrentSlide] = useState(0);
+    const [pendingClients, setPendingClients] = useState<PendingClient[]>([]);
+    const [totalPendingCount, setTotalPendingCount] = useState(0);
+    const [isLoadingPending, setIsLoadingPending] = useState(true);
 
     // Calculate Total Clients
     const totalClients = clients.length;
@@ -29,163 +33,184 @@ export default function DashboardAnalytics() {
         return acc;
     }, {} as Record<string, number>);
 
-    const genderData = [
-        { name: "Male", count: genderCounts["Male"] || 0 },
-        { name: "Female", count: genderCounts["Female"] || 0 },
-    ];
+    const totalBoys = genderCounts["Male"] || 0;
+    const totalGirls = genderCounts["Female"] || 0;
 
-    // Calculate Age Distribution
+    // Calculate Age
     const calculateAge = (dob: string) => {
-        if (!dob) return 0;
+        if (!dob) return null;
         const birthDate = new Date(dob);
         const ageDifMs = Date.now() - birthDate.getTime();
         const ageDate = new Date(ageDifMs);
         return Math.abs(ageDate.getUTCFullYear() - 1970);
     };
 
-    const ageGroups = {
-        "18-20": 0,
-        "21-25": 0,
-        "25-30": 0,
-        "30-40": 0,
-        "40+": 0,
-    };
-
-    clients.forEach((client) => {
-        const age = calculateAge(client.dob);
-        if (age >= 18 && age <= 20) ageGroups["18-20"]++;
-        else if (age >= 21 && age <= 25) ageGroups["21-25"]++;
-        else if (age >= 26 && age <= 30) ageGroups["25-30"]++;
-        else if (age >= 31 && age <= 40) ageGroups["30-40"]++;
-        else if (age > 40) ageGroups["40+"]++;
+    // Get clients added in the last week
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const clientsAddedLastWeek = clients.filter((client) => {
+        if (!client.createdAt) return false;
+        const createdDate = new Date(client.createdAt);
+        return createdDate >= oneWeekAgo;
     });
 
-    const ageData = Object.entries(ageGroups).map(([name, count]) => ({ name, count }));
+    // Get recent clients (last 2, sorted by createdAt)
+    const recentClients = [...clientsAddedLastWeek]
+        .sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        })
+        .slice(0, 2);
 
-    const charts = [
-        {
-            title: "Gender Distribution",
-            component: (
-                <div className="h-[250px] w-full pointer-events-none">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={genderData} margin={{ top: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Bar dataKey="count" name="Clients" fill="#8884d8" radius={[4, 4, 0, 0]}>
-                                <LabelList dataKey="count" position="insideTop" fill="white" fontSize={14} fontWeight="bold" />
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            )
-        },
-        {
-            title: "Age Distribution",
-            component: (
-                <div className="h-[250px] w-full pointer-events-none">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={ageData} margin={{ top: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
-                            <YAxis />
-                            <Bar dataKey="count" name="Clients" fill="#82ca9d" radius={[4, 4, 0, 0]}>
-                                <LabelList dataKey="count" position="insideTop" fill="white" fontSize={14} fontWeight="bold" />
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-            )
-        }
-    ];
+    // Load pending clients
+    useEffect(() => {
+        const loadPendingClients = async () => {
+            try {
+                setIsLoadingPending(true);
+                const pending = await getPendingClients();
+                setTotalPendingCount(pending.length);
+                setPendingClients(pending.slice(0, 2) as PendingClient[]);
+            } catch (error) {
+                console.error("Failed to load pending clients:", error);
+            } finally {
+                setIsLoadingPending(false);
+            }
+        };
 
-    const nextSlide = () => {
-        setCurrentSlide((prev) => (prev + 1) % charts.length);
-    };
-
-    const prevSlide = () => {
-        setCurrentSlide((prev) => (prev - 1 + charts.length) % charts.length);
-    };
-
-    // Touch Handling
-    const [touchStart, setTouchStart] = useState<number | null>(null);
-    const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
-    // Minimum swipe distance (in px)
-    const minSwipeDistance = 50;
-
-    const onTouchStart = (e: React.TouchEvent) => {
-        setTouchEnd(null); // Reset
-        setTouchStart(e.targetTouches[0].clientX);
-    };
-
-    const onTouchMove = (e: React.TouchEvent) => {
-        setTouchEnd(e.targetTouches[0].clientX);
-    };
-
-    const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return;
-
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-
-        if (isLeftSwipe) {
-            nextSlide();
-        }
-        if (isRightSwipe) {
-            prevSlide();
-        }
-    };
+        loadPendingClients();
+    }, []);
 
     return (
         <div className="flex flex-col h-full space-y-4">
             {/* Total Clients Card - Fixed Top */}
-            <div className="shrink-0 bg-card text-card-foreground shadow p-6">
-                <div className="text-sm font-medium text-muted-foreground">
+            <div className="shrink-0 bg-card text-card-foreground shadow p-0 pb-4">
+                <div className="text-base font-medium text-muted-foreground mb-2">
                     Total Clients
                 </div>
-                <div className="text-2xl font-bold">{totalClients}</div>
+                <div className="flex items-center gap-4">
+                    <div className="text-2xl font-bold">{totalClients}</div>
+                    <div className="flex items-center gap-4 text-sm">
+                        <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-black dark:text-gray-100">
+                            <UserIcon className="h-4 w-4" />
+                            <span className="font-medium">{totalBoys}</span>
+                            <span className="text-xs">Boys</span>
+                        </span>
+                        <span className="flex items-center gap-1.5 px-2 py-1 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400">
+                            <UserIcon className="h-4 w-4" />
+                            <span className="font-medium">{totalGirls}</span>
+                            <span className="text-xs">Girls</span>
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            {/* Carousel Area */}
-            <div
-                className="flex-1 min-h-0 flex flex-col bg-card text-card-foreground shadow p-4 relative"
-                onTouchStart={onTouchStart}
-                onTouchMove={onTouchMove}
-                onTouchEnd={onTouchEnd}
-            >
-                <div className="mb-2 text-lg font-medium text-center">{charts[currentSlide].title}</div>
-
-                <div className="flex-1 w-full flex items-center justify-center overflow-hidden min-h-[200px]">
-                    {charts[currentSlide].component}
-                </div>
-
-                {/* Navigation Controls */}
-                <div className="mt-4 flex items-center justify-between px-4">
-                    <button onClick={prevSlide} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                        <ChevronLeft className="h-6 w-6 text-muted-foreground" />
-                    </button>
-
-                    <div className="flex gap-2">
-                        {charts.map((_, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => setCurrentSlide(idx)}
-                                className="text-primary transition-colors"
-                            >
-                                {currentSlide === idx ? (
-                                    <CircleDot className="h-4 w-4 fill-current" />
-                                ) : (
-                                    <Circle className="h-4 w-4 text-muted-foreground" />
-                                )}
-                            </button>
-                        ))}
+            {/* Recent Activity Area */}
+            <div className="flex-1 min-h-0 flex flex-col bg-card text-card-foreground px-4 pb-4 pt-0 overflow-hidden">
+                <div className="mb-4 text-lg font-medium">Recent Activity</div>
+                
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-4">
+                    {/* Recently Added Profiles */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            <span>Added Profiles in Last Week ({clientsAddedLastWeek.length})</span>
+                        </div>
+                        {recentClients.length > 0 ? (
+                            <div className="grid gap-2 grid-cols-1">
+                                {recentClients.map((client) => (
+                                    <Link
+                                        key={client.id}
+                                        href={`/clients/${client.id}`}
+                                        className="group relative flex items-center gap-3 bg-gray-50 dark:bg-gray-900 p-3 shadow-sm hover:shadow-md transition-all rounded"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
+                                            {client.photoUrl ? (
+                                                <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <UserIcon className="h-5 w-5 text-gray-400" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-sm group-hover:text-red-600 transition-colors truncate">{client.fullName}</h3>
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                {calculateAge(client.dob) !== null ? `${calculateAge(client.dob)} y/o` : 'Age N/A'} • {client.location}
+                                            </p>
+                                        </div>
+                                        <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-red-600 transition-colors shrink-0" />
+                                    </Link>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-sm text-muted-foreground italic">No profiles added in the last week</div>
+                        )}
                     </div>
 
-                    <button onClick={nextSlide} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                        <ChevronRight className="h-6 w-6 text-muted-foreground" />
-                    </button>
+                    {/* Divider between sections */}
+                    {(recentClients.length > 0 || clientsAddedLastWeek.length === 0) && (isLoadingPending || pendingClients.length > 0) && (
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                    )}
+
+                    {/* Pending Profiles */}
+                    {isLoadingPending ? (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground">
+                                <Hourglass className="h-4 w-4" />
+                                <span>Pending Profiles{totalPendingCount > 0 ? ` (${totalPendingCount})` : ''}</span>
+                            </div>
+                            <div className="flex items-center justify-center py-8">
+                                <div className="text-sm text-muted-foreground">Loading pending profiles...</div>
+                            </div>
+                        </div>
+                    ) : pendingClients.length > 0 ? (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground">
+                                <Hourglass className="h-4 w-4" />
+                                <span>Pending Profiles ({totalPendingCount})</span>
+                            </div>
+                            <div className="grid gap-2 grid-cols-1">
+                                {pendingClients.map((client) => (
+                                    <Link
+                                        key={client.id}
+                                        href={`/inbox/${client.id}`}
+                                        className="group relative flex items-center gap-3 bg-gray-50 dark:bg-gray-900 p-3 shadow-sm hover:shadow-md transition-all rounded border-l-2 border-yellow-500"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
+                                            {client.photoUrl ? (
+                                                <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <UserIcon className="h-5 w-5 text-gray-400" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-sm group-hover:text-red-600 transition-colors truncate">{client.fullName}</h3>
+                                            <p className="text-xs text-muted-foreground truncate">
+                                                {calculateAge(client.dob) !== null ? `${calculateAge(client.dob)} y/o` : 'Age N/A'} • {client.location}
+                                            </p>
+                                        </div>
+                                        <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-red-600 transition-colors shrink-0" />
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        recentClients.length > 0 && (
+                            <div>
+                                <div className="flex items-center gap-2 mb-2 text-sm font-medium text-muted-foreground">
+                                    <Hourglass className="h-4 w-4" />
+                                    <span>Pending Profiles ({totalPendingCount})</span>
+                                </div>
+                                <div className="text-sm text-muted-foreground italic">No pending profiles</div>
+                            </div>
+                        )
+                    )}
+
+                    {recentClients.length === 0 && !isLoadingPending && pendingClients.length === 0 && (
+                        <div className="text-center text-muted-foreground py-8">
+                            No recent activity
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

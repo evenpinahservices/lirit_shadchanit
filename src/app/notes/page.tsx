@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { saveNote, getNote } from "@/actions/noteActions";
+import { saveNoteByUserId, getNoteByUserId } from "@/actions/noteActions";
 import { Loader2, Save, StickyNote } from "lucide-react";
-import { useDebounce } from "@/lib/hooks"; // Assuming hooks exist, or I'll implement debounce locally if not
 
 export default function NotesPage() {
     const { user } = useAuth();
@@ -18,20 +17,20 @@ export default function NotesPage() {
         if (!user?.id) return;
 
         const load = async () => {
-            const noteContent = await getNote(user.id);
+            const noteContent = await getNoteByUserId(user.id);
             setContent(noteContent || "");
             setIsLoading(false);
         };
         load();
     }, [user?.id]);
 
-    // Simple debounce logic since I don't know if useDebounce exists
+    // Auto-save note
     useEffect(() => {
         if (!user?.id || isLoading) return;
 
         const timeoutId = setTimeout(async () => {
             setIsSaving(true);
-            await saveNote(user.id, content);
+            await saveNoteByUserId(user.id, content);
             setIsSaving(false);
             setLastSaved(new Date());
         }, 1000);
@@ -82,7 +81,7 @@ export default function NotesPage() {
             <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="flex-1 w-full p-4 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-950 dark:border-gray-800"
+                className="flex-1 w-full p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-950 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] dark:shadow-[0_-2px_10px_rgba(0,0,0,0.3)]"
                 placeholder="Type your notes here..."
             />
         </div>

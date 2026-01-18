@@ -62,20 +62,21 @@ function ClientDetailsContent() {
     const isRtl = true;
 
     const getBackInfo = () => {
-        switch (source) {
+        // Page back buttons should always be in English (not form buttons)
+               switch (source) {
             case "matching":
                 return { 
-                    text: isRtl ? "חזרה להתאמות" : "Back to Matching", 
+                    text: "Back to Matching", 
                     link: "/matching" 
                 };
             case "search":
                 return { 
-                    text: isRtl ? "חזרה לחיפוש" : "Back to Search", 
+                    text: "Back to Results", 
                     link: "/search" 
                 };
             default:
                 return { 
-                    text: isRtl ? "חזרה ללקוחות" : "Back to Clients", 
+                    text: "Back to Clients", 
                     link: "/clients" 
                 };
         }
@@ -86,12 +87,37 @@ function ClientDetailsContent() {
     if (isViewMode) {
         return (
             <div className={`w-full max-w-4xl mx-auto h-[calc(100dvh-8rem)] flex flex-col space-y-2 ${isRtl ? "rtl" : "ltr"}`} dir={isRtl ? "rtl" : "ltr"}>
-                <button
-                    onClick={() => router.push(backLink)}
-                    className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1 shrink-0"
-                >
-                    {isRtl ? `${backText} →` : `← ${backText}`}
-                </button>
+                <div className="w-full flex justify-start" style={{ direction: 'ltr' }}>
+                    <button
+                        onClick={() => {
+                            if (source === "search") {
+                                // Restore search state from sessionStorage
+                                const savedState = sessionStorage.getItem('searchState');
+                                if (savedState) {
+                                    // Navigate to search and let the page restore state
+                                    router.push('/search');
+                                } else {
+                                    // Fallback to browser back or direct navigation
+                                    if (typeof window !== 'undefined' && window.history.length > 1) {
+                                        router.back();
+                                    } else {
+                                        router.push(backLink);
+                                    }
+                                }
+                            } else {
+                                // For other sources, use browser back or direct navigation
+                                if (typeof window !== 'undefined' && window.history.length > 1) {
+                                    router.back();
+                                } else {
+                                    router.push(backLink);
+                                }
+                            }
+                        }}
+                        className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1"
+                    >
+                        ← {backText}
+                    </button>
+                </div>
                 <div className="w-full flex-1 min-h-0">
                     <ClientProfileView
                         client={client}
@@ -115,12 +141,14 @@ function ClientDetailsContent() {
     return (
         <div className={`w-full h-full flex flex-col flex-1 min-h-0 ${isRtl ? "rtl" : "ltr"}`} dir={isRtl ? "rtl" : "ltr"}>
             <div className="shrink-0 mb-2">
-                <button
-                    onClick={() => setIsViewMode(true)}
-                    className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1 mb-2"
-                >
-                    {isRtl ? "חזרה לפרופיל →" : "← Back to Profile"}
-                </button>
+                <div className="w-full flex justify-start" style={{ direction: 'ltr' }}>
+                    <button
+                        onClick={() => setIsViewMode(true)}
+                        className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1 mb-2"
+                    >
+                        ← Back to Profile
+                    </button>
+                </div>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">
                         {isRtl ? "עריכת לקוח" : "Edit Client"}

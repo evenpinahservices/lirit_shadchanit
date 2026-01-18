@@ -95,14 +95,16 @@ export function AutomaticMatchingModal({
                                         <h4 className="font-semibold text-sm truncate text-gray-900 dark:text-gray-100" title={match.fullName}>
                                             {match.fullName}
                                         </h4>
-                                        <div className="flex items-center text-xs text-muted-foreground gap-3 mt-0.5">
+                                        <div className="flex items-center text-xs text-muted-foreground gap-3 mt-0.5" dir="ltr">
                                             <div className="flex items-center gap-1">
                                                 <Calendar className="h-3 w-3" />
-                                                <span>{calculateAge(match.dob)} years old</span>
+                                                <span>{calculateAge(match.dob)} y/o</span>
                                             </div>
                                             <div className="flex items-center gap-1 truncate">
                                                 <MapPin className="h-3 w-3" />
-                                                <span className="truncate">{match.location}</span>
+                                                <span className={match.location ? "truncate" : "truncate italic"}>
+                                                    {match.location || "Unknown Location"}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

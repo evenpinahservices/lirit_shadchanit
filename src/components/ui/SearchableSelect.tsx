@@ -27,7 +27,9 @@ export function SearchableSelect({
     disabled = false
 }: SearchableSelectProps) {
     const [isOpen, setIsOpen] = React.useState(false);
+    const [dropdownStyle, setDropdownStyle] = React.useState<React.CSSProperties>({});
     const containerRef = React.useRef<HTMLDivElement>(null);
+    const inputRef = React.useRef<HTMLInputElement>(null);
 
     // Derive selected option
     const selectedOption = options.find(opt => opt.value === value);
@@ -44,6 +46,19 @@ export function SearchableSelect({
             setInputValue(selectedOption?.label || "");
         }
     }, [value, selectedOption, isTyping]);
+
+    // Calculate dropdown position when it opens
+    React.useEffect(() => {
+        if (isOpen && inputRef.current) {
+            const rect = inputRef.current.getBoundingClientRect();
+            setDropdownStyle({
+                top: `${rect.bottom + 4}px`,
+                left: `${rect.left}px`,
+                width: `${rect.width}px`,
+                maxHeight: `calc(100vh - ${rect.bottom + 24}px)`
+            });
+        }
+    }, [isOpen]);
 
     // Handle click outside
     React.useEffect(() => {
@@ -80,6 +95,7 @@ export function SearchableSelect({
         <div className={cn("relative", className)} ref={containerRef}>
             <div className="relative">
                 <input
+                    ref={inputRef}
                     type="text"
                     className={cn(
                         "flex w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 pr-8 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-950 dark:border-gray-700",
@@ -115,7 +131,12 @@ export function SearchableSelect({
                             setInputValue("");
                         }
                     }}
-                    onBlur={() => {
+                    onBlur={(e) => {
+                        // Don't blur if clicking on dropdown option
+                        const relatedTarget = e.relatedTarget as HTMLElement;
+                        if (containerRef.current?.contains(relatedTarget)) {
+                            return;
+                        }
                         // Reset typing state after a short delay to allow click events
                         setTimeout(() => {
                             setIsTyping(false);
@@ -127,7 +148,10 @@ export function SearchableSelect({
             </div>
 
             {isOpen && filteredOptions.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md shadow-lg max-h-60 flex flex-col overflow-y-auto transform origin-top animate-in fade-in zoom-in-95 duration-100">
+                <div 
+                    className="fixed z-50 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md shadow-lg flex flex-col overflow-y-auto transform origin-top animate-in fade-in zoom-in-95 duration-100 custom-scrollbar"
+                    style={dropdownStyle}
+                >
                     <div className="p-1">
                         {filteredOptions.map((option) => (
                             <div
@@ -136,7 +160,15 @@ export function SearchableSelect({
                                     "flex items-center justify-between px-2 py-1.5 text-sm rounded-sm cursor-pointer hover:bg-red-50 hover:text-red-900 dark:hover:bg-red-900/20 dark:hover:text-red-100",
                                     value === option.value && "bg-red-50 text-red-900 dark:bg-red-900/20 dark:text-red-100 font-medium"
                                 )}
-                                onClick={() => handleSelect(option)}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleSelect(option);
+                                }}
+                                onMouseDown={(e) => {
+                                    // Prevent input blur from firing before click
+                                    e.preventDefault();
+                                }}
                             >
                                 {option.label}
                                 {value === option.value && (
@@ -148,7 +180,10 @@ export function SearchableSelect({
                 </div>
             )}
             {isOpen && filteredOptions.length === 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md shadow-lg p-4 text-center text-sm text-muted-foreground animate-in fade-in zoom-in-95 duration-100">
+                <div 
+                    className="fixed z-50 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-md shadow-lg p-4 text-center text-sm text-muted-foreground animate-in fade-in zoom-in-95 duration-100"
+                    style={dropdownStyle}
+                >
                     No results found.
                 </div>
             )}

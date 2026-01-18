@@ -3,13 +3,16 @@ import mongoose, { Schema, Model } from "mongoose";
 export interface Note {
     id: string;
     userId: string;
+    title: string;
     content: string;
     updatedAt: Date;
+    createdAt: Date;
 }
 
 const NoteSchema = new Schema<Note>(
     {
-        userId: { type: String, required: true, unique: true }, // One note document per user for simplicity as requested ("Simple page... type notes")
+        userId: { type: String, required: true },
+        title: { type: String, required: true, default: "Untitled Note" },
         content: { type: String, default: "" },
     },
     {
