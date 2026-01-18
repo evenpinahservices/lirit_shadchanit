@@ -4,6 +4,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { createPendingClient } from "@/actions/pendingClient";
 import dbConnect from "@/lib/db";
 import WhatsAppSessionModel from "@/models/WhatsAppSession";
+import TwilioCostModel from "@/models/TwilioCost";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -72,8 +73,20 @@ function getTwilioClient() {
     return twilio(accountSid, authToken);
 }
 
-// Send WhatsApp message
-async function sendWhatsAppMessage(to: string, body: string) {
+// Default WhatsApp pricing (US rates - adjust for your country)
+const DEFAULT_WHATSAPP_PRICING = {
+    inboundText: 0.005,
+    inboundMedia: 0.005,
+    outboundText: 0.005,
+    outboundMedia: 0.005,
+};
+
+// Send WhatsApp message and track cost
+async function sendWhatsAppMessage(
+    to: string,
+    body: string,
+    options?: { profileId?: string; messageType?: "text" | "media" }
+) {
     try {
         const client = getTwilioClient();
         const from = process.env.TWILIO_WHATSAPP_NUMBER || "whatsapp:+14155238886";
@@ -85,6 +98,45 @@ async function sendWhatsAppMessage(to: string, body: string) {
         });
         
         console.log(`WhatsApp message sent: ${message.sid}`);
+        
+        // Try to fetch actual cost from Twilio (may not be available immediately)
+        let actualCost = DEFAULT_WHATSAPP_PRICING.outboundText;
+        let currency = "USD";
+        
+        try {
+            // Wait a bit for Twilio to process the message
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            const messageDetails = await client.messages(message.sid).fetch();
+            if (messageDetails.price) {
+                actualCost = parseFloat(messageDetails.price) || DEFAULT_WHATSAPP_PRICING.outboundText;
+                currency = messageDetails.priceUnit || "USD";
+            }
+        } catch (fetchError) {
+            console.log(`Could not fetch message price immediately, using default: ${actualCost}`);
+        }
+        
+        // Store cost in database
+        try {
+            await dbConnect();
+            await TwilioCostModel.create({
+                messageSid: message.sid,
+                profileId: options?.profileId,
+                sender: to,
+                direction: "outbound",
+                messageType: options?.messageType || "text",
+                cost: actualCost,
+                currency,
+                date: new Date(),
+                metadata: {
+                    body: body.substring(0, 100), // Store first 100 chars
+                    status: "sent",
+                },
+            });
+        } catch (costError) {
+            console.error("Failed to store cost:", costError);
+            // Don't fail the message send if cost tracking fails
+        }
+        
         return message.sid;
     } catch (error: any) {
         console.error("Error sending WhatsApp message:", error);
@@ -106,26 +158,31 @@ async function downloadAndUploadToCloudinary(twilioUrl: string): Promise<string>
     }
     
     try {
-        // Use Twilio SDK's httpClient to download
-        const client = getTwilioClient();
-        console.log(`[Cloudinary] Downloading from Twilio using SDK...`);
+        // Twilio media URLs require Basic Auth with Account SID and Auth Token
+        // Create Basic Auth header
+        const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
         
-        const response = await (client as any).httpClient.request({
+        console.log(`[Cloudinary] Downloading from Twilio with Basic Auth...`);
+        
+        // Use fetch with Basic Auth headers
+        const response = await fetch(twilioUrl, {
             method: 'GET',
-            uri: twilioUrl,
+            headers: {
+                'Authorization': `Basic ${auth}`,
+            },
         });
         
         const downloadElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`[Cloudinary] Downloaded in ${downloadElapsed}s (status: ${response.statusCode})`);
+        console.log(`[Cloudinary] Downloaded in ${downloadElapsed}s (status: ${response.status})`);
         
-        if (response.statusCode !== 200) {
-            throw new Error(`Failed to download image: ${response.statusCode}`);
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => 'Unknown error');
+            throw new Error(`Failed to download image: ${response.status} ${errorText}`);
         }
         
         // Convert to buffer
-        const buffer = Buffer.isBuffer(response.body) 
-            ? response.body 
-            : Buffer.from(response.body);
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
         
         const sizeKB = (buffer.length / 1024).toFixed(1);
         console.log(`[Cloudinary] Image downloaded (${sizeKB} KB), uploading to Cloudinary...`);
@@ -448,6 +505,27 @@ export async function POST(request: NextRequest) {
         if (numMedia > 0) {
             console.log(`[WhatsApp] Received ${numMedia} image(s) from ${sender}`);
             
+            // Track inbound media message cost
+            try {
+                await dbConnect();
+                const messageSid = formData.get("MessageSid")?.toString() || `inbound_${Date.now()}`;
+                await TwilioCostModel.create({
+                    messageSid,
+                    sender,
+                    direction: "inbound",
+                    messageType: "media",
+                    cost: DEFAULT_WHATSAPP_PRICING.inboundMedia * numMedia,
+                    currency: "USD",
+                    date: new Date(),
+                    metadata: {
+                        numMedia,
+                        status: "received",
+                    },
+                });
+            } catch (costError) {
+                console.error("Failed to track inbound media cost:", costError);
+            }
+            
             // Get or create session from MongoDB
             const session = await getSession(sender);
             const previousCount = session.images ? session.images.length : 0;
@@ -509,6 +587,27 @@ export async function POST(request: NextRequest) {
         const incomingMsg = body.trim().toLowerCase();
         console.log(`[WhatsApp] Processing text message: "${incomingMsg}"`);
         console.log(`[WhatsApp] Sender: ${sender}`);
+        
+        // Track inbound text message cost
+        try {
+            await dbConnect();
+            const messageSid = formData.get("MessageSid")?.toString() || `inbound_${Date.now()}`;
+            await TwilioCostModel.create({
+                messageSid,
+                sender,
+                direction: "inbound",
+                messageType: "text",
+                cost: DEFAULT_WHATSAPP_PRICING.inboundText,
+                currency: "USD",
+                date: new Date(),
+                metadata: {
+                    body: incomingMsg,
+                    status: "received",
+                },
+            });
+        } catch (costError) {
+            console.error("Failed to track inbound text cost:", costError);
+        }
 
         // Check if user is confirming (case-insensitive: yes, y, done, go)
         if (incomingMsg === "yes" || incomingMsg === "done" || incomingMsg === "go" || incomingMsg === "y") {
@@ -599,7 +698,8 @@ export async function POST(request: NextRequest) {
                     console.log(`[WhatsApp] Step 3/3: Sending success message to ${sender}...`);
                     await sendWhatsAppMessage(
                         sender,
-                        `✅ *Profile Drafted!*\n\nName: ${name}\n\nReview and Publish here: ${editLink}`
+                        `✅ *Profile Drafted!*\n\nName: ${name}\n\nReview and Publish here: ${editLink}`,
+                        { profileId: pendingClient.id, messageType: "text" }
                     );
                     console.log(`[WhatsApp] Step 3/3: ✅ Success message sent`);
                     console.log(`[WhatsApp] ===== PROCESSING COMPLETE =====\n`);
@@ -623,7 +723,8 @@ export async function POST(request: NextRequest) {
                     try {
                         await sendWhatsAppMessage(
                             sender,
-                            `❌ Error processing images: ${errorMsg}\n\nPlease try again or contact support.`
+                            `❌ Error processing images: ${errorMsg}\n\nPlease try again or contact support.`,
+                            { messageType: "text" }
                         );
                         console.error(`[WhatsApp] Error message sent to user`);
                     } catch (sendError) {
