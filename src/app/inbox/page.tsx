@@ -135,7 +135,7 @@ export default function InboxPage() {
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block rounded-md bg-white dark:bg-gray-950 shadow-sm overflow-y-auto flex-1 min-h-0 max-h-[calc(100dvh-12rem)]">
+            <div className="hidden md:block rounded-md bg-white dark:bg-gray-950 shadow-sm overflow-y-auto flex-1 min-h-0 max-h-[calc(100dvh-12rem)] custom-scrollbar">
                 <div className="h-full">
                     <table className="w-full text-sm text-left relative">
                         <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 sticky top-0 z-10 shadow-sm">
@@ -237,7 +237,7 @@ export default function InboxPage() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="md:hidden flex-1 overflow-y-auto min-h-0 space-y-3 px-1 pb-32">
+            <div className="md:hidden flex-1 overflow-y-auto min-h-0 space-y-3 px-1 pb-32 custom-scrollbar">
                 {filteredClients.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                         {searchTerm ? (

@@ -297,46 +297,7 @@ export const generateMockClients = (count: number): Client[] => {
 
 
 
-const testClient: Client = {
-    id: "test-long-list",
-    fullName: "Test Client Long List",
-    email: "test.long@example.com",
-    phone: "555-0000",
-    dob: "1995-01-01",
-    location: "Jerusalem, Israel",
-    gender: "Female",
-    height: 165,
-    eyeColor: "Brown",
-    hairColor: "Black",
-    ethnicity: "Ashkenazi",
-    tribalStatus: "Yisrael",
-    religiousAffiliation: ["Yeshivish Litvish"],
-    learningStatus: "Working",
-    maritalStatus: "Single",
-    children: 0,
-    languages: ["English", "Hebrew"],
-    familyBackground: "FFB",
-    education: "Seminary",
-    occupation: "Teacher",
-    smoking: "No",
-    headCovering: "Wig",
-    hobbies: "Reading",
-    personality: "Quiet",
-    medicalHistory: false,
-    // lookingFor: "Someone nice", - removed
-    willingToRelocate: "No", // Dealbreaker 1
-    ageGapPreference: ["1-2 years", "3-5 years"], // Dealbreaker 2
-    preferredEthnicities: ["Ashkenazi", "Sephardi", "Yemenite", "Convert", "Other"],
-    preferredHashkafos: ["Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Modern Orthodox", "Hardal", "Chassidish (General)", "Chassidish (Gur)", "Chassidish (Belz)", "Chassidish (Satmar)", "Chassidish (Vizhnitz)", "Litvish (Modern)", "Litvish (Yeshivish)", "Carlebach", "Breslov"],
-    preferredLearningStatus: ["Full Time", "Working & Learning", "Working", "Student", "Retired"],
-    preferredHeadCovering: ["Kippah", "Black Hat", "None", "Kippah Sruga", "Baseball Cap", "Fedora", "Shtreimel", "Any"], // Dealbreaker 6
-    references: "None",
-    notes: "For testing scrolling",
-    active: true,
-    createdAt: new Date().toISOString().split("T")[0],
-};
-
-export const MOCK_CLIENTS: Client[] = [testClient, ...generateMockClients(100)];
+export const MOCK_CLIENTS: Client[] = generateMockClients(100);
 
 
 export const MOCK_MATCHES: Match[] = [];

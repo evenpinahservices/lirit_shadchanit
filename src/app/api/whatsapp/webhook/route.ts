@@ -25,6 +25,14 @@ async function getSession(sender: string) {
             isWaitingConfirmation: false,
         });
         console.log(`[Session] Created new MongoDB session for ${sender}`);
+    } else {
+        // Ensure images array exists (defensive check)
+        if (!session.images || !Array.isArray(session.images)) {
+            console.warn(`[Session] Session found but images array is invalid, resetting to empty array`);
+            session.images = [];
+            await session.save();
+        }
+        console.log(`[Session] Retrieved existing MongoDB session for ${sender} with ${session.images.length} images`);
     }
     
     return session;
@@ -442,9 +450,10 @@ export async function POST(request: NextRequest) {
             
             // Get or create session from MongoDB
             const session = await getSession(sender);
-            const previousCount = session.images.length;
+            const previousCount = session.images ? session.images.length : 0;
             const isNewSession = previousCount === 0;
-            console.log(`[WhatsApp] Previous image count: ${previousCount}`);
+            console.log(`[WhatsApp] Session retrieved. Previous image count: ${previousCount}`);
+            console.log(`[WhatsApp] Session images array:`, session.images);
 
             // Download images from Twilio and upload to Cloudinary immediately
             const newCloudinaryUrls: string[] = [];
@@ -465,15 +474,27 @@ export async function POST(request: NextRequest) {
             }
 
             // Update session in MongoDB with Cloudinary URLs (not Twilio URLs)
-            const updatedImages = [...session.images, ...newCloudinaryUrls];
+            const existingImages = session.images || [];
+            const updatedImages = [...existingImages, ...newCloudinaryUrls];
             await updateSession(sender, {
                 images: updatedImages,
             });
             console.log(`[WhatsApp] Total images in session: ${updatedImages.length} (all stored in Cloudinary)`);
+            console.log(`[WhatsApp] Session images before update: ${existingImages.length}, New images: ${newCloudinaryUrls.length}, Total after: ${updatedImages.length}`);
 
             // Simple message: just tell them how many images and to type yes
             const totalImages = updatedImages.length;
-            const message = `You have sent ${totalImages} image(s). Click Enter to reply yes to proceed.`;
+            if (totalImages === 0) {
+                console.error(`[WhatsApp] ERROR: No images stored! Session had ${session.images.length}, newCloudinaryUrls: ${newCloudinaryUrls.length}`);
+                const message = `⚠️ No images were saved. Please try sending the images again.`;
+                const immediateMsg = twiml.message(message);
+                return new NextResponse(twiml.toString(), {
+                    status: 200,
+                    headers: { "Content-Type": "text/xml" },
+                });
+            }
+            
+            const message = `You have sent ${totalImages} image(s). Reply yes or done to proceed.`;
             
             const immediateMsg = twiml.message(message);
             console.log(`[WhatsApp] Response sent. Session ID: ${sender}, Images stored: ${totalImages} (all in Cloudinary)`);
@@ -550,9 +571,12 @@ export async function POST(request: NextRequest) {
                     console.log(`[WhatsApp] Extracted name:`, extractedData.fullName || "Unknown");
 
                     // Save to MongoDB
+                    // Store Cloudinary image URLs in galleryImages so we can clean them up if rejected
                     console.log(`[WhatsApp] Step 2/3: Saving to MongoDB...`);
                     const pendingClient = await createPendingClient({
                         ...extractedData,
+                        // Store original WhatsApp images in galleryImages for cleanup
+                        galleryImages: images, // Cloudinary URLs from WhatsApp upload
                         submittedAt: new Date().toISOString(),
                         submittedBy: sender,
                         source: "whatsapp",
@@ -585,6 +609,16 @@ export async function POST(request: NextRequest) {
                     console.error(`[WhatsApp] Error:`, error);
                     console.error(`[WhatsApp] Error message:`, error.message);
                     console.error(`[WhatsApp] Error stack:`, error.stack);
+                    
+                    // Clean up uploaded images from Cloudinary on error
+                    try {
+                        const { deleteCloudinaryImages } = await import("@/lib/cloudinaryCleanup");
+                        console.log(`[WhatsApp] Cleaning up ${images.length} image(s) from Cloudinary due to processing error`);
+                        await deleteCloudinaryImages(images);
+                    } catch (cleanupError) {
+                        console.error(`[WhatsApp] Failed to cleanup images:`, cleanupError);
+                    }
+                    
                     const errorMsg = error.message || "Unknown error";
                     try {
                         await sendWhatsAppMessage(

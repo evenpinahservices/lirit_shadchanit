@@ -261,7 +261,7 @@ export function JsonFillModal({
                             <strong>Tip:</strong> You can upload:
                         </p>
                         <ul className="text-xs text-blue-600 dark:text-blue-400 mt-1 ml-4 list-disc">
-                            <li>JSON files (<code>.json</code>) from <code>api-service/debug_outputs/</code></li>
+                            <li>JSON files (<code>.json</code>) containing extracted client data</li>
                             <li>Text files (<code>.txt</code>) containing JSON (raw JSON or in markdown code blocks)</li>
                             <li>Paste JSON or text directly into the textarea below</li>
                         </ul>

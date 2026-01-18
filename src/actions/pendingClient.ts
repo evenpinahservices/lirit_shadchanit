@@ -6,6 +6,7 @@ import { Client } from "@/lib/mockData";
 import { revalidatePath } from "next/cache";
 import { createClient } from "./client";
 import crypto from "crypto";
+import { deleteCloudinaryImages, extractImageUrls } from "@/lib/cloudinaryCleanup";
 
 // Type definition for PendingClient Input (excluding auto-generated fields)
 type PendingClientInput = Omit<Client, "id" | "createdAt"> & {
@@ -327,11 +328,22 @@ export async function updatePendingClient(
 
 export async function rejectPendingClient(pendingClientId: string): Promise<void> {
     await dbConnect();
-    // Use findByIdAndDelete to ensure we're deleting by unique ID, not token
-    const result = await PendingClientModel.findByIdAndDelete(pendingClientId);
-    if (!result) {
+    
+    // Get the pending client before deleting to extract image URLs
+    const pendingClient = await PendingClientModel.findById(pendingClientId);
+    if (!pendingClient) {
         throw new Error("Pending client not found");
     }
+
+    // Extract and delete images from Cloudinary
+    const imageUrls = extractImageUrls(pendingClient.toObject());
+    if (imageUrls.length > 0) {
+        console.log(`[Reject] Deleting ${imageUrls.length} image(s) from Cloudinary for rejected pending client`);
+        await deleteCloudinaryImages(imageUrls);
+    }
+
+    // Delete from MongoDB
+    await PendingClientModel.findByIdAndDelete(pendingClientId);
     revalidatePath("/inbox");
 }
 

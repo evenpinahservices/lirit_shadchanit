@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useClients } from "@/context/ClientContext";
-import { seedTestClient } from "@/actions/client";
-import { Client, MOCK_CLIENTS } from "@/lib/mockData";
+import { Client } from "@/lib/mockData";
 import { findMatches, calculateAge } from "@/lib/matchingUtils";
 import { Heart, Sparkles, ArrowRight, Check, X, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
@@ -20,12 +19,7 @@ export default function MatchingPage() {
         value: client.id
     }));
 
-    // Force inclusions for testing
-    const testClientMock = MOCK_CLIENTS.find(c => c.id === "test-long-list");
     const allClients = [...clients];
-    if (testClientMock && !allClients.some(c => c.id === testClientMock.id)) {
-        allClients.unshift(testClientMock); // Add to top for visibility
-    }
 
     const searchParams = useSearchParams();
     const initialClientId = searchParams.get("clientId");
@@ -50,9 +44,6 @@ export default function MatchingPage() {
         return "all";
     });
 
-    useEffect(() => {
-        seedTestClient().catch(console.error);
-    }, []);
 
     // Effect to handle deep linking
     useEffect(() => {
@@ -293,44 +284,41 @@ export default function MatchingPage() {
                                             <Link
                                                 key={match.id}
                                                 href={`/clients/${match.id}?source=matching`}
-                                                className="group relative flex flex-col justify-between bg-gray-50 dark:bg-gray-900 p-4 shadow-sm hover:shadow-md transition-all"
+                                                className="group relative flex flex-col bg-gray-50 dark:bg-gray-900 p-3 shadow-sm hover:shadow-md transition-all"
                                             >
-                                                <div className="space-y-3">
-                                                    <div className="flex items-start justify-between">
-                                                        <div>
-                                                            <h3 className="font-semibold text-base group-hover:text-red-600 transition-colors">{match.fullName}</h3>
-                                                            <p className="text-xs text-muted-foreground" dir="ltr">
-                                                                {match.location ? (
-                                                                    <>{match.location} • {calculateAge(match.dob)} y/o</>
-                                                                ) : (
-                                                                    <><span className="italic">Unknown Location</span> • {calculateAge(match.dob)} y/o</>
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                        <div className="rounded-full bg-green-100 p-1.5 text-green-600">
-                                                            <Check className="h-3 w-3" />
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                                                        {match.photoUrl ? (
+                                                            <img src={match.photoUrl} alt={match.fullName} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="h-full w-full flex items-center justify-center text-sm font-semibold text-gray-400">
+                                                                {match.fullName.charAt(0)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <h3 className="font-semibold text-base group-hover:text-red-600 transition-colors">{match.fullName}</h3>
+                                                                <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">
+                                                                    {match.location || <span className="italic">Unknown Location</span>} • {match.dob ? `${calculateAge(match.dob)} y/o` : "—"}
+                                                                </p>
+                                                                <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
+                                                                    <p>Ethnicity: {Array.isArray(match.ethnicity) ? (match.ethnicity.length > 0 ? match.ethnicity.join(", ") : "—") : (match.ethnicity || "—")}</p>
+                                                                    <p>Hashkafa: {Array.isArray(match.religiousAffiliation) ? (match.religiousAffiliation.length > 0 ? match.religiousAffiliation[0] : "—") : (match.religiousAffiliation || "—")}</p>
+                                                                    <p>Learning: {Array.isArray(match.learningStatus) ? (match.learningStatus.length > 0 ? match.learningStatus[0] : "—") : (match.learningStatus || "—")}</p>
+                                                                </div>
+                                                                <div className="mt-2 flex items-center justify-end">
+                                                                    <span className="text-xs font-medium text-red-600 group-hover:underline flex items-center gap-1">
+                                                                        View Profile <ArrowRight className="h-3 w-3" />
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="rounded-full bg-green-100 p-1.5 text-green-600 shrink-0">
+                                                                <Check className="h-3 w-3" />
+                                                            </div>
                                                         </div>
                                                     </div>
-
-                                                    <div className="space-y-1 text-xs">
-                                                        <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">Ethnicity:</span>
-                                                            <span className="text-right truncate max-w-[7.5rem]">{Array.isArray(match.ethnicity) ? match.ethnicity.join(", ") : match.ethnicity}</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">Hashkafa:</span>
-                                                            <span className="text-right truncate max-w-[7.5rem]">{Array.isArray(match.religiousAffiliation) ? match.religiousAffiliation[0] : match.religiousAffiliation}</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-muted-foreground">Learning:</span>
-                                                            <span className="text-right truncate max-w-[7.5rem]">{Array.isArray(match.learningStatus) ? match.learningStatus[0] : match.learningStatus}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="mt-4 pt-3 flex items-center justify-end">
-                                                    <span className="text-xs font-medium text-red-600 group-hover:underline flex items-center gap-1">
-                                                        View Profile <ArrowRight className="h-3 w-3" />
-                                                    </span>
                                                 </div>
                                             </Link>
                                         ))}

@@ -541,40 +541,30 @@ export default function SearchPage() {
                                                         };
                                                         sessionStorage.setItem('searchState', JSON.stringify(searchState));
                                                     }}
-                                                    className="group relative flex flex-col justify-between bg-gray-50 dark:bg-gray-900 p-4 shadow-sm hover:shadow-md transition-all"
+                                                    className="group relative flex flex-col bg-gray-50 dark:bg-gray-900 p-3 shadow-sm hover:shadow-md transition-all"
                                                 >
-                                                    <div className="space-y-3">
-                                                        <div className="flex items-start justify-between">
-                                                            <div>
-                                                                <h3 className="font-semibold text-base group-hover:text-red-600 transition-colors">{client.fullName}</h3>
-                                                                <p className="text-xs text-muted-foreground" dir="ltr">
-                                                                    {calculateAge(client.dob) !== null ? `${calculateAge(client.dob)} y/o` : 'Age N/A'}
-                                                                </p>
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                                                            {client.photoUrl ? (
+                                                                <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <UserIcon className="h-6 w-6 text-gray-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h3 className="font-semibold text-base group-hover:text-red-600 transition-colors">{client.fullName}</h3>
+                                                            <p className="text-xs text-muted-foreground mt-0.5" dir="ltr">
+                                                                {client.location || <span className="italic">Unknown Location</span>} • {calculateAge(client.dob) !== null ? `${calculateAge(client.dob)} y/o` : '—'}
+                                                            </p>
+                                                            <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
+                                                                <p>Occupation: {client.occupation || "—"}</p>
                                                             </div>
-                                                            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
-                                                                {client.photoUrl ? (
-                                                                    <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <UserIcon className="h-4 w-4 text-gray-400" />
-                                                                )}
+                                                            <div className="mt-2 flex items-center justify-end">
+                                                                <span className="text-xs font-medium text-red-600 group-hover:underline flex items-center gap-1">
+                                                                    View Profile <ArrowRight className="h-3 w-3" />
+                                                                </span>
                                                             </div>
                                                         </div>
-
-                                                        <div className="space-y-1 text-xs">
-                                                            <div className="flex justify-between">
-                                                                <span className="text-muted-foreground">Location:</span>
-                                                                <span className="text-right truncate max-w-[7.5rem]">{client.location}</span>
-                                                            </div>
-                                                            <div className="flex justify-between">
-                                                                <span className="text-muted-foreground">Occupation:</span>
-                                                                <span className="text-right truncate max-w-[7.5rem]">{client.occupation}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-4 pt-3 flex items-center justify-end">
-                                                        <span className="text-xs font-medium text-red-600 group-hover:underline flex items-center gap-1">
-                                                            View Profile <ArrowRight className="h-3 w-3" />
-                                                        </span>
                                                     </div>
                                                 </Link>
                                             ))}

@@ -71,22 +71,26 @@ export async function updateClient(id: string, updates: Partial<Client>): Promis
 
 export async function deleteClient(id: string): Promise<void> {
     await dbConnect();
+    
+    // Get the client before deleting to extract image URLs
+    const client = await ClientModel.findById(id);
+    if (!client) {
+        throw new Error("Client not found");
+    }
+
+    // Extract and delete images from Cloudinary
+    const { deleteCloudinaryImages, extractImageUrls } = await import("@/lib/cloudinaryCleanup");
+    const imageUrls = extractImageUrls(client.toObject());
+    if (imageUrls.length > 0) {
+        console.log(`[Delete] Deleting ${imageUrls.length} image(s) from Cloudinary for deleted client`);
+        await deleteCloudinaryImages(imageUrls);
+    }
+
+    // Delete from MongoDB
     await ClientModel.findByIdAndDelete(id);
     revalidatePath("/clients");
 }
 
-export async function seedTestClient(): Promise<void> {
-    await dbConnect();
-    const existing = await ClientModel.findOne({ email: "test.long@example.com" });
-    if (!existing) {
-        const testClient = MOCK_CLIENTS.find(c => c.email === "test.long@example.com");
-        if (testClient) {
-            const { id, createdAt, ...data } = testClient;
-            await createClient(data);
-            revalidatePath("/matching");
-        }
-    }
-}
 export async function seedDatabase(count: number = 10): Promise<void> {
     await dbConnect();
     const clients = generateMockClients(count);
