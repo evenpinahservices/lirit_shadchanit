@@ -4,7 +4,7 @@ import { createPendingClient } from "@/actions/pendingClient";
 
 // Session storage for image uploads (in-memory, resets on cold start)
 // In production, consider using Vercel KV or Redis for persistence
-const uploadSessions = new Map<string, { images: string[]; timestamp: number }>();
+const uploadSessions = new Map<string, { images: string[]; timestamp: number; isWaitingConfirmation: boolean }>();
 
 // Clean up old sessions (older than 1 hour)
 setInterval(() => {
@@ -307,11 +307,13 @@ export async function POST(request: NextRequest) {
         // Handle images
         if (numMedia > 0) {
             // Initialize session if not exists
-            if (!uploadSessions.has(sender)) {
-                uploadSessions.set(sender, { images: [], timestamp: Date.now() });
+            const isNewSession = !uploadSessions.has(sender);
+            if (isNewSession) {
+                uploadSessions.set(sender, { images: [], timestamp: Date.now(), isWaitingConfirmation: false });
             }
 
             const session = uploadSessions.get(sender)!;
+            const previousCount = session.images.length;
 
             // Extract and store image URLs
             for (let i = 0; i < numMedia; i++) {
@@ -321,23 +323,23 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            // Update timestamp
+            // Update timestamp and reset confirmation flag
             session.timestamp = Date.now();
+            session.isWaitingConfirmation = false;
 
             const totalImages = session.images.length;
 
-            // Send immediate acknowledgment
-            const immediateMsg = twiml.message(
-                `📥 Received ${numMedia} image(s). Processing...`
-            );
+            // Different message for first batch vs additional batches
+            let message: string;
+            if (isNewSession || previousCount === 0) {
+                // First batch of images
+                message = `Hi! Thank you for uploading these images. Keep sending if you have more. Type 'yes' or 'done' when finished to generate the profile. Also, write 'cancel' at any time to exit this process.`;
+            } else {
+                // Additional batch
+                message = `I received another ${numMedia} image(s). Keep sending if you have more.`;
+            }
 
-            // Send total count message asynchronously (don't wait for it)
-            sendWhatsAppMessage(
-                sender,
-                `📸 You have sent ${totalImages} total image(s). Keep sending more if needed.\n\nType *YES* or *DONE* when finished to generate the profile.`
-            ).catch((error) => {
-                console.error("Error sending total count message:", error);
-            });
+            const immediateMsg = twiml.message(message);
 
             return new NextResponse(twiml.toString(), {
                 status: 200,
@@ -348,11 +350,20 @@ export async function POST(request: NextRequest) {
         // Handle text messages
         const incomingMsg = body.trim().toLowerCase();
 
+        // Handle cancel command
+        if (incomingMsg === "cancel" && uploadSessions.has(sender)) {
+            uploadSessions.delete(sender);
+            const msg = twiml.message("❌ Process cancelled. You can start over by sending images again.");
+            return new NextResponse(twiml.toString(), {
+                status: 200,
+                headers: { "Content-Type": "text/xml" },
+            });
+        }
+
         // Check if user is confirming upload (case-insensitive)
-        if ((incomingMsg === "yes" || incomingMsg === "done" || incomingMsg === "go" || incomingMsg === "y") && uploadSessions.has(sender)) {
+        if ((incomingMsg === "yes" || incomingMsg === "done" || incomingMsg === "go" || incomingMsg === "y" || incomingMsg === "no" || incomingMsg === "n") && uploadSessions.has(sender)) {
             const session = uploadSessions.get(sender)!;
             const images = session.images;
-            uploadSessions.delete(sender); // Clear session
 
             if (images.length === 0) {
                 const msg = twiml.message("⚠️ No images found to process.");
@@ -362,59 +373,84 @@ export async function POST(request: NextRequest) {
                 });
             }
 
-            // Send confirmation message
-            await sendWhatsAppMessage(
-                sender,
-                "✅ Received images. Processing resume now. I will send a message when this is done."
-            );
-
-            try {
-                // Extract data from images (this may take a while)
-                const extractedData = await extractDataFromImages(images);
-
-                // Save to MongoDB
-                const pendingClient = await createPendingClient({
-                    ...extractedData,
-                    submittedAt: new Date().toISOString(),
-                    submittedBy: sender,
-                    source: "whatsapp",
-                    sourceDescription: "Extracted from WhatsApp images",
-                    status: "pending_approval",
-                    active: true,
-                    createdAt: new Date().toISOString().split("T")[0],
-                });
-
-                // Generate edit link
-                const webAppUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.WEB_APP_URL || "http://localhost:3000";
-                const editLink = `${webAppUrl}/inbox/${pendingClient.id}`;
-
-                // Extract name
-                const name = extractedData.fullName || "Unknown";
-
-                // Send success message
-                await sendWhatsAppMessage(
-                    sender,
-                    `✅ *Profile Drafted!*\n\nName: ${name}\n\nReview and Publish here: ${editLink}`
-                );
-
-                // Return empty TwiML (message already sent)
-                return new NextResponse(twiml.toString(), {
-                    status: 200,
-                    headers: { "Content-Type": "text/xml" },
-                });
-            } catch (error: any) {
-                console.error("Error processing images:", error);
-                const errorMsg = error.message || "Unknown error";
-                await sendWhatsAppMessage(
-                    sender,
-                    `❌ Error processing images: ${errorMsg}\n\nPlease try again or contact support.`
-                );
-
+            // If waiting for confirmation and user says "no", allow them to continue
+            if (session.isWaitingConfirmation && (incomingMsg === "no" || incomingMsg === "n")) {
+                session.isWaitingConfirmation = false;
+                const msg = twiml.message("Continue uploading images, and then press Yes or Done to proceed, or 'cancel' to exit.");
                 return new NextResponse(twiml.toString(), {
                     status: 200,
                     headers: { "Content-Type": "text/xml" },
                 });
             }
+
+            // If not waiting for confirmation, ask for confirmation first
+            if (!session.isWaitingConfirmation) {
+                session.isWaitingConfirmation = true;
+                const msg = twiml.message(
+                    `You have sent ${images.length} image(s). Would you like to proceed with processing? Reply 'yes' to continue or 'no' to upload more images.`
+                );
+                return new NextResponse(twiml.toString(), {
+                    status: 200,
+                    headers: { "Content-Type": "text/xml" },
+                });
+            }
+
+            // User confirmed, proceed with processing
+            uploadSessions.delete(sender); // Clear session
+
+            // Send confirmation message immediately (responds right away)
+            const confirmationMsg = twiml.message(
+                "✅ Received images. Processing resume now. I will send a message when this is done."
+            );
+
+            // Return confirmation immediately (don't wait for processing)
+            const response = new NextResponse(twiml.toString(), {
+                status: 200,
+                headers: { "Content-Type": "text/xml" },
+            });
+
+            // Process images in background (don't block the response)
+            // This runs after the response is sent
+            (async () => {
+                try {
+                    // Extract data from images (this may take a while)
+                    const extractedData = await extractDataFromImages(images);
+
+                    // Save to MongoDB
+                    const pendingClient = await createPendingClient({
+                        ...extractedData,
+                        submittedAt: new Date().toISOString(),
+                        submittedBy: sender,
+                        source: "whatsapp",
+                        sourceDescription: "Extracted from WhatsApp images",
+                        status: "pending_approval",
+                        active: true,
+                        createdAt: new Date().toISOString().split("T")[0],
+                    });
+
+                    // Generate edit link
+                    const webAppUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.WEB_APP_URL || "http://localhost:3000";
+                    const editLink = `${webAppUrl}/inbox/${pendingClient.id}`;
+
+                    // Extract name
+                    const name = extractedData.fullName || "Unknown";
+
+                    // Send success message
+                    await sendWhatsAppMessage(
+                        sender,
+                        `✅ *Profile Drafted!*\n\nName: ${name}\n\nReview and Publish here: ${editLink}`
+                    );
+                } catch (error: any) {
+                    console.error("Error processing images:", error);
+                    const errorMsg = error.message || "Unknown error";
+                    await sendWhatsAppMessage(
+                        sender,
+                        `❌ Error processing images: ${errorMsg}\n\nPlease try again or contact support.`
+                    );
+                }
+            })();
+
+            return response;
         }
 
         // Handle "join" or "sign up" commands
