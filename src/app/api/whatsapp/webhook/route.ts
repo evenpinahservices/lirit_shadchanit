@@ -533,51 +533,17 @@ export async function POST(request: NextRequest) {
             console.log(`[WhatsApp] Session retrieved. Previous image count: ${previousCount}`);
             console.log(`[WhatsApp] Session images array:`, session.images);
 
-            // Download images from Twilio and upload to Cloudinary immediately
-            const newCloudinaryUrls: string[] = [];
-            for (let i = 0; i < numMedia; i++) {
-                const twilioMediaUrl = formData.get(`MediaUrl${i}`)?.toString();
-                if (twilioMediaUrl) {
-                    try {
-                        console.log(`[WhatsApp] Processing image ${i + 1}/${numMedia}...`);
-                        // Download from Twilio and upload to Cloudinary
-                        const cloudinaryUrl = await downloadAndUploadToCloudinary(twilioMediaUrl);
-                        newCloudinaryUrls.push(cloudinaryUrl);
-                        console.log(`[WhatsApp] Image ${i + 1} uploaded to Cloudinary: ${cloudinaryUrl.substring(0, 50)}...`);
-                    } catch (error: any) {
-                        console.error(`[WhatsApp] Failed to process image ${i + 1}:`, error.message);
-                        // Continue with other images
-                    }
-                }
-            }
-
-            // Update session in MongoDB with Cloudinary URLs (not Twilio URLs)
+            // Get existing image count for immediate response
             const existingImages = session.images || [];
-            const updatedImages = [...existingImages, ...newCloudinaryUrls];
-            await updateSession(sender, {
-                images: updatedImages,
-            });
-            console.log(`[WhatsApp] Total images in session: ${updatedImages.length} (all stored in Cloudinary)`);
-            console.log(`[WhatsApp] Session images before update: ${existingImages.length}, New images: ${newCloudinaryUrls.length}, Total after: ${updatedImages.length}`);
-
-            // Simple message: just tell them how many images and to type yes
-            const totalImages = updatedImages.length;
-            if (totalImages === 0) {
-                console.error(`[WhatsApp] ERROR: No images stored! Session had ${existingImages.length}, newCloudinaryUrls: ${newCloudinaryUrls.length}`);
-                const errorMessage = `⚠️ No images were saved. Please try sending the images again.`;
-                twiml.message(errorMessage);
-                const errorTwiML = twiml.toString();
-                console.log(`[WhatsApp] Error TwiML: ${errorTwiML}`);
-                return new NextResponse(errorTwiML, {
-                    status: 200,
-                    headers: { "Content-Type": "text/xml" },
-                });
-            }
+            const currentCount = existingImages.length;
             
+            // Return response IMMEDIATELY (don't wait for image processing)
+            // Process images in background using waitUntil
+            const totalImages = currentCount + numMedia;
             const message = `You have sent ${totalImages} image(s). Reply yes or done to proceed.`;
             twiml.message(message);
             const twimlResponse = twiml.toString();
-            console.log(`[WhatsApp] Response sent. Session ID: ${sender}, Images stored: ${totalImages} (all in Cloudinary)`);
+            console.log(`[WhatsApp] Sending immediate response. Current count: ${currentCount}, New images: ${numMedia}, Total: ${totalImages}`);
             console.log(`[WhatsApp] TwiML response: ${twimlResponse}`);
 
             const response = new NextResponse(twimlResponse, {
@@ -588,7 +554,47 @@ export async function POST(request: NextRequest) {
                 },
             });
             console.log(`[WhatsApp] Returning response with status ${response.status}`);
-            console.log(`[WhatsApp] Response headers:`, Object.fromEntries(response.headers.entries()));
+
+            // Process images in background (after response is sent)
+            const processingPromise = (async () => {
+                try {
+                    console.log(`[WhatsApp] Background: Processing ${numMedia} image(s)...`);
+                    const newCloudinaryUrls: string[] = [];
+                    
+                    for (let i = 0; i < numMedia; i++) {
+                        const twilioMediaUrl = formData.get(`MediaUrl${i}`)?.toString();
+                        if (twilioMediaUrl) {
+                            try {
+                                console.log(`[WhatsApp] Background: Processing image ${i + 1}/${numMedia}...`);
+                                // Download from Twilio and upload to Cloudinary
+                                const cloudinaryUrl = await downloadAndUploadToCloudinary(twilioMediaUrl);
+                                newCloudinaryUrls.push(cloudinaryUrl);
+                                console.log(`[WhatsApp] Background: Image ${i + 1} uploaded to Cloudinary: ${cloudinaryUrl.substring(0, 50)}...`);
+                            } catch (error: any) {
+                                console.error(`[WhatsApp] Background: Failed to process image ${i + 1}:`, error.message);
+                                // Continue with other images
+                            }
+                        }
+                    }
+
+                    // Update session in MongoDB with Cloudinary URLs
+                    if (newCloudinaryUrls.length > 0) {
+                        const updatedImages = [...existingImages, ...newCloudinaryUrls];
+                        await updateSession(sender, {
+                            images: updatedImages,
+                        });
+                        console.log(`[WhatsApp] Background: Updated session with ${updatedImages.length} total images (${newCloudinaryUrls.length} new)`);
+                    } else {
+                        console.error(`[WhatsApp] Background: No images were successfully uploaded!`);
+                    }
+                } catch (error: any) {
+                    console.error(`[WhatsApp] Background: Error processing images:`, error);
+                }
+            })();
+
+            // Use waitUntil to ensure background processing completes
+            (request as any).waitUntil(processingPromise);
+
             return response;
         }
 
