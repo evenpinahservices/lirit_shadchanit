@@ -324,10 +324,20 @@ export async function POST(request: NextRequest) {
             // Update timestamp
             session.timestamp = Date.now();
 
-            // Acknowledge receipt
-            const msg = twiml.message(
-                `📥 I received ${numMedia} image(s). Keep sending them if you have more.\n\nType *YES* or *DONE* when finished to generate the profile.`
+            const totalImages = session.images.length;
+
+            // Send immediate acknowledgment
+            const immediateMsg = twiml.message(
+                `📥 Received ${numMedia} image(s). Processing...`
             );
+
+            // Send total count message asynchronously (don't wait for it)
+            sendWhatsAppMessage(
+                sender,
+                `📸 You have sent ${totalImages} total image(s). Keep sending more if needed.\n\nType *YES* or *DONE* when finished to generate the profile.`
+            ).catch((error) => {
+                console.error("Error sending total count message:", error);
+            });
 
             return new NextResponse(twiml.toString(), {
                 status: 200,
@@ -338,8 +348,8 @@ export async function POST(request: NextRequest) {
         // Handle text messages
         const incomingMsg = body.trim().toLowerCase();
 
-        // Check if user is confirming upload
-        if ((incomingMsg === "yes" || incomingMsg === "done" || incomingMsg === "go") && uploadSessions.has(sender)) {
+        // Check if user is confirming upload (case-insensitive)
+        if ((incomingMsg === "yes" || incomingMsg === "done" || incomingMsg === "go" || incomingMsg === "y") && uploadSessions.has(sender)) {
             const session = uploadSessions.get(sender)!;
             const images = session.images;
             uploadSessions.delete(sender); // Clear session
@@ -352,11 +362,14 @@ export async function POST(request: NextRequest) {
                 });
             }
 
-            // Send processing message (async, don't wait)
-            sendWhatsAppMessage(sender, "🤖 Processing your profile... please wait.").catch(console.error);
+            // Send confirmation message
+            await sendWhatsAppMessage(
+                sender,
+                "✅ Received images. Processing resume now. I will send a message when this is done."
+            );
 
             try {
-                // Extract data from images
+                // Extract data from images (this may take a while)
                 const extractedData = await extractDataFromImages(images);
 
                 // Save to MongoDB
