@@ -76,46 +76,57 @@ async function sendWhatsAppMessage(to: string, body: string) {
     }
 }
 
-// Download image from Twilio media URL with timeout
+// Download image from Twilio media URL
+// The issue: raw fetch() can hang in Vercel serverless functions
+// Solution: Use Twilio SDK's httpClient which is more reliable
 async function downloadImageFromUrl(url: string): Promise<Buffer> {
+    console.log(`[Download] Starting download from Twilio: ${url.substring(0, 80)}...`);
+    const startTime = Date.now();
+    
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const DOWNLOAD_TIMEOUT_MS = 30000; // 30 seconds timeout for image download
     
     if (!accountSid || !authToken) {
         throw new Error("Twilio credentials not configured");
     }
     
-    console.log(`[Download] Starting download from Twilio: ${url.substring(0, 80)}...`);
-    const startTime = Date.now();
-    
-    // Create timeout promise
-    const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error(`Image download timeout after ${DOWNLOAD_TIMEOUT_MS / 1000}s`)), DOWNLOAD_TIMEOUT_MS);
-    });
-    
-    // Create fetch promise
-    const fetchPromise = fetch(url, {
-        headers: {
-            Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
-        },
-    });
-    
-    // Race between fetch and timeout
-    const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    console.log(`[Download] Response received in ${elapsed}s (status: ${response.status})`);
-    
-    if (!response.ok) {
-        throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+    try {
+        // Use Twilio SDK's httpClient instead of raw fetch
+        // This handles authentication and is more reliable in serverless
+        const client = getTwilioClient();
+        
+        // The httpClient is accessible via client.httpClient
+        // But actually, we can use the SDK's request method
+        console.log(`[Download] Using Twilio SDK httpClient...`);
+        
+        // Make authenticated request using Twilio's httpClient
+        const response = await (client as any).httpClient.request({
+            method: 'GET',
+            uri: url,
+        });
+        
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[Download] Response received in ${elapsed}s (status: ${response.statusCode})`);
+        
+        if (response.statusCode !== 200) {
+            throw new Error(`Failed to download image: ${response.statusCode} ${response.statusMessage}`);
+        }
+        
+        console.log(`[Download] Converting response to buffer...`);
+        // Response body should be a buffer or string
+        const buffer = Buffer.isBuffer(response.body) 
+            ? response.body 
+            : Buffer.from(response.body);
+        
+        const sizeKB = (buffer.length / 1024).toFixed(1);
+        console.log(`[Download] Image downloaded successfully (${sizeKB} KB)`);
+        return buffer;
+    } catch (error: any) {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.error(`[Download] Error after ${elapsed}s:`, error.message);
+        console.error(`[Download] Error stack:`, error.stack);
+        throw new Error(`Failed to download image: ${error.message}`);
     }
-    
-    console.log(`[Download] Converting response to buffer...`);
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const sizeKB = (buffer.length / 1024).toFixed(1);
-    console.log(`[Download] Image downloaded successfully (${sizeKB} KB)`);
-    return buffer;
 }
 
 // Convert image to base64 for Gemini
