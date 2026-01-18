@@ -592,8 +592,16 @@ export async function POST(request: NextRequest) {
                 }
             })();
 
-            // Use waitUntil to ensure background processing completes
-            (request as any).waitUntil(processingPromise);
+            // Use waitUntil if available (Vercel serverless functions support this)
+            // If not available, process in background anyway (will complete even if function terminates)
+            if (typeof (request as any).waitUntil === 'function') {
+                (request as any).waitUntil(processingPromise);
+            } else {
+                // If waitUntil not available, just start the promise (don't await)
+                processingPromise.catch((error) => {
+                    console.error('[WhatsApp] Background processing error:', error);
+                });
+            }
 
             return response;
         }
