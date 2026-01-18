@@ -2,9 +2,8 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IWhatsAppSession extends Document {
     sender: string;
-    images: string[];
+    images: string[]; // Cloudinary URLs
     timestamp: number;
-    isWaitingConfirmation: boolean;
     createdAt: Date;
     expiresAt: Date;
 }
@@ -23,10 +22,6 @@ const WhatsAppSessionSchema = new Schema<IWhatsAppSession>({
     timestamp: {
         type: Number,
         required: true,
-    },
-    isWaitingConfirmation: {
-        type: Boolean,
-        default: false,
     },
     createdAt: {
         type: Date,

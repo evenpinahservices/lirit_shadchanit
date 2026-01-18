@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
+import { v2 as cloudinary } from "cloudinary";
 import { createPendingClient } from "@/actions/pendingClient";
 import dbConnect from "@/lib/db";
 import WhatsAppSessionModel from "@/models/WhatsAppSession";
+
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // Session storage using MongoDB (persists across serverless invocations)
 async function getSession(sender: string) {
@@ -22,7 +30,7 @@ async function getSession(sender: string) {
     return session;
 }
 
-async function updateSession(sender: string, updates: Partial<{ images: string[]; timestamp: number; isWaitingConfirmation: boolean }>) {
+async function updateSession(sender: string, updates: Partial<{ images: string[]; timestamp: number }>) {
     await dbConnect();
     const session = await WhatsAppSessionModel.findOneAndUpdate(
         { sender },
@@ -76,11 +84,10 @@ async function sendWhatsAppMessage(to: string, body: string) {
     }
 }
 
-// Download image from Twilio media URL
-// The issue: raw fetch() can hang in Vercel serverless functions
-// Solution: Use Twilio SDK's httpClient which is more reliable
-async function downloadImageFromUrl(url: string): Promise<Buffer> {
-    console.log(`[Download] Starting download from Twilio: ${url.substring(0, 80)}...`);
+// Download image from Twilio media URL and upload to Cloudinary
+// Returns Cloudinary URL for permanent storage
+async function downloadAndUploadToCloudinary(twilioUrl: string): Promise<string> {
+    console.log(`[Cloudinary] Starting download from Twilio: ${twilioUrl.substring(0, 80)}...`);
     const startTime = Date.now();
     
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -91,41 +98,78 @@ async function downloadImageFromUrl(url: string): Promise<Buffer> {
     }
     
     try {
-        // Use Twilio SDK's httpClient instead of raw fetch
-        // This handles authentication and is more reliable in serverless
+        // Use Twilio SDK's httpClient to download
         const client = getTwilioClient();
+        console.log(`[Cloudinary] Downloading from Twilio using SDK...`);
         
-        // The httpClient is accessible via client.httpClient
-        // But actually, we can use the SDK's request method
-        console.log(`[Download] Using Twilio SDK httpClient...`);
-        
-        // Make authenticated request using Twilio's httpClient
         const response = await (client as any).httpClient.request({
             method: 'GET',
-            uri: url,
+            uri: twilioUrl,
         });
         
-        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`[Download] Response received in ${elapsed}s (status: ${response.statusCode})`);
+        const downloadElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[Cloudinary] Downloaded in ${downloadElapsed}s (status: ${response.statusCode})`);
         
         if (response.statusCode !== 200) {
-            throw new Error(`Failed to download image: ${response.statusCode} ${response.statusMessage}`);
+            throw new Error(`Failed to download image: ${response.statusCode}`);
         }
         
-        console.log(`[Download] Converting response to buffer...`);
-        // Response body should be a buffer or string
+        // Convert to buffer
         const buffer = Buffer.isBuffer(response.body) 
             ? response.body 
             : Buffer.from(response.body);
         
         const sizeKB = (buffer.length / 1024).toFixed(1);
-        console.log(`[Download] Image downloaded successfully (${sizeKB} KB)`);
+        console.log(`[Cloudinary] Image downloaded (${sizeKB} KB), uploading to Cloudinary...`);
+        
+        // Convert to base64 for Cloudinary
+        const base64Data = `data:image/jpeg;base64,${buffer.toString("base64")}`;
+        
+        // Upload to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(base64Data, {
+            folder: "whatsapp_resumes",
+            resource_type: "image",
+            timeout: 120000,
+        });
+        
+        const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[Cloudinary] Uploaded to Cloudinary in ${totalElapsed}s: ${uploadResult.secure_url}`);
+        
+        if (!uploadResult?.secure_url) {
+            throw new Error("Cloudinary upload succeeded but no URL returned");
+        }
+        
+        return uploadResult.secure_url;
+    } catch (error: any) {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.error(`[Cloudinary] Error after ${elapsed}s:`, error.message);
+        throw new Error(`Failed to download and upload image: ${error.message}`);
+    }
+}
+
+// Download image from Cloudinary URL (public URLs, simple fetch)
+async function downloadImageFromCloudinary(url: string): Promise<Buffer> {
+    console.log(`[Download] Downloading from Cloudinary: ${url.substring(0, 80)}...`);
+    const startTime = Date.now();
+    
+    try {
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to download from Cloudinary: ${response.status} ${response.statusText}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        const sizeKB = (buffer.length / 1024).toFixed(1);
+        
+        console.log(`[Download] Downloaded from Cloudinary in ${elapsed}s (${sizeKB} KB)`);
         return buffer;
     } catch (error: any) {
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         console.error(`[Download] Error after ${elapsed}s:`, error.message);
-        console.error(`[Download] Error stack:`, error.stack);
-        throw new Error(`Failed to download image: ${error.message}`);
+        throw new Error(`Failed to download from Cloudinary: ${error.message}`);
     }
 }
 
@@ -208,21 +252,22 @@ async function extractDataFromImages(imageUrls: string[]): Promise<any> {
         throw new Error("GEMINI_API_KEY not configured");
     }
 
-    // Download and convert images
+    // Download images from Cloudinary and convert for Gemini
+    // Note: imageUrls now contain Cloudinary URLs (public, reliable)
     const imageParts: Array<{ mimeType: string; data: string }> = [];
-    console.log(`[Gemini] Downloading ${imageUrls.length} image(s)...`);
+    console.log(`[Gemini] Processing ${imageUrls.length} image(s) from Cloudinary...`);
     
     for (let i = 0; i < imageUrls.length; i++) {
-        const url = imageUrls[i];
+        const cloudinaryUrl = imageUrls[i];
         try {
-            console.log(`[Gemini] Downloading image ${i + 1}/${imageUrls.length}...`);
-            const imageBuffer = await downloadImageFromUrl(url);
+            console.log(`[Gemini] Downloading image ${i + 1}/${imageUrls.length} from Cloudinary...`);
+            const imageBuffer = await downloadImageFromCloudinary(cloudinaryUrl);
             console.log(`[Gemini] Image ${i + 1} downloaded, converting to base64...`);
             const base64Image = await imageToBase64(imageBuffer);
             imageParts.push(base64Image);
             console.log(`[Gemini] Image ${i + 1} converted successfully`);
-        } catch (error) {
-            console.error(`[Gemini] Failed to download image ${i + 1} from ${url}:`, error);
+        } catch (error: any) {
+            console.error(`[Gemini] Failed to download image ${i + 1} from ${cloudinaryUrl}:`, error.message);
             // Continue with other images
         }
     }
@@ -401,38 +446,37 @@ export async function POST(request: NextRequest) {
             const isNewSession = previousCount === 0;
             console.log(`[WhatsApp] Previous image count: ${previousCount}`);
 
-            // Extract and store image URLs
-            const newImageUrls: string[] = [];
+            // Download images from Twilio and upload to Cloudinary immediately
+            const newCloudinaryUrls: string[] = [];
             for (let i = 0; i < numMedia; i++) {
-                const mediaUrl = formData.get(`MediaUrl${i}`)?.toString();
-                if (mediaUrl) {
-                    newImageUrls.push(mediaUrl);
-                    console.log(`[WhatsApp] Stored image URL ${i + 1}: ${mediaUrl.substring(0, 50)}...`);
+                const twilioMediaUrl = formData.get(`MediaUrl${i}`)?.toString();
+                if (twilioMediaUrl) {
+                    try {
+                        console.log(`[WhatsApp] Processing image ${i + 1}/${numMedia}...`);
+                        // Download from Twilio and upload to Cloudinary
+                        const cloudinaryUrl = await downloadAndUploadToCloudinary(twilioMediaUrl);
+                        newCloudinaryUrls.push(cloudinaryUrl);
+                        console.log(`[WhatsApp] Image ${i + 1} uploaded to Cloudinary: ${cloudinaryUrl.substring(0, 50)}...`);
+                    } catch (error: any) {
+                        console.error(`[WhatsApp] Failed to process image ${i + 1}:`, error.message);
+                        // Continue with other images
+                    }
                 }
             }
 
-            // Update session in MongoDB with new images
-            const updatedImages = [...session.images, ...newImageUrls];
+            // Update session in MongoDB with Cloudinary URLs (not Twilio URLs)
+            const updatedImages = [...session.images, ...newCloudinaryUrls];
             await updateSession(sender, {
                 images: updatedImages,
-                isWaitingConfirmation: false,
             });
-            console.log(`[WhatsApp] Total images in session: ${updatedImages.length}`);
+            console.log(`[WhatsApp] Total images in session: ${updatedImages.length} (all stored in Cloudinary)`);
 
-            const totalImages = session.images.length;
-
-            // Different message for first batch vs additional batches
-            let message: string;
-            if (isNewSession || previousCount === 0) {
-                // First batch of images - removed "Hi!" to avoid duplicate messages
-                message = `Thank you for uploading these images. Keep sending if you have more. Type 'yes' or 'done' when finished to generate the profile. Also, write 'cancel' at any time to exit this process.`;
-            } else {
-                // Additional batch
-                message = `I received another ${numMedia} image(s). Keep sending if you have more.`;
-            }
-
+            // Simple message: just tell them how many images and to type yes
+            const totalImages = updatedImages.length;
+            const message = `You have sent ${totalImages} image(s). Click Enter to reply yes to proceed.`;
+            
             const immediateMsg = twiml.message(message);
-            console.log(`[WhatsApp] Response sent. Session ID: ${sender}, Images stored: ${session.images.length}`);
+            console.log(`[WhatsApp] Response sent. Session ID: ${sender}, Images stored: ${totalImages} (all in Cloudinary)`);
 
             return new NextResponse(twiml.toString(), {
                 status: 200,
@@ -445,27 +489,8 @@ export async function POST(request: NextRequest) {
         console.log(`[WhatsApp] Processing text message: "${incomingMsg}"`);
         console.log(`[WhatsApp] Sender: ${sender}`);
 
-        // Handle cancel command
-        if (incomingMsg === "cancel") {
-            const hasActiveSession = await hasSession(sender);
-            if (hasActiveSession) {
-                await deleteSession(sender);
-                const msg = twiml.message("❌ Process cancelled. You can start over by sending images again.");
-                return new NextResponse(twiml.toString(), {
-                    status: 200,
-                    headers: { "Content-Type": "text/xml" },
-                });
-            } else {
-                const msg = twiml.message("No active session to cancel. Send images to start.");
-                return new NextResponse(twiml.toString(), {
-                    status: 200,
-                    headers: { "Content-Type": "text/xml" },
-                });
-            }
-        }
-
-        // Check if user is confirming upload (case-insensitive)
-        if (incomingMsg === "yes" || incomingMsg === "done" || incomingMsg === "go" || incomingMsg === "y" || incomingMsg === "no" || incomingMsg === "n") {
+        // Check if user is confirming (case-insensitive: yes, y, done, go)
+        if (incomingMsg === "yes" || incomingMsg === "done" || incomingMsg === "go" || incomingMsg === "y") {
             console.log(`[WhatsApp] User sent command: "${incomingMsg}"`);
             
             const hasActiveSession = await hasSession(sender);
@@ -473,7 +498,7 @@ export async function POST(request: NextRequest) {
             
             if (!hasActiveSession) {
                 console.log(`[WhatsApp] No session found for ${sender}`);
-                const msg = twiml.message("⚠️ No images found. Please send images first, then type 'yes' or 'done'.");
+                const msg = twiml.message("⚠️ No images found. Please send images first, then type 'yes' to proceed.");
                 return new NextResponse(twiml.toString(), {
                     status: 200,
                     headers: { "Content-Type": "text/xml" },
@@ -493,31 +518,7 @@ export async function POST(request: NextRequest) {
                 });
             }
 
-            // If waiting for confirmation and user says "no", allow them to continue
-            if (session.isWaitingConfirmation && (incomingMsg === "no" || incomingMsg === "n")) {
-                console.log(`[WhatsApp] User said 'no' to confirmation, allowing more uploads`);
-                await updateSession(sender, { isWaitingConfirmation: false });
-                const msg = twiml.message("Continue uploading images, and then press Yes or Done to proceed, or 'cancel' to exit.");
-                return new NextResponse(twiml.toString(), {
-                    status: 200,
-                    headers: { "Content-Type": "text/xml" },
-                });
-            }
-
-            // If not waiting for confirmation, ask for confirmation first
-            if (!session.isWaitingConfirmation) {
-                console.log(`[WhatsApp] Asking for confirmation. Images: ${images.length}`);
-                await updateSession(sender, { isWaitingConfirmation: true });
-                const msg = twiml.message(
-                    `You have sent ${images.length} image(s). Would you like to proceed with processing? Reply 'yes' to continue or 'no' to upload more images.`
-                );
-                return new NextResponse(twiml.toString(), {
-                    status: 200,
-                    headers: { "Content-Type": "text/xml" },
-                });
-            }
-
-            // User confirmed, proceed with processing
+            // User confirmed, proceed with processing immediately (no confirmation step)
             console.log(`[WhatsApp] User confirmed processing. Starting with ${images.length} images`);
             await deleteSession(sender); // Clear session from MongoDB
 
