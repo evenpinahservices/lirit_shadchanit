@@ -306,40 +306,47 @@ export async function POST(request: NextRequest) {
 
         // Handle images
         if (numMedia > 0) {
+            console.log(`[WhatsApp] Received ${numMedia} image(s) from ${sender}`);
+            
             // Initialize session if not exists
             const isNewSession = !uploadSessions.has(sender);
             if (isNewSession) {
+                console.log(`[WhatsApp] Creating new session for ${sender}`);
                 uploadSessions.set(sender, { images: [], timestamp: Date.now(), isWaitingConfirmation: false });
             }
 
             const session = uploadSessions.get(sender)!;
             const previousCount = session.images.length;
+            console.log(`[WhatsApp] Previous image count: ${previousCount}`);
 
             // Extract and store image URLs
             for (let i = 0; i < numMedia; i++) {
                 const mediaUrl = formData.get(`MediaUrl${i}`)?.toString();
                 if (mediaUrl) {
                     session.images.push(mediaUrl);
+                    console.log(`[WhatsApp] Stored image URL ${i + 1}: ${mediaUrl.substring(0, 50)}...`);
                 }
             }
 
             // Update timestamp and reset confirmation flag
             session.timestamp = Date.now();
             session.isWaitingConfirmation = false;
+            console.log(`[WhatsApp] Total images in session: ${session.images.length}`);
 
             const totalImages = session.images.length;
 
             // Different message for first batch vs additional batches
             let message: string;
             if (isNewSession || previousCount === 0) {
-                // First batch of images
-                message = `Hi! Thank you for uploading these images. Keep sending if you have more. Type 'yes' or 'done' when finished to generate the profile. Also, write 'cancel' at any time to exit this process.`;
+                // First batch of images - removed "Hi!" to avoid duplicate messages
+                message = `Thank you for uploading these images. Keep sending if you have more. Type 'yes' or 'done' when finished to generate the profile. Also, write 'cancel' at any time to exit this process.`;
             } else {
                 // Additional batch
                 message = `I received another ${numMedia} image(s). Keep sending if you have more.`;
             }
 
             const immediateMsg = twiml.message(message);
+            console.log(`[WhatsApp] Response sent. Session ID: ${sender}, Images stored: ${session.images.length}`);
 
             return new NextResponse(twiml.toString(), {
                 status: 200,
@@ -349,23 +356,61 @@ export async function POST(request: NextRequest) {
 
         // Handle text messages
         const incomingMsg = body.trim().toLowerCase();
+        console.log(`[WhatsApp] Processing text message: "${incomingMsg}"`);
+        console.log(`[WhatsApp] Sender: ${sender}`);
+        console.log(`[WhatsApp] All active sessions:`, Array.from(uploadSessions.keys()));
+        console.log(`[WhatsApp] Session exists for ${sender}:`, uploadSessions.has(sender));
+        
+        // Debug: Check if sender format matches any existing session
+        if (!uploadSessions.has(sender)) {
+            console.log(`[WhatsApp] No exact match. Checking for similar senders...`);
+            for (const [key, value] of uploadSessions.entries()) {
+                if (key.includes(sender.split('@')[0]) || sender.includes(key.split('@')[0])) {
+                    console.log(`[WhatsApp] Found similar session: ${key} (images: ${value.images.length})`);
+                }
+            }
+        }
 
         // Handle cancel command
-        if (incomingMsg === "cancel" && uploadSessions.has(sender)) {
-            uploadSessions.delete(sender);
-            const msg = twiml.message("❌ Process cancelled. You can start over by sending images again.");
-            return new NextResponse(twiml.toString(), {
-                status: 200,
-                headers: { "Content-Type": "text/xml" },
-            });
+        if (incomingMsg === "cancel") {
+            if (uploadSessions.has(sender)) {
+                uploadSessions.delete(sender);
+                const msg = twiml.message("❌ Process cancelled. You can start over by sending images again.");
+                return new NextResponse(twiml.toString(), {
+                    status: 200,
+                    headers: { "Content-Type": "text/xml" },
+                });
+            } else {
+                const msg = twiml.message("No active session to cancel. Send images to start.");
+                return new NextResponse(twiml.toString(), {
+                    status: 200,
+                    headers: { "Content-Type": "text/xml" },
+                });
+            }
         }
 
         // Check if user is confirming upload (case-insensitive)
-        if ((incomingMsg === "yes" || incomingMsg === "done" || incomingMsg === "go" || incomingMsg === "y" || incomingMsg === "no" || incomingMsg === "n") && uploadSessions.has(sender)) {
+        // Remove the session check from the condition - we'll handle it inside
+        if (incomingMsg === "yes" || incomingMsg === "done" || incomingMsg === "go" || incomingMsg === "y" || incomingMsg === "no" || incomingMsg === "n") {
+            console.log(`[WhatsApp] User sent command: "${incomingMsg}"`);
+            console.log(`[WhatsApp] Has session: ${uploadSessions.has(sender)}`);
+            
+            if (!uploadSessions.has(sender)) {
+                console.log(`[WhatsApp] No session found for ${sender}`);
+                console.log(`[WhatsApp] This might be a serverless cold start issue. Asking user to resend images.`);
+                const msg = twiml.message("⚠️ No images found in session. This can happen if there was a delay. Please send your images again, then type 'yes' or 'done'.");
+                return new NextResponse(twiml.toString(), {
+                    status: 200,
+                    headers: { "Content-Type": "text/xml" },
+                });
+            }
+
             const session = uploadSessions.get(sender)!;
             const images = session.images;
+            console.log(`[WhatsApp] Session found. Image count: ${images.length}`);
 
             if (images.length === 0) {
+                console.log(`[WhatsApp] Session exists but no images stored`);
                 const msg = twiml.message("⚠️ No images found to process.");
                 return new NextResponse(twiml.toString(), {
                     status: 200,
@@ -375,6 +420,7 @@ export async function POST(request: NextRequest) {
 
             // If waiting for confirmation and user says "no", allow them to continue
             if (session.isWaitingConfirmation && (incomingMsg === "no" || incomingMsg === "n")) {
+                console.log(`[WhatsApp] User said 'no' to confirmation, allowing more uploads`);
                 session.isWaitingConfirmation = false;
                 const msg = twiml.message("Continue uploading images, and then press Yes or Done to proceed, or 'cancel' to exit.");
                 return new NextResponse(twiml.toString(), {
@@ -385,6 +431,7 @@ export async function POST(request: NextRequest) {
 
             // If not waiting for confirmation, ask for confirmation first
             if (!session.isWaitingConfirmation) {
+                console.log(`[WhatsApp] Asking for confirmation. Images: ${images.length}`);
                 session.isWaitingConfirmation = true;
                 const msg = twiml.message(
                     `You have sent ${images.length} image(s). Would you like to proceed with processing? Reply 'yes' to continue or 'no' to upload more images.`
@@ -394,6 +441,9 @@ export async function POST(request: NextRequest) {
                     headers: { "Content-Type": "text/xml" },
                 });
             }
+
+            // User confirmed, proceed with processing
+            console.log(`[WhatsApp] User confirmed processing. Starting with ${images.length} images`);
 
             // User confirmed, proceed with processing
             uploadSessions.delete(sender); // Clear session
