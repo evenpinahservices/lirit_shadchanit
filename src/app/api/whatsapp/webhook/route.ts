@@ -183,35 +183,28 @@ async function downloadAndUploadToCloudinary(twilioUrl: string): Promise<string>
         // Convert to buffer
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-            
-            const sizeKB = (buffer.length / 1024).toFixed(1);
-            console.log(`[Cloudinary] Image downloaded (${sizeKB} KB), uploading to Cloudinary...`);
-            
-            // Convert to base64 for Cloudinary
-            const base64Data = `data:image/jpeg;base64,${buffer.toString("base64")}`;
-            
-            // Upload to Cloudinary
-            const uploadResult = await cloudinary.uploader.upload(base64Data, {
-                folder: "whatsapp_resumes",
-                resource_type: "image",
-                timeout: 120000,
-            });
-            
-            const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-            console.log(`[Cloudinary] Uploaded to Cloudinary in ${totalElapsed}s: ${uploadResult.secure_url}`);
-            
-            if (!uploadResult?.secure_url) {
-                throw new Error("Cloudinary upload succeeded but no URL returned");
-            }
-            
-            return uploadResult.secure_url;
-        } catch (error: any) {
-            clearTimeout(timeoutId);
-            if (error.name === 'AbortError') {
-                throw new Error('Download timeout after 10 seconds');
-            }
-            throw error;
+        
+        const sizeKB = (buffer.length / 1024).toFixed(1);
+        console.log(`[Cloudinary] Image downloaded (${sizeKB} KB), uploading to Cloudinary...`);
+        
+        // Convert to base64 for Cloudinary
+        const base64Data = `data:image/jpeg;base64,${buffer.toString("base64")}`;
+        
+        // Upload to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(base64Data, {
+            folder: "whatsapp_resumes",
+            resource_type: "image",
+            timeout: 120000,
+        });
+        
+        const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[Cloudinary] Uploaded to Cloudinary in ${totalElapsed}s: ${uploadResult.secure_url}`);
+        
+        if (!uploadResult?.secure_url) {
+            throw new Error("Cloudinary upload succeeded but no URL returned");
         }
+        
+        return uploadResult.secure_url;
     } catch (error: any) {
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         console.error(`[Cloudinary] Error after ${elapsed}s:`, error.message);
@@ -541,12 +534,15 @@ export async function POST(request: NextRequest) {
             console.log(`[WhatsApp] Session images array:`, session.images);
 
             // Get existing image count for immediate response
+            // For now, we accumulate images (user can send multiple batches)
+            // TODO: Consider replacing instead of accumulating if user wants fresh start
             const existingImages = session.images || [];
             const currentCount = existingImages.length;
             
             // Return response IMMEDIATELY (don't wait for image processing)
             // Process images in background using waitUntil
             const totalImages = currentCount + numMedia;
+            console.log(`[WhatsApp] Session will have ${totalImages} total images (${currentCount} existing + ${numMedia} new)`);
             const message = `You have sent ${totalImages} image(s). Reply yes or done to proceed.`;
             twiml.message(message);
             const twimlResponse = twiml.toString();
