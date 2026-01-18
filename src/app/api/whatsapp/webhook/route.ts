@@ -1,20 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
 import { createPendingClient } from "@/actions/pendingClient";
+import dbConnect from "@/lib/db";
+import WhatsAppSessionModel from "@/models/WhatsAppSession";
 
-// Session storage for image uploads (in-memory, resets on cold start)
-// In production, consider using Vercel KV or Redis for persistence
-const uploadSessions = new Map<string, { images: string[]; timestamp: number; isWaitingConfirmation: boolean }>();
-
-// Clean up old sessions (older than 1 hour)
-setInterval(() => {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
-    for (const [sender, session] of uploadSessions.entries()) {
-        if (session.timestamp < oneHourAgo) {
-            uploadSessions.delete(sender);
-        }
+// Session storage using MongoDB (persists across serverless invocations)
+async function getSession(sender: string) {
+    await dbConnect();
+    let session = await WhatsAppSessionModel.findOne({ sender });
+    
+    if (!session) {
+        session = await WhatsAppSessionModel.create({
+            sender,
+            images: [],
+            timestamp: Date.now(),
+            isWaitingConfirmation: false,
+        });
+        console.log(`[Session] Created new MongoDB session for ${sender}`);
     }
-}, 5 * 60 * 1000); // Run every 5 minutes
+    
+    return session;
+}
+
+async function updateSession(sender: string, updates: Partial<{ images: string[]; timestamp: number; isWaitingConfirmation: boolean }>) {
+    await dbConnect();
+    const session = await WhatsAppSessionModel.findOneAndUpdate(
+        { sender },
+        { ...updates, timestamp: Date.now() },
+        { new: true, upsert: true }
+    );
+    return session;
+}
+
+async function deleteSession(sender: string) {
+    await dbConnect();
+    await WhatsAppSessionModel.deleteOne({ sender });
+    console.log(`[Session] Deleted MongoDB session for ${sender}`);
+}
+
+async function hasSession(sender: string): Promise<boolean> {
+    await dbConnect();
+    const session = await WhatsAppSessionModel.findOne({ sender });
+    return !!session;
+}
 
 // Twilio client initialization
 function getTwilioClient() {
@@ -48,28 +76,46 @@ async function sendWhatsAppMessage(to: string, body: string) {
     }
 }
 
-// Download image from Twilio media URL
+// Download image from Twilio media URL with timeout
 async function downloadImageFromUrl(url: string): Promise<Buffer> {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const DOWNLOAD_TIMEOUT_MS = 30000; // 30 seconds timeout for image download
     
     if (!accountSid || !authToken) {
         throw new Error("Twilio credentials not configured");
     }
     
-    // Twilio media URLs require authentication
-    const response = await fetch(url, {
+    console.log(`[Download] Starting download from Twilio: ${url.substring(0, 80)}...`);
+    const startTime = Date.now();
+    
+    // Create timeout promise
+    const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`Image download timeout after ${DOWNLOAD_TIMEOUT_MS / 1000}s`)), DOWNLOAD_TIMEOUT_MS);
+    });
+    
+    // Create fetch promise
+    const fetchPromise = fetch(url, {
         headers: {
             Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
         },
     });
     
+    // Race between fetch and timeout
+    const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`[Download] Response received in ${elapsed}s (status: ${response.status})`);
+    
     if (!response.ok) {
-        throw new Error(`Failed to download image: ${response.statusText}`);
+        throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
     }
     
+    console.log(`[Download] Converting response to buffer...`);
     const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(arrayBuffer);
+    const sizeKB = (buffer.length / 1024).toFixed(1);
+    console.log(`[Download] Image downloaded successfully (${sizeKB} KB)`);
+    return buffer;
 }
 
 // Convert image to base64 for Gemini
@@ -338,30 +384,29 @@ export async function POST(request: NextRequest) {
         if (numMedia > 0) {
             console.log(`[WhatsApp] Received ${numMedia} image(s) from ${sender}`);
             
-            // Initialize session if not exists
-            const isNewSession = !uploadSessions.has(sender);
-            if (isNewSession) {
-                console.log(`[WhatsApp] Creating new session for ${sender}`);
-                uploadSessions.set(sender, { images: [], timestamp: Date.now(), isWaitingConfirmation: false });
-            }
-
-            const session = uploadSessions.get(sender)!;
+            // Get or create session from MongoDB
+            const session = await getSession(sender);
             const previousCount = session.images.length;
+            const isNewSession = previousCount === 0;
             console.log(`[WhatsApp] Previous image count: ${previousCount}`);
 
             // Extract and store image URLs
+            const newImageUrls: string[] = [];
             for (let i = 0; i < numMedia; i++) {
                 const mediaUrl = formData.get(`MediaUrl${i}`)?.toString();
                 if (mediaUrl) {
-                    session.images.push(mediaUrl);
+                    newImageUrls.push(mediaUrl);
                     console.log(`[WhatsApp] Stored image URL ${i + 1}: ${mediaUrl.substring(0, 50)}...`);
                 }
             }
 
-            // Update timestamp and reset confirmation flag
-            session.timestamp = Date.now();
-            session.isWaitingConfirmation = false;
-            console.log(`[WhatsApp] Total images in session: ${session.images.length}`);
+            // Update session in MongoDB with new images
+            const updatedImages = [...session.images, ...newImageUrls];
+            await updateSession(sender, {
+                images: updatedImages,
+                isWaitingConfirmation: false,
+            });
+            console.log(`[WhatsApp] Total images in session: ${updatedImages.length}`);
 
             const totalImages = session.images.length;
 
@@ -388,23 +433,12 @@ export async function POST(request: NextRequest) {
         const incomingMsg = body.trim().toLowerCase();
         console.log(`[WhatsApp] Processing text message: "${incomingMsg}"`);
         console.log(`[WhatsApp] Sender: ${sender}`);
-        console.log(`[WhatsApp] All active sessions:`, Array.from(uploadSessions.keys()));
-        console.log(`[WhatsApp] Session exists for ${sender}:`, uploadSessions.has(sender));
-        
-        // Debug: Check if sender format matches any existing session
-        if (!uploadSessions.has(sender)) {
-            console.log(`[WhatsApp] No exact match. Checking for similar senders...`);
-            for (const [key, value] of uploadSessions.entries()) {
-                if (key.includes(sender.split('@')[0]) || sender.includes(key.split('@')[0])) {
-                    console.log(`[WhatsApp] Found similar session: ${key} (images: ${value.images.length})`);
-                }
-            }
-        }
 
         // Handle cancel command
         if (incomingMsg === "cancel") {
-            if (uploadSessions.has(sender)) {
-                uploadSessions.delete(sender);
+            const hasActiveSession = await hasSession(sender);
+            if (hasActiveSession) {
+                await deleteSession(sender);
                 const msg = twiml.message("❌ Process cancelled. You can start over by sending images again.");
                 return new NextResponse(twiml.toString(), {
                     status: 200,
@@ -420,22 +454,22 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if user is confirming upload (case-insensitive)
-        // Remove the session check from the condition - we'll handle it inside
         if (incomingMsg === "yes" || incomingMsg === "done" || incomingMsg === "go" || incomingMsg === "y" || incomingMsg === "no" || incomingMsg === "n") {
             console.log(`[WhatsApp] User sent command: "${incomingMsg}"`);
-            console.log(`[WhatsApp] Has session: ${uploadSessions.has(sender)}`);
             
-            if (!uploadSessions.has(sender)) {
+            const hasActiveSession = await hasSession(sender);
+            console.log(`[WhatsApp] Has session: ${hasActiveSession}`);
+            
+            if (!hasActiveSession) {
                 console.log(`[WhatsApp] No session found for ${sender}`);
-                console.log(`[WhatsApp] This might be a serverless cold start issue. Asking user to resend images.`);
-                const msg = twiml.message("⚠️ No images found in session. This can happen if there was a delay. Please send your images again, then type 'yes' or 'done'.");
+                const msg = twiml.message("⚠️ No images found. Please send images first, then type 'yes' or 'done'.");
                 return new NextResponse(twiml.toString(), {
                     status: 200,
                     headers: { "Content-Type": "text/xml" },
                 });
             }
 
-            const session = uploadSessions.get(sender)!;
+            const session = await getSession(sender);
             const images = session.images;
             console.log(`[WhatsApp] Session found. Image count: ${images.length}`);
 
@@ -451,7 +485,7 @@ export async function POST(request: NextRequest) {
             // If waiting for confirmation and user says "no", allow them to continue
             if (session.isWaitingConfirmation && (incomingMsg === "no" || incomingMsg === "n")) {
                 console.log(`[WhatsApp] User said 'no' to confirmation, allowing more uploads`);
-                session.isWaitingConfirmation = false;
+                await updateSession(sender, { isWaitingConfirmation: false });
                 const msg = twiml.message("Continue uploading images, and then press Yes or Done to proceed, or 'cancel' to exit.");
                 return new NextResponse(twiml.toString(), {
                     status: 200,
@@ -462,7 +496,7 @@ export async function POST(request: NextRequest) {
             // If not waiting for confirmation, ask for confirmation first
             if (!session.isWaitingConfirmation) {
                 console.log(`[WhatsApp] Asking for confirmation. Images: ${images.length}`);
-                session.isWaitingConfirmation = true;
+                await updateSession(sender, { isWaitingConfirmation: true });
                 const msg = twiml.message(
                     `You have sent ${images.length} image(s). Would you like to proceed with processing? Reply 'yes' to continue or 'no' to upload more images.`
                 );
@@ -474,9 +508,7 @@ export async function POST(request: NextRequest) {
 
             // User confirmed, proceed with processing
             console.log(`[WhatsApp] User confirmed processing. Starting with ${images.length} images`);
-
-            // User confirmed, proceed with processing
-            uploadSessions.delete(sender); // Clear session
+            await deleteSession(sender); // Clear session from MongoDB
 
             // Send confirmation message immediately (responds right away)
             const confirmationMsg = twiml.message(
