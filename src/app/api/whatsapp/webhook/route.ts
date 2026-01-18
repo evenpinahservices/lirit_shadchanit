@@ -403,20 +403,35 @@ export async function POST(request: NextRequest) {
                 "✅ Received images. Processing resume now. I will send a message when this is done."
             );
 
+            // Send confirmation message immediately (responds right away)
+            const confirmationMsg = twiml.message(
+                "✅ Received images. Processing resume now. I will send a message when this is done."
+            );
+
             // Return confirmation immediately (don't wait for processing)
             const response = new NextResponse(twiml.toString(), {
                 status: 200,
                 headers: { "Content-Type": "text/xml" },
             });
 
-            // Process images in background (don't block the response)
-            // This runs after the response is sent
-            (async () => {
+            // Process images in background using waitUntil to keep function alive
+            // This ensures Vercel doesn't kill the function before processing completes
+            const processingPromise = (async () => {
                 try {
+                    console.log(`\n[WhatsApp] ===== STARTING PROCESSING =====`);
+                    console.log(`[WhatsApp] Sender: ${sender}`);
+                    console.log(`[WhatsApp] Image count: ${images.length}`);
+                    console.log(`[WhatsApp] Image URLs:`, images);
+                    
                     // Extract data from images (this may take a while)
+                    console.log(`[WhatsApp] Step 1/3: Calling Gemini API to extract data...`);
                     const extractedData = await extractDataFromImages(images);
+                    console.log(`[WhatsApp] Step 1/3: ✅ Data extraction complete`);
+                    console.log(`[WhatsApp] Extracted fields:`, Object.keys(extractedData));
+                    console.log(`[WhatsApp] Extracted name:`, extractedData.fullName || "Unknown");
 
                     // Save to MongoDB
+                    console.log(`[WhatsApp] Step 2/3: Saving to MongoDB...`);
                     const pendingClient = await createPendingClient({
                         ...extractedData,
                         submittedAt: new Date().toISOString(),
@@ -427,6 +442,8 @@ export async function POST(request: NextRequest) {
                         active: true,
                         createdAt: new Date().toISOString().split("T")[0],
                     });
+                    console.log(`[WhatsApp] Step 2/3: ✅ Saved to MongoDB`);
+                    console.log(`[WhatsApp] Pending client ID: ${pendingClient.id}`);
 
                     // Generate edit link
                     const webAppUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.WEB_APP_URL || "http://localhost:3000";
@@ -436,19 +453,41 @@ export async function POST(request: NextRequest) {
                     const name = extractedData.fullName || "Unknown";
 
                     // Send success message
+                    console.log(`[WhatsApp] Step 3/3: Sending success message to ${sender}...`);
                     await sendWhatsAppMessage(
                         sender,
                         `✅ *Profile Drafted!*\n\nName: ${name}\n\nReview and Publish here: ${editLink}`
                     );
+                    console.log(`[WhatsApp] Step 3/3: ✅ Success message sent`);
+                    console.log(`[WhatsApp] ===== PROCESSING COMPLETE =====\n`);
                 } catch (error: any) {
-                    console.error("Error processing images:", error);
+                    console.error(`\n[WhatsApp] ===== PROCESSING ERROR =====`);
+                    console.error(`[WhatsApp] Sender: ${sender}`);
+                    console.error(`[WhatsApp] Error:`, error);
+                    console.error(`[WhatsApp] Error message:`, error.message);
+                    console.error(`[WhatsApp] Error stack:`, error.stack);
                     const errorMsg = error.message || "Unknown error";
-                    await sendWhatsAppMessage(
-                        sender,
-                        `❌ Error processing images: ${errorMsg}\n\nPlease try again or contact support.`
-                    );
+                    try {
+                        await sendWhatsAppMessage(
+                            sender,
+                            `❌ Error processing images: ${errorMsg}\n\nPlease try again or contact support.`
+                        );
+                        console.error(`[WhatsApp] Error message sent to user`);
+                    } catch (sendError) {
+                        console.error(`[WhatsApp] Failed to send error message:`, sendError);
+                    }
+                    console.error(`[WhatsApp] ===== ERROR HANDLED =====\n`);
                 }
             })();
+
+            // Use waitUntil to keep the function alive during processing
+            // This is a Vercel/Next.js feature that ensures background tasks complete
+            if (typeof (request as any).waitUntil === 'function') {
+                (request as any).waitUntil(processingPromise);
+            } else {
+                // Fallback: just start the promise (may not complete in serverless)
+                processingPromise.catch(console.error);
+            }
 
             return response;
         }
