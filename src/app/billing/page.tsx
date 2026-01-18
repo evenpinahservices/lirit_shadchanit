@@ -224,6 +224,7 @@ export default function BillingPage() {
                                 <span className="font-semibold">Total Estimated Cost</span>
                                 <span className="text-2xl font-bold">${estimateData.estimatedCostPerProfile.totalCost}</span>
                             </div>
+                        </div>
                         <p className="text-xs text-gray-500 mt-4">{estimateData.note}</p>
                     </div>
                 </div>
