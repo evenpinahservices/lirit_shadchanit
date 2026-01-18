@@ -582,9 +582,13 @@ export async function POST(request: NextRequest) {
 
             const response = new NextResponse(twimlResponse, {
                 status: 200,
-                headers: { "Content-Type": "text/xml" },
+                headers: { 
+                    "Content-Type": "text/xml; charset=utf-8",
+                    "Cache-Control": "no-cache",
+                },
             });
             console.log(`[WhatsApp] Returning response with status ${response.status}`);
+            console.log(`[WhatsApp] Response headers:`, Object.fromEntries(response.headers.entries()));
             return response;
         }
 
