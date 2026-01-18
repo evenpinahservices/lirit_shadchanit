@@ -574,10 +574,12 @@ export async function POST(request: NextRequest) {
             
             const message = `You have sent ${totalImages} image(s). Reply yes or done to proceed.`;
             
-            const immediateMsg = twiml.message(message);
+            twiml.message(message);
+            const twimlResponse = twiml.toString();
             console.log(`[WhatsApp] Response sent. Session ID: ${sender}, Images stored: ${totalImages} (all in Cloudinary)`);
+            console.log(`[WhatsApp] TwiML response: ${twimlResponse}`);
 
-            return new NextResponse(twiml.toString(), {
+            return new NextResponse(twimlResponse, {
                 status: 200,
                 headers: { "Content-Type": "text/xml" },
             });
