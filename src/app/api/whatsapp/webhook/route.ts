@@ -563,26 +563,29 @@ export async function POST(request: NextRequest) {
             // Simple message: just tell them how many images and to type yes
             const totalImages = updatedImages.length;
             if (totalImages === 0) {
-                console.error(`[WhatsApp] ERROR: No images stored! Session had ${session.images.length}, newCloudinaryUrls: ${newCloudinaryUrls.length}`);
-                const message = `⚠️ No images were saved. Please try sending the images again.`;
-                const immediateMsg = twiml.message(message);
-                return new NextResponse(twiml.toString(), {
+                console.error(`[WhatsApp] ERROR: No images stored! Session had ${existingImages.length}, newCloudinaryUrls: ${newCloudinaryUrls.length}`);
+                const errorMessage = `⚠️ No images were saved. Please try sending the images again.`;
+                twiml.message(errorMessage);
+                const errorTwiML = twiml.toString();
+                console.log(`[WhatsApp] Error TwiML: ${errorTwiML}`);
+                return new NextResponse(errorTwiML, {
                     status: 200,
                     headers: { "Content-Type": "text/xml" },
                 });
             }
             
             const message = `You have sent ${totalImages} image(s). Reply yes or done to proceed.`;
-            
             twiml.message(message);
             const twimlResponse = twiml.toString();
             console.log(`[WhatsApp] Response sent. Session ID: ${sender}, Images stored: ${totalImages} (all in Cloudinary)`);
             console.log(`[WhatsApp] TwiML response: ${twimlResponse}`);
 
-            return new NextResponse(twimlResponse, {
+            const response = new NextResponse(twimlResponse, {
                 status: 200,
                 headers: { "Content-Type": "text/xml" },
             });
+            console.log(`[WhatsApp] Returning response with status ${response.status}`);
+            return response;
         }
 
         // Handle text messages
