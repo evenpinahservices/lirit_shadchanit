@@ -164,7 +164,7 @@ async function downloadAndUploadToCloudinary(twilioUrl: string): Promise<string>
         
         console.log(`[Cloudinary] Downloading from Twilio with Basic Auth...`);
         
-        // Use fetch with Basic Auth headers
+        // Use simple fetch with Basic Auth (most reliable)
         const response = await fetch(twilioUrl, {
             method: 'GET',
             headers: {
@@ -183,28 +183,35 @@ async function downloadAndUploadToCloudinary(twilioUrl: string): Promise<string>
         // Convert to buffer
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        
-        const sizeKB = (buffer.length / 1024).toFixed(1);
-        console.log(`[Cloudinary] Image downloaded (${sizeKB} KB), uploading to Cloudinary...`);
-        
-        // Convert to base64 for Cloudinary
-        const base64Data = `data:image/jpeg;base64,${buffer.toString("base64")}`;
-        
-        // Upload to Cloudinary
-        const uploadResult = await cloudinary.uploader.upload(base64Data, {
-            folder: "whatsapp_resumes",
-            resource_type: "image",
-            timeout: 120000,
-        });
-        
-        const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`[Cloudinary] Uploaded to Cloudinary in ${totalElapsed}s: ${uploadResult.secure_url}`);
-        
-        if (!uploadResult?.secure_url) {
-            throw new Error("Cloudinary upload succeeded but no URL returned");
+            
+            const sizeKB = (buffer.length / 1024).toFixed(1);
+            console.log(`[Cloudinary] Image downloaded (${sizeKB} KB), uploading to Cloudinary...`);
+            
+            // Convert to base64 for Cloudinary
+            const base64Data = `data:image/jpeg;base64,${buffer.toString("base64")}`;
+            
+            // Upload to Cloudinary
+            const uploadResult = await cloudinary.uploader.upload(base64Data, {
+                folder: "whatsapp_resumes",
+                resource_type: "image",
+                timeout: 120000,
+            });
+            
+            const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log(`[Cloudinary] Uploaded to Cloudinary in ${totalElapsed}s: ${uploadResult.secure_url}`);
+            
+            if (!uploadResult?.secure_url) {
+                throw new Error("Cloudinary upload succeeded but no URL returned");
+            }
+            
+            return uploadResult.secure_url;
+        } catch (error: any) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('Download timeout after 10 seconds');
+            }
+            throw error;
         }
-        
-        return uploadResult.secure_url;
     } catch (error: any) {
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         console.error(`[Cloudinary] Error after ${elapsed}s:`, error.message);
@@ -555,25 +562,33 @@ export async function POST(request: NextRequest) {
             });
             console.log(`[WhatsApp] Returning response with status ${response.status}`);
 
+            // Extract media URLs BEFORE returning response (formData might not be available after)
+            const mediaUrls: string[] = [];
+            for (let i = 0; i < numMedia; i++) {
+                const twilioMediaUrl = formData.get(`MediaUrl${i}`)?.toString();
+                if (twilioMediaUrl) {
+                    mediaUrls.push(twilioMediaUrl);
+                }
+            }
+            console.log(`[WhatsApp] Extracted ${mediaUrls.length} media URL(s) for background processing`);
+
             // Process images in background (after response is sent)
             const processingPromise = (async () => {
                 try {
-                    console.log(`[WhatsApp] Background: Processing ${numMedia} image(s)...`);
+                    console.log(`[WhatsApp] Background: Processing ${mediaUrls.length} image(s)...`);
                     const newCloudinaryUrls: string[] = [];
                     
-                    for (let i = 0; i < numMedia; i++) {
-                        const twilioMediaUrl = formData.get(`MediaUrl${i}`)?.toString();
-                        if (twilioMediaUrl) {
-                            try {
-                                console.log(`[WhatsApp] Background: Processing image ${i + 1}/${numMedia}...`);
-                                // Download from Twilio and upload to Cloudinary
-                                const cloudinaryUrl = await downloadAndUploadToCloudinary(twilioMediaUrl);
-                                newCloudinaryUrls.push(cloudinaryUrl);
-                                console.log(`[WhatsApp] Background: Image ${i + 1} uploaded to Cloudinary: ${cloudinaryUrl.substring(0, 50)}...`);
-                            } catch (error: any) {
-                                console.error(`[WhatsApp] Background: Failed to process image ${i + 1}:`, error.message);
-                                // Continue with other images
-                            }
+                    for (let i = 0; i < mediaUrls.length; i++) {
+                        const twilioMediaUrl = mediaUrls[i];
+                        try {
+                            console.log(`[WhatsApp] Background: Processing image ${i + 1}/${mediaUrls.length}...`);
+                            // Download from Twilio and upload to Cloudinary
+                            const cloudinaryUrl = await downloadAndUploadToCloudinary(twilioMediaUrl);
+                            newCloudinaryUrls.push(cloudinaryUrl);
+                            console.log(`[WhatsApp] Background: Image ${i + 1} uploaded to Cloudinary: ${cloudinaryUrl.substring(0, 50)}...`);
+                        } catch (error: any) {
+                            console.error(`[WhatsApp] Background: Failed to process image ${i + 1}:`, error.message);
+                            // Continue with other images
                         }
                     }
 
