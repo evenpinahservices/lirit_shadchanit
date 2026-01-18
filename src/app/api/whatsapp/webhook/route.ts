@@ -403,11 +403,6 @@ export async function POST(request: NextRequest) {
                 "✅ Received images. Processing resume now. I will send a message when this is done."
             );
 
-            // Send confirmation message immediately (responds right away)
-            const confirmationMsg = twiml.message(
-                "✅ Received images. Processing resume now. I will send a message when this is done."
-            );
-
             // Return confirmation immediately (don't wait for processing)
             const response = new NextResponse(twiml.toString(), {
                 status: 200,
