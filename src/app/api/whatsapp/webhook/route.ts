@@ -153,17 +153,24 @@ async function extractDataFromImages(imageUrls: string[]): Promise<any> {
 
     // Download and convert images
     const imageParts: Array<{ mimeType: string; data: string }> = [];
+    console.log(`[Gemini] Downloading ${imageUrls.length} image(s)...`);
     
-    for (const url of imageUrls) {
+    for (let i = 0; i < imageUrls.length; i++) {
+        const url = imageUrls[i];
         try {
+            console.log(`[Gemini] Downloading image ${i + 1}/${imageUrls.length}...`);
             const imageBuffer = await downloadImageFromUrl(url);
+            console.log(`[Gemini] Image ${i + 1} downloaded, converting to base64...`);
             const base64Image = await imageToBase64(imageBuffer);
             imageParts.push(base64Image);
+            console.log(`[Gemini] Image ${i + 1} converted successfully`);
         } catch (error) {
-            console.error(`Failed to download image from ${url}:`, error);
+            console.error(`[Gemini] Failed to download image ${i + 1} from ${url}:`, error);
             // Continue with other images
         }
     }
+    
+    console.log(`[Gemini] Successfully prepared ${imageParts.length} image(s) for Gemini API`);
 
     if (imageParts.length === 0) {
         throw new Error("No images could be downloaded");
@@ -183,10 +190,22 @@ async function extractDataFromImages(imageUrls: string[]): Promise<any> {
         });
     }
 
-    // Call Gemini API
+    // Call Gemini API with timeout
     let geminiResponse: Response;
+    const startTime = Date.now();
+    const TIMEOUT_MS = 60000; // 60 seconds timeout
+    
     try {
-        geminiResponse = await fetch(
+        console.log(`[Gemini] Calling Gemini API (model: gemini-3-flash-preview)...`);
+        console.log(`[Gemini] Timeout set to ${TIMEOUT_MS / 1000}s`);
+        
+        // Create a timeout promise
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error(`Gemini API timeout after ${TIMEOUT_MS / 1000}s`)), TIMEOUT_MS);
+        });
+        
+        // Race between fetch and timeout
+        const fetchPromise = fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`,
             {
                 method: "POST",
@@ -198,11 +217,15 @@ async function extractDataFromImages(imageUrls: string[]): Promise<any> {
                 }),
             }
         );
+        
+        geminiResponse = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[Gemini] Gemini API responded in ${elapsed}s (status: ${geminiResponse.status})`);
 
         // Fallback to gemini-2.0-flash-exp if 404
         if (geminiResponse.status === 404) {
-            console.log("gemini-3-flash-preview not found, trying gemini-2.0-flash-exp");
-            geminiResponse = await fetch(
+            console.log("[Gemini] gemini-3-flash-preview not found, trying gemini-2.0-flash-exp");
+            const fetchPromise2 = fetch(
                 `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
                 {
                     method: "POST",
@@ -214,11 +237,12 @@ async function extractDataFromImages(imageUrls: string[]): Promise<any> {
                     }),
                 }
             );
+            geminiResponse = await Promise.race([fetchPromise2, timeoutPromise]) as Response;
 
             // Fallback to gemini-1.5-flash if still 404
             if (geminiResponse.status === 404) {
-                console.log("gemini-2.0-flash-exp not found, trying gemini-1.5-flash");
-                geminiResponse = await fetch(
+                console.log("[Gemini] gemini-2.0-flash-exp not found, trying gemini-1.5-flash");
+                const fetchPromise3 = fetch(
                     `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
                     {
                         method: "POST",
@@ -230,10 +254,16 @@ async function extractDataFromImages(imageUrls: string[]): Promise<any> {
                         }),
                     }
                 );
+                geminiResponse = await Promise.race([fetchPromise3, timeoutPromise]) as Response;
             }
         }
     } catch (error: any) {
-        console.error("Gemini API fetch error:", error);
+        console.error("[Gemini] Gemini API fetch error:", error);
+        console.error("[Gemini] Error type:", error.constructor.name);
+        console.error("[Gemini] Error message:", error.message);
+        if (error.message.includes("timeout")) {
+            throw new Error(`Gemini API timed out after ${TIMEOUT_MS / 1000} seconds. The images might be too large or the API is slow.`);
+        }
         throw new Error(`Failed to call Gemini API: ${error.message}`);
     }
 
