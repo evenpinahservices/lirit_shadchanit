@@ -533,16 +533,16 @@ export async function POST(request: NextRequest) {
             console.log(`[WhatsApp] Session retrieved. Previous image count: ${previousCount}`);
             console.log(`[WhatsApp] Session images array:`, session.images);
 
-            // Get existing image count for immediate response
-            // For now, we accumulate images (user can send multiple batches)
-            // TODO: Consider replacing instead of accumulating if user wants fresh start
+            // New images replace old ones if they haven't been processed yet
+            // Only accumulate if user explicitly wants to add more (we'll replace for now)
             const existingImages = session.images || [];
             const currentCount = existingImages.length;
             
             // Return response IMMEDIATELY (don't wait for image processing)
             // Process images in background using waitUntil
-            const totalImages = currentCount + numMedia;
-            console.log(`[WhatsApp] Session will have ${totalImages} total images (${currentCount} existing + ${numMedia} new)`);
+            // For now, new images replace old ones (don't accumulate)
+            const totalImages = numMedia; // Only count new images, replacing old ones
+            console.log(`[WhatsApp] Replacing ${currentCount} old images with ${numMedia} new images`);
             const message = `You have sent ${totalImages} image(s). Reply yes or done to proceed.`;
             twiml.message(message);
             const twimlResponse = twiml.toString();
@@ -589,12 +589,26 @@ export async function POST(request: NextRequest) {
                     }
 
                     // Update session in MongoDB with Cloudinary URLs
+                    // Replace old images with new ones (don't accumulate)
                     if (newCloudinaryUrls.length > 0) {
-                        const updatedImages = [...existingImages, ...newCloudinaryUrls];
+                        // Delete old images from Cloudinary before replacing
+                        if (existingImages.length > 0) {
+                            try {
+                                const { deleteCloudinaryImages } = await import("@/lib/cloudinaryCleanup");
+                                console.log(`[WhatsApp] Background: Deleting ${existingImages.length} old image(s) from Cloudinary...`);
+                                await deleteCloudinaryImages(existingImages);
+                                console.log(`[WhatsApp] Background: Deleted old images from Cloudinary`);
+                            } catch (cleanupError) {
+                                console.error(`[WhatsApp] Background: Failed to delete old images:`, cleanupError);
+                                // Continue anyway - new images will still be saved
+                            }
+                        }
+                        
+                        // Replace session with new images only
                         await updateSession(sender, {
-                            images: updatedImages,
+                            images: newCloudinaryUrls,
                         });
-                        console.log(`[WhatsApp] Background: Updated session with ${updatedImages.length} total images (${newCloudinaryUrls.length} new)`);
+                        console.log(`[WhatsApp] Background: Replaced session with ${newCloudinaryUrls.length} new images`);
                     } else {
                         console.error(`[WhatsApp] Background: No images were successfully uploaded!`);
                     }
