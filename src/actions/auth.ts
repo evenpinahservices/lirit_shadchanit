@@ -21,7 +21,7 @@ export async function loginUser(username: string, password?: string): Promise<Us
         username: { $regex: new RegExp(`^${escapedUsername}$`, "i") },
     });
 
-    if (user) {
+    if (user && user.password) {
         // Check if password is hashed (starts with $2a$ or $2b$ for bcrypt)
         const isHashed = user.password.startsWith("$2a$") || user.password.startsWith("$2b$");
         
