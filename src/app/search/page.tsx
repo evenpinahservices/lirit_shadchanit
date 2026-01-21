@@ -330,9 +330,9 @@ export default function SearchPage() {
                         "w-full md:static h-full min-h-0",
                         showResults ? "hidden md:flex" : "flex"
                     )}>
-                        {/* Scrollable filters area - scrollbar at edge */}
-                        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-0 md:pr-0 pb-24 md:pb-0 max-h-[calc(100dvh-12rem)] custom-scrollbar">
-                            <div className="space-y-5 md:pr-8">
+                        {/* Scrollable filters area - scrollbar on left */}
+                        <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-0 md:pl-8 md:pr-0 pb-24 md:pb-0 max-h-[calc(100dvh-12rem)] custom-scrollbar scrollbar-left">
+                            <div className="space-y-5">
                                 <h3 className="font-semibold flex items-center text-lg">
                                     <Search className="w-5 h-5 mr-2" />
                                     Filter Criteria
@@ -347,7 +347,7 @@ export default function SearchPage() {
                                             <input
                                                 type="text"
                                                 placeholder="Search..."
-                                                className="w-full rounded-md border border-gray-300 pl-8 pr-3 py-1.5 text-sm focus:border-red-500 focus:outline-none focus:ring-red-500 dark:bg-gray-900 dark:border-gray-700"
+                                                className="w-full rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm dark:bg-gray-900"
                                                 value={keyword}
                                                 onChange={(e) => setKeyword(e.target.value)}
                                             />
@@ -363,7 +363,7 @@ export default function SearchPage() {
                                                 <input
                                                     type="number"
                                                     placeholder="Min"
-                                                    className="w-full p-2 border rounded-md text-sm dark:bg-gray-900"
+                                                    className="w-full p-2 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900"
                                                     value={minAge}
                                                     onChange={(e) => setMinAge(e.target.value)}
                                                 />
@@ -371,7 +371,7 @@ export default function SearchPage() {
                                                 <input
                                                     type="number"
                                                     placeholder="Max"
-                                                    className="w-full p-2 border rounded-md text-sm dark:bg-gray-900"
+                                                    className="w-full p-2 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900"
                                                     value={maxAge}
                                                     onChange={(e) => setMaxAge(e.target.value)}
                                                 />
@@ -384,7 +384,7 @@ export default function SearchPage() {
                                                 <input
                                                     type="number"
                                                     placeholder="Min"
-                                                    className="w-full p-2 border rounded-md text-sm dark:bg-gray-900"
+                                                    className="w-full p-2 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900"
                                                     value={minHeight}
                                                     onChange={(e) => setMinHeight(e.target.value)}
                                                 />
@@ -392,7 +392,7 @@ export default function SearchPage() {
                                                 <input
                                                     type="number"
                                                     placeholder="Max"
-                                                    className="w-full p-2 border rounded-md text-sm dark:bg-gray-900"
+                                                    className="w-full p-2 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900"
                                                     value={maxHeight}
                                                     onChange={(e) => setMaxHeight(e.target.value)}
                                                 />
@@ -404,7 +404,7 @@ export default function SearchPage() {
                                     <div className="space-y-1">
                                         <label className="text-xs font-medium text-gray-500">Gender</label>
                                         <select
-                                            className="w-full p-2 border rounded-md text-sm dark:bg-gray-900"
+                                            className="w-full p-2 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900"
                                             value={gender}
                                             onChange={(e) => setGender(e.target.value)}
                                         >
@@ -420,7 +420,7 @@ export default function SearchPage() {
                                         <input
                                             type="text"
                                             placeholder="City or Area..."
-                                            className="w-full p-2 border rounded-md text-sm dark:bg-gray-900"
+                                            className="w-full p-2 rounded-lg text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900"
                                             value={location}
                                             onChange={(e) => setLocation(e.target.value)}
                                         />

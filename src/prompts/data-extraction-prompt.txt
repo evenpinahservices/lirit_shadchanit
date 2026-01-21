@@ -44,7 +44,7 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
         * Be VERY conservative - it's better to leave a preference empty than to incorrectly restrict the matching pool
         * Look for EXPLICIT statements like "looking for", "prefers", "wants", "expects", "requires"
         * Do NOT infer preferences from descriptive text about the candidate themselves
-        * *Example:* If the resume says "works full-time", this describes the candidate's `learningStatus`, NOT their `preferredLearningStatus` in a match
+        * *Example:* If the resume says "works full-time", this describes the candidate's `learningStatus` (learning Torah status), NOT their `preferredLearningStatus` (preferred learning Torah status) in a match
 
 4.  **CLEAN OUTPUT:**
     * The schema below contains "Helper Fields" starting with an underscore (e.g., `_options`, `_type`, `_note`).
@@ -53,7 +53,7 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
 
 5.  **VISUAL VERIFICATION:**
     * Use candidate photos to fill in `gender` if missing.
-    * **For `headCovering` field:** If photos show the candidate currently wearing a head covering (e.g., sheitel/wig, tichel, hat), this can help verify their intended practice, but remember: `headCovering` refers to their PLANNED practice AFTER marriage, not necessarily what they're wearing in the photo. If the resume explicitly states their future plans, prioritize that text over visual inference.
+    * **For `headCovering` field:** If photos show the candidate currently wearing a head covering (e.g., sheitel/wig, tichel, hat), this can help verify their intended practice, but remember: `headCovering` refers to their PLANNED head covering practice ONCE MARRIED, not necessarily what they're wearing in the photo. If the resume explicitly states their future plans, prioritize that text over visual inference.
     * When using visual analysis, note this in the `sourceQuote` field (e.g., "Inferred from photo analysis").
 
 6.  **MISSING DATA:**
@@ -74,9 +74,9 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
         * Only select an ethnicity if you have clear evidence from the resume (e.g., explicitly stated as "Ashkenazi", "Sephardi", "Yemenite", "Ethiopian", "Convert", or "Other").
         * If the resume mentions multiple ethnicities or is ambiguous, set to `null` rather than guessing.
     * **`headCovering` (vs `preferredHeadCovering`):**
-        * **`headCovering`**: This is the candidate's OWN planned/intended head covering practice AFTER marriage. For unmarried women, this describes how they plan to cover their hair once married (e.g., "will wear wig", "plans to cover with tichel", "intends to use hat"). For men, use "N/A". Look for future-tense language or explicit statements about marital head covering plans. **If not mentioned, default to "Flexible".**
+        * **`headCovering`**: This is the candidate's OWN planned/intended head covering practice ONCE MARRIED. For unmarried women, this describes how they plan to cover their hair once married (e.g., "will wear wig", "plans to cover with tichel", "intends to use hat"). For men, use "N/A". Look for future-tense language or explicit statements about head covering plans once married. **If not mentioned, default to "Flexible".**
         * **`preferredHeadCovering`**: This is what the candidate PREFERS in a potential match (e.g., "looking for someone who wears wig", "prefers tichel"). This is a PREFERENCE about their match, not about themselves.
-        * **Key distinction:** `headCovering` = about the candidate themselves (future plans). `preferredHeadCovering` = about what they want in a match.
+        * **Key distinction:** `headCovering` = about the candidate themselves (head covering once married). `preferredHeadCovering` = about what they want in a match.
 
 ### REFERENCE SCHEMA
 
@@ -208,20 +208,20 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": "Selection",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_learningStatus_options": ["Full Time", "Half Time", "Koveah Itim", "Working", "Student", "Retired", "N/A"]
+    "_learningStatus_options": ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning"]
   },
   "headCovering": {
     "value": "Selection",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
     "_headCovering_options": ["N/A", "None", "Wig", "Tichel", "Hat", "Scarf", "Flexible"],
-    "_note": "IMPORTANT: This field indicates how the candidate (typically a woman) plans to cover her hair AFTER marriage. For unmarried women, this is their intended/planned head covering practice once married. For men, use 'N/A'. Look for phrases like 'will cover with', 'plans to wear', 'intends to use', or descriptions of future marital head covering practices."
+    "_note": "IMPORTANT: This field indicates how the candidate (typically a woman) plans to cover her hair ONCE MARRIED. For unmarried women, this is their intended/planned head covering practice once married. For men, use 'N/A'. Look for phrases like 'will cover with', 'plans to wear', 'intends to use', or descriptions of head covering practices once married."
   },
   "religiousDetailsFreeText": {
     "value": "string - OPEN TEXT",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_note": "This field captures any additional religious details, practices, background, or information about the candidate's religious observance that doesn't fit into the structured fields (religiousAffiliation, learningStatus, headCovering). Look for descriptions of religious practices, background, community involvement, or any other religious-related information. Preserve the exact language from the resume (Hebrew/English/mixed)."
+    "_note": "This field captures any additional religious details, practices, background, or information about the candidate's religious observance that doesn't fit into the structured fields (religiousAffiliation, learningStatus [learning Torah status], headCovering [head covering once married]). Look for descriptions of religious practices, background, community involvement, or any other religious-related information. Preserve the exact language from the resume (Hebrew/English/mixed)."
   },
   "smoking": {
     "value": "Selection",
@@ -284,7 +284,7 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": ["Selection (Multiple Allowed)"] | null,
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_preferredLearningStatus_options": ["I don't mind", "Full Time", "Half Time", "Koveah Itim", "Working", "Student", "Retired", "N/A"],
+    "_preferredLearningStatus_options": ["I don't mind", "Full Time", "Half Time", "Koveah Itim", "Working - Not Learning"],
     "_note": "CRITICAL: Only fill if confidence >= 0.9. Otherwise set to null or []"
   },
   "preferredHeadCovering": {

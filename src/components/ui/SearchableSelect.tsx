@@ -98,7 +98,7 @@ export function SearchableSelect({
                     ref={inputRef}
                     type="text"
                     className={cn(
-                        "flex w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 pr-8 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-950 dark:border-gray-700",
+                        "flex w-full h-10 rounded-lg bg-white px-3 py-2 pr-8 text-sm ring-offset-background placeholder:text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-500 shadow-sm disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-950",
                         className
                     )}
                     placeholder={placeholder}

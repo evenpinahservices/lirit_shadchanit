@@ -261,9 +261,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const isUpdatingFromAgeRef = useRef(false);
     const isUpdatingFromDobRef = useRef(false);
     
-    // Scroll detection for conditional gradient fade
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const [hasOverflow, setHasOverflow] = useState(false);
     
     // Initialize date mode based on existing dob
     useEffect(() => {
@@ -281,32 +279,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             }
         }
     }, [client]);
-    
-    // Check for scroll overflow to show/hide gradient fade
-    useEffect(() => {
-        const checkOverflow = () => {
-            const container = scrollContainerRef.current;
-            if (container) {
-                // Only check if content is scrollable (more content than visible area)
-                const hasScrollableContent = container.scrollHeight > container.clientHeight + 20;
-                setHasOverflow(hasScrollableContent);
-            }
-        };
-        
-        // Initial check with slight delay to ensure DOM is ready
-        const timeoutId = setTimeout(checkOverflow, 100);
-        
-        const container = scrollContainerRef.current;
-        if (container) {
-            // Also check on resize
-            window.addEventListener('resize', checkOverflow);
-        }
-        
-        return () => {
-            clearTimeout(timeoutId);
-            window.removeEventListener('resize', checkOverflow);
-        };
-    }, [currentStep, showSummary]); // Re-check when step changes or summary is shown
     
     // Store Gregorian date when it changes (if in Gregorian mode)
     useEffect(() => {
@@ -1141,7 +1113,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                     className="flex flex-col h-full overflow-hidden relative"
                 >
                     {/* Wizard Header - Sticky on Mobile */}
-                    <div className="shrink-0 bg-white dark:bg-gray-950 p-4 border-b z-30">
+                    <div className="shrink-0 bg-white dark:bg-gray-950 p-4 z-30">
                         <div className="flex items-center justify-between mb-2 md:mb-4">
                             <div className="flex items-center gap-2">
                                 <h2 className="text-lg font-semibold">
@@ -1237,7 +1209,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                             <div><span className="font-medium">{t(lang, "labels.hairColor")}:</span> {watch("hairColor") || "—"}</div>
                                             {watch("photoUrl") && (
                                                 <div className="mt-2">
-                                                    <img src={watch("photoUrl")} alt="Profile" className="w-24 h-24 rounded-full object-cover border" />
+                                                    <img src={watch("photoUrl")} alt="Profile" className="w-24 h-24 rounded-full object-cover shadow-sm" />
                                                 </div>
                                             )}
                                         </div>
@@ -1308,21 +1280,21 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.fullName")}</label>
                                         <FieldWithTooltip sourceQuote={sourceQuotes.fullName} fieldName="fullName">
-                                            <input {...register("fullName")} style={getFieldStyle("fullName")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.fullName")} dir={rtl ? "rtl" : "ltr"} />
+                                            <input {...register("fullName")} style={getFieldStyle("fullName")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.fullName")} dir={rtl ? "rtl" : "ltr"} />
                                         </FieldWithTooltip>
                                         {errors.fullName && <p className="text-red-500 text-xs">{errors.fullName?.message}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.email")}</label>
                                         <FieldWithTooltip sourceQuote={sourceQuotes.email} fieldName="email">
-                                            <input {...register("email")} style={getFieldStyle("email")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.email")} dir="ltr" />
+                                            <input {...register("email")} style={getFieldStyle("email")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.email")} dir="ltr" />
                                         </FieldWithTooltip>
                                         {errors.email && <p className="text-red-500 text-xs">{errors.email?.message}</p>}
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.phone")}</label>
                                         <FieldWithTooltip sourceQuote={sourceQuotes.phone} fieldName="phone">
-                                            <input {...register("phone")} style={getFieldStyle("phone")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.phone")} dir="ltr" />
+                                            <input {...register("phone")} style={getFieldStyle("phone")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.phone")} dir="ltr" />
                                         </FieldWithTooltip>
                                         {errors.phone && <p className="text-red-500 text-xs">{errors.phone?.message}</p>}
                                     </div>
@@ -1472,7 +1444,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                     e.currentTarget.blur();
                                                 }
                                             }}
-                                            className="w-full p-2 border rounded-md dark:bg-gray-900"
+                                            className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm"
                                             placeholder={lang === "he" ? "גיל" : "Age"}
                                             dir={rtl ? "rtl" : "ltr"}
                                         />
@@ -1483,7 +1455,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.gender")}</label>
                                         <FieldWithTooltip sourceQuote={sourceQuotes.gender} fieldName="gender">
-                                            <select {...register("gender")} style={getFieldStyle("gender")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            <select {...register("gender")} style={getFieldStyle("gender")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
                                                 {opts("gender").map(opt => (
                                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                                 ))}
@@ -1493,7 +1465,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.location")}</label>
                                         <FieldWithTooltip sourceQuote={sourceQuotes.location} fieldName="location">
-                                            <input {...register("location")} style={getFieldStyle("location")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.location")} dir={rtl ? "rtl" : "ltr"} />
+                                            <input {...register("location")} style={getFieldStyle("location")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.location")} dir={rtl ? "rtl" : "ltr"} />
                                         </FieldWithTooltip>
                                         {errors.location && <p className="text-red-500 text-xs">{errors.location?.message}</p>}
                                     </div>
@@ -1508,7 +1480,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-4">
                                     <label className="text-sm font-medium block">{t(lang, "labels.profilePhoto")}</label>
                                     <div className="flex items-center gap-4">
-                                        <div className="relative w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 overflow-visible border">
+                                        <div className="relative w-24 h-24 rounded-full bg-gray-100 dark:bg-gray-800 overflow-visible shadow-sm">
                                             {watchedPhotoUrl ? (
                                                 <>
                                                     <div className="relative w-full h-full rounded-full overflow-hidden">
@@ -1591,13 +1563,13 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.height")}</label>
                                         <FieldWithTooltip sourceQuote={sourceQuotes.height} fieldName="height">
-                                            <input type="number" {...register("height", { valueAsNumber: true })} style={getFieldStyle("height")} className="w-full p-2 border rounded-md dark:bg-gray-900" dir="ltr" />
+                                            <input type="number" {...register("height", { valueAsNumber: true })} style={getFieldStyle("height")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm" dir="ltr" />
                                         </FieldWithTooltip>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.eyeColor")}</label>
                                         <FieldWithTooltip sourceQuote={sourceQuotes.eyeColor} fieldName="eyeColor">
-                                            <select {...register("eyeColor")} style={getFieldStyle("eyeColor")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            <select {...register("eyeColor")} style={getFieldStyle("eyeColor")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
                                                 {opts("eyeColor").map(opt => (
                                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                                 ))}
@@ -1607,7 +1579,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium">{t(lang, "labels.hairColor")}</label>
                                         <FieldWithTooltip sourceQuote={sourceQuotes.hairColor} fieldName="hairColor">
-                                            <select {...register("hairColor")} style={getFieldStyle("hairColor")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                            <select {...register("hairColor")} style={getFieldStyle("hairColor")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
                                                 {opts("hairColor").map(opt => (
                                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                                 ))}
@@ -1616,11 +1588,11 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     </div>
                                 </div>
 
-                                <div className="space-y-4 pt-4 border-t">
+                                <div className="space-y-4 pt-4">
                                     <label className="text-sm font-medium block">{t(lang, "labels.galleryImages")}</label>
                                     <div className="grid grid-cols-4 gap-2">
                                         {(watch("galleryImages") || []).map((img: string, idx: number) => (
-                                            <div key={idx} className="relative aspect-square rounded-md overflow-hidden bg-gray-100 border">
+                                            <div key={idx} className="relative aspect-square rounded-md overflow-hidden bg-gray-100 shadow-sm">
                                                 <Image src={img} alt="" fill className="object-cover" />
                                                 <button
                                                     type="button"
@@ -1637,10 +1609,10 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         <div className="flex flex-col">
                                             <label 
                                                 className={cn(
-                                                    "relative flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed cursor-pointer bg-gray-50 dark:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
+                                                    "relative flex flex-col items-center justify-center aspect-square rounded-lg shadow-sm cursor-pointer bg-white dark:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
                                                     isDraggingGallery 
-                                                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20" 
-                                                        : "border-gray-300 hover:border-gray-400"
+                                                        ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20" 
+                                                        : "hover:shadow-md"
                                                 )}
                                                 style={{ pointerEvents: galleryUpload.isUploading ? 'none' : 'auto' }}
                                                 onDrop={handleGalleryImageDrop}
@@ -1763,7 +1735,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.ethnicity")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.ethnicity} fieldName="ethnicity">
-                                        <select {...register("ethnicity")} style={getFieldStyle("ethnicity")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                        <select {...register("ethnicity")} style={getFieldStyle("ethnicity")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
                                             {opts("ethnicity").map(opt => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                                             ))}
@@ -1773,7 +1745,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.tribalStatus")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.tribalStatus} fieldName="tribalStatus">
-                                        <select {...register("tribalStatus")} style={getFieldStyle("tribalStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                        <select {...register("tribalStatus")} style={getFieldStyle("tribalStatus")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
                                             <option value="">{t(lang, "messages.selectOption")}</option>
                                             {opts("tribalStatus").map(opt => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -1784,7 +1756,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.maritalStatus")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.maritalStatus} fieldName="maritalStatus">
-                                        <select {...register("maritalStatus")} style={getFieldStyle("maritalStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                        <select {...register("maritalStatus")} style={getFieldStyle("maritalStatus")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
                                             {opts("maritalStatus").map(opt => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                                             ))}
@@ -1794,7 +1766,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.occupation")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.occupation} fieldName="occupation">
-                                        <input {...register("occupation")} style={getFieldStyle("occupation")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.occupation")} dir={rtl ? "rtl" : "ltr"} />
+                                        <input {...register("occupation")} style={getFieldStyle("occupation")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.occupation")} dir={rtl ? "rtl" : "ltr"} />
                                     </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
@@ -1820,13 +1792,13 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.familyBackground")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.familyBackground} fieldName="familyBackground">
-                                        <textarea {...register("familyBackground")} style={getFieldStyle("familyBackground")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" placeholder={t(lang, "placeholders.familyBackground")} dir={rtl ? "rtl" : "ltr"} />
+                                        <textarea {...register("familyBackground")} style={getFieldStyle("familyBackground")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 h-32 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.familyBackground")} dir={rtl ? "rtl" : "ltr"} />
                                     </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.education")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.education} fieldName="education">
-                                        <input {...register("education")} style={getFieldStyle("education")} className="w-full p-2 border rounded-md dark:bg-gray-900" placeholder={t(lang, "placeholders.education")} dir={rtl ? "rtl" : "ltr"} />
+                                        <input {...register("education")} style={getFieldStyle("education")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.education")} dir={rtl ? "rtl" : "ltr"} />
                                     </FieldWithTooltip>
                                 </div>
                             </div>
@@ -1858,7 +1830,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.learningStatus")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.learningStatus} fieldName="learningStatus">
-                                        <select {...register("learningStatus")} style={getFieldStyle("learningStatus")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                        <select {...register("learningStatus")} style={getFieldStyle("learningStatus")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
                                             {opts("learningStatus").map(opt => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                                             ))}
@@ -1868,7 +1840,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.headCovering")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.headCovering} fieldName="headCovering">
-                                        <select {...register("headCovering")} style={getFieldStyle("headCovering")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                        <select {...register("headCovering")} style={getFieldStyle("headCovering")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
                                             {opts("headCovering").map(opt => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                                             ))}
@@ -1878,7 +1850,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.religiousDetailsFreeText")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.religiousDetailsFreeText} fieldName="religiousDetailsFreeText">
-                                        <textarea {...register("religiousDetailsFreeText")} style={getFieldStyle("religiousDetailsFreeText")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" placeholder={t(lang, "placeholders.religiousDetailsFreeText")} dir={rtl ? "rtl" : "ltr"} />
+                                        <textarea {...register("religiousDetailsFreeText")} style={getFieldStyle("religiousDetailsFreeText")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 h-32 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.religiousDetailsFreeText")} dir={rtl ? "rtl" : "ltr"} />
                                     </FieldWithTooltip>
                                 </div>
                             </div>
@@ -1890,7 +1862,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.personality")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.personality} fieldName="personality">
-                                        <textarea {...register("personality")} style={getFieldStyle("personality")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" placeholder={t(lang, "placeholders.personality")} dir={rtl ? "rtl" : "ltr"} />
+                                        <textarea {...register("personality")} style={getFieldStyle("personality")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 h-32 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.personality")} dir={rtl ? "rtl" : "ltr"} />
                                     </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
@@ -1899,7 +1871,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         <textarea 
                                             {...register("hobbies")} 
                                             style={getFieldStyle("hobbies")}
-                                            className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" 
+                                            className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 h-32 dark:bg-gray-900 text-sm placeholder:text-sm" 
                                             placeholder={t(lang, "placeholders.hobbies")} 
                                             dir={rtl ? "rtl" : "ltr"}
                                         />
@@ -1908,21 +1880,21 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.smoking")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.smoking} fieldName="smoking">
-                                        <select {...register("smoking")} style={getFieldStyle("smoking")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                        <select {...register("smoking")} style={getFieldStyle("smoking")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
                                             {opts("smoking").map(opt => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                                             ))}
                                         </select>
                                     </FieldWithTooltip>
                                 </div>
-                                <div className="space-y-4 border-t pt-4">
+                                <div className="space-y-4 pt-4">
                                     <label className="text-sm font-medium block">{t(lang, "labels.medicalHistory")}</label>
                                     <div className="flex gap-4">
-                                        <label className="flex items-center gap-2 border p-3 rounded-md w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        <label className="flex items-center gap-2 p-3 rounded-lg shadow-sm w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 bg-white dark:bg-gray-900">
                                             <input type="radio" value="No" {...register("medicalHistory")} className="text-red-600 focus:ring-red-500" />
                                             <span>{opts("medicalHistory")[0].label}</span>
                                         </label>
-                                        <label className="flex items-center gap-2 border p-3 rounded-md w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        <label className="flex items-center gap-2 p-3 rounded-lg shadow-sm w-full cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 bg-white dark:bg-gray-900">
                                             <input type="radio" value="Yes" {...register("medicalHistory")} className="text-red-600 focus:ring-red-500" />
                                             <span>{opts("medicalHistory")[1].label}</span>
                                         </label>
@@ -1931,7 +1903,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                                             <label className="text-sm font-medium">{t(lang, "labels.medicalHistoryDetails")}</label>
                                             <FieldWithTooltip sourceQuote={sourceQuotes.medicalHistoryDetails} fieldName="medicalHistoryDetails">
-                                                <textarea {...register("medicalHistoryDetails")} style={getFieldStyle("medicalHistoryDetails")} className="w-full p-2 border rounded-md dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
+                                                <textarea {...register("medicalHistoryDetails")} style={getFieldStyle("medicalHistoryDetails")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm" dir={rtl ? "rtl" : "ltr"} />
                                             </FieldWithTooltip>
                                         </div>
                                     )}
@@ -1966,7 +1938,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.willingToRelocate")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.willingToRelocate} fieldName="willingToRelocate">
-                                        <select {...register("willingToRelocate")} style={getFieldStyle("willingToRelocate")} className="w-full p-2 border rounded-md dark:bg-gray-900">
+                                        <select {...register("willingToRelocate")} style={getFieldStyle("willingToRelocate")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
                                             {opts("willingToRelocate").map(opt => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                                             ))}
@@ -2059,7 +2031,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         <textarea 
                                             {...register("preferencesFreeText")} 
                                             style={getFieldStyle("preferencesFreeText")} 
-                                            className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" 
+                                            className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 h-32 dark:bg-gray-900 text-sm placeholder:text-sm" 
                                             placeholder={t(lang, "placeholders.preferencesFreeText")}
                                             dir={rtl ? "rtl" : "ltr"} 
                                         />
@@ -2074,7 +2046,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.references")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.references} fieldName="references">
-                                        <textarea {...register("references")} style={getFieldStyle("references")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
+                                        <textarea {...register("references")} style={getFieldStyle("references")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 h-32 dark:bg-gray-900 text-sm placeholder:text-sm" dir={rtl ? "rtl" : "ltr"} />
                                     </FieldWithTooltip>
                                 </div>
                                 {/* Notes and resumeRawText only for admin forms */}
@@ -2083,19 +2055,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium">{t(lang, "labels.notes")}</label>
                                             <FieldWithTooltip sourceQuote={sourceQuotes.notes} fieldName="notes">
-                                                <textarea {...register("notes")} style={getFieldStyle("notes")} className="w-full p-2 border rounded-md h-32 dark:bg-gray-900" dir={rtl ? "rtl" : "ltr"} />
-                                            </FieldWithTooltip>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">{t(lang, "labels.resumeRawText")}</label>
-                                            <FieldWithTooltip sourceQuote={sourceQuotes.resumeRawText} fieldName="resumeRawText">
-                                                <textarea 
-                                                    {...register("resumeRawText")} 
-                                                    style={getFieldStyle("resumeRawText")}
-                                                    className="w-full p-2 border rounded-md h-32 dark:bg-gray-900 font-mono text-xs" 
-                                                    placeholder={t(lang, "placeholders.resumeRawText")}
-                                                    dir="auto"
-                                                />
+                                                <textarea {...register("notes")} style={getFieldStyle("notes")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 h-32 dark:bg-gray-900 text-sm placeholder:text-sm" dir={rtl ? "rtl" : "ltr"} />
                                             </FieldWithTooltip>
                                         </div>
                                     </>
@@ -2113,10 +2073,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                             ? "bottom-[calc(env(safe-area-inset-bottom))]"
                             : "bottom-[calc(4rem+env(safe-area-inset-bottom))]"
                     )}>
-                        {/* Gradient fade - only show when content overflows */}
-                        {hasOverflow && (
-                            <div className="pointer-events-none absolute -top-16 left-0 right-0 h-16 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-gray-950 dark:via-gray-950/80" />
-                        )}
                         {/* Background for buttons - extends to bottom of viewport */}
                         <div 
                             className="absolute top-0 left-0 right-0 bg-gradient-to-t from-white via-white to-white/95 dark:from-gray-950 dark:via-gray-950 dark:to-gray-950/95 -z-10"

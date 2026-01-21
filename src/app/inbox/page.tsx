@@ -167,7 +167,7 @@ export default function InboxPage() {
                                 filteredClients.map((client) => (
                                     <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors border-b">
                                         <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                                            <Link href={`/inbox/${client.id}`} className="hover:underline flex items-center gap-2">
+                                            <Link href={`/inbox/${client.id}`} className="hover:text-red-600 transition-colors flex items-center gap-2">
                                                 <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
                                                     {client.photoUrl ? (
                                                         <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
@@ -253,7 +253,7 @@ export default function InboxPage() {
                 ) : (
                     filteredClients.map((client) => (
                         <div key={client.id} className="bg-white dark:bg-gray-950 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800">
-                            <Link href={`/inbox/${client.id}`} className="flex items-center gap-4 mb-3">
+                            <Link href={`/inbox/${client.id}`} className="flex items-center gap-4 mb-3 group">
                                 <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
                                     {client.photoUrl ? (
                                         <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
@@ -262,7 +262,7 @@ export default function InboxPage() {
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{client.fullName}</h3>
+                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-red-600 transition-colors">{client.fullName}</h3>
                                     <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 mt-0.5">
                                         <p>{calculateAge(client.dob)} y/o • {client.gender}</p>
                                         <p className="truncate">{client.location || "N/A"}</p>

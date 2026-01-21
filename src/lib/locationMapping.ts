@@ -274,25 +274,48 @@ function normalizeLocation(location: string): string {
 export function getCanonicalLocation(location: string): string {
   if (!location) return location;
   
+  // Extract city name from "City, Country" format
+  const cityName = location.split(",")[0].trim();
   const normalized = normalizeLocation(location);
+  const normalizedCity = normalizeLocation(cityName);
   
-  // Try direct lookup
+  // Try direct lookup (full location)
   if (LOCATION_MAP[location]) return LOCATION_MAP[location];
   if (LOCATION_MAP[normalized]) return LOCATION_MAP[normalized];
   
-  // Try normalized lookup
+  // Try direct lookup (city name only)
+  if (LOCATION_MAP[cityName]) return LOCATION_MAP[cityName];
+  if (LOCATION_MAP[normalizedCity]) return LOCATION_MAP[normalizedCity];
+  
+  // Try normalized lookup (full location) - check both normalized and original
   for (const [hebrew, english] of Object.entries(LOCATION_MAP)) {
-    if (normalizeLocation(hebrew) === normalized) {
+    const hebrewNormalized = normalizeLocation(hebrew);
+    if (hebrewNormalized === normalized || hebrewNormalized === normalizedCity || hebrew === location || hebrew === cityName) {
       return english;
     }
   }
   
-  // Check if already English
+  // Try normalized lookup (city name only) - already covered above
+  
+  // Check if already English (full location)
   const englishLower = normalized.toLowerCase();
   for (const english of Object.values(LOCATION_MAP)) {
     if (english.toLowerCase() === englishLower) {
       return english;
     }
+  }
+  
+  // Check if already English (city name only)
+  const englishCityLower = normalizedCity.toLowerCase();
+  for (const english of Object.values(LOCATION_MAP)) {
+    if (english.toLowerCase() === englishCityLower) {
+      return english;
+    }
+  }
+  
+  // Return city name if no mapping found (for "City, Country" format)
+  if (location.includes(",")) {
+    return cityName;
   }
   
   // Return original if no mapping found
@@ -308,28 +331,66 @@ export function getLocationCountry(location: string): CountryCode {
   
   const normalized = normalizeLocation(location);
   
-  // Try Hebrew lookup first
+  // Extract city name from "City, Country" format
+  const cityName = location.split(",")[0].trim();
+  const normalizedCity = normalizeLocation(cityName);
+  
+  // Try Hebrew lookup first (exact match - full location)
   if (LOCATION_MAP_WITH_COUNTRY[location]) {
     return LOCATION_MAP_WITH_COUNTRY[location].country;
   }
   
-  // Try normalized Hebrew lookup
+  // Try Hebrew lookup with city name only (exact match)
+  if (LOCATION_MAP_WITH_COUNTRY[cityName]) {
+    return LOCATION_MAP_WITH_COUNTRY[cityName].country;
+  }
+  
+  // Try normalized Hebrew lookup (full location) - check both normalized and exact match
   for (const [hebrew, info] of Object.entries(LOCATION_MAP_WITH_COUNTRY)) {
-    if (normalizeLocation(hebrew) === normalized) {
+    const hebrewNormalized = normalizeLocation(hebrew);
+    if (hebrewNormalized === normalized || hebrewNormalized === normalizedCity || hebrew === location || hebrew === cityName) {
       return info.country;
     }
   }
   
-  // Try English lookup
+  // Try English lookup (full location) - get canonical first
   const canonical = getCanonicalLocation(location);
-  if (ENGLISH_LOCATION_COUNTRY[canonical]) {
+  if (canonical && ENGLISH_LOCATION_COUNTRY[canonical]) {
     return ENGLISH_LOCATION_COUNTRY[canonical];
   }
   
-  // Try direct English lookup with case insensitivity
+  // Try English lookup (city name only)
+  const canonicalCity = getCanonicalLocation(cityName);
+  if (canonicalCity && ENGLISH_LOCATION_COUNTRY[canonicalCity]) {
+    return ENGLISH_LOCATION_COUNTRY[canonicalCity];
+  }
+  
+  // Try direct English lookup with case insensitivity (full location)
   for (const [english, country] of Object.entries(ENGLISH_LOCATION_COUNTRY)) {
-    if (english.toLowerCase() === normalized) {
+    if (english.toLowerCase() === normalized || english.toLowerCase() === normalizedCity) {
       return country;
+    }
+  }
+  
+  // If we got a canonical location from Hebrew, try to get country from that
+  if (canonical && canonical !== location && canonical !== cityName) {
+    // The canonical might be the English version from LOCATION_MAP
+    // Check if any Hebrew maps to this canonical and get its country
+    for (const [hebrew, info] of Object.entries(LOCATION_MAP_WITH_COUNTRY)) {
+      if (info.english.toLowerCase() === canonical.toLowerCase()) {
+        return info.country;
+      }
+    }
+    // Also check ENGLISH_LOCATION_COUNTRY directly
+    if (ENGLISH_LOCATION_COUNTRY[canonical]) {
+      return ENGLISH_LOCATION_COUNTRY[canonical];
+    }
+  }
+  
+  // Final fallback: check if location matches any Hebrew key exactly (case-sensitive for Hebrew)
+  for (const [hebrew, info] of Object.entries(LOCATION_MAP_WITH_COUNTRY)) {
+    if (hebrew === location || hebrew === cityName) {
+      return info.country;
     }
   }
   

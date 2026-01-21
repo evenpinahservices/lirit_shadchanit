@@ -87,7 +87,7 @@ function ClientDetailsContent() {
     if (isViewMode) {
         return (
             <div className={`w-full max-w-4xl mx-auto h-[calc(100dvh-8rem)] flex flex-col space-y-2 ${isRtl ? "rtl" : "ltr"}`} dir={isRtl ? "rtl" : "ltr"}>
-                <div className="w-full flex justify-start" style={{ direction: 'ltr' }}>
+                <div className="w-full flex justify-start mt-4 sm:mt-6 md:mt-8" style={{ direction: 'ltr' }}>
                     <button
                         onClick={() => {
                             if (source === "search") {

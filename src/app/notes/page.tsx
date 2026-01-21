@@ -81,7 +81,7 @@ export default function NotesPage() {
             <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="flex-1 w-full p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-950 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] dark:shadow-[0_-2px_10px_rgba(0,0,0,0.3)]"
+                className="flex-1 w-full p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-500 bg-white dark:bg-gray-950 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] dark:shadow-[0_-2px_10px_rgba(0,0,0,0.3)] text-sm placeholder:text-sm"
                 placeholder="Type your notes here..."
             />
         </div>

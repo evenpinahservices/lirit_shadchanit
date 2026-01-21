@@ -173,7 +173,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                     <Field label={t(lang, "labels.hairColor")} value={client.hairColor} lang={lang} optionKey="hairColor" isRtl={isRtl} />
                     {client.photoUrl && (
                         <div className={cn("mt-2", isRtl && "text-right")} dir={isRtl ? "rtl" : "ltr"}>
-                            <img src={client.photoUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover border inline-block" />
+                            <img src={client.photoUrl} alt="Profile" className="w-24 h-24 rounded-full object-cover shadow-sm inline-block" />
                         </div>
                     )}
                     {allImages.length > 0 && (
@@ -388,7 +388,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
             {/* Content - Toggle Style (Old Implementation) */}
             <div className="w-full flex-1 mt-2 bg-white dark:bg-gray-950 rounded-xl flex flex-col min-h-0 overflow-hidden" dir={isRtl ? "rtl" : "ltr"}>
                 {/* Carousel Controls - Top Navigation */}
-                <div className={cn("flex items-center justify-between p-3 border-b bg-gray-50/50 dark:bg-gray-900/50 shrink-0", isRtl && "flex-row-reverse")} dir={isRtl ? "rtl" : "ltr"}>
+                <div className={cn("flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-900/50 shrink-0 shadow-sm", isRtl && "flex-row-reverse")} dir={isRtl ? "rtl" : "ltr"}>
                     {/* Left button - Previous in LTR, Next in RTL */}
                     <button
                         onClick={isRtl ? nextSection : prevSection}

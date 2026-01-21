@@ -480,7 +480,7 @@ export function AutoFillModal({
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" dir="ltr">
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" dir="ltr">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center justify-between p-4">
                     <h2 className="text-xl font-semibold">Auto-Fill from Images</h2>
                     <button
                         onClick={handleClose}
@@ -586,7 +586,7 @@ export function AutoFillModal({
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between gap-3 p-4 border-t">
+                <div className="flex items-center justify-between gap-3 p-4">
                     <button
                         onClick={simulateProgress}
                         disabled={isProcessing}

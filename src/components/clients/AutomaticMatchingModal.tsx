@@ -76,7 +76,7 @@ export function AutomaticMatchingModal({
                             {topMatches.map((match) => (
                                 <div key={match.id} className="group flex items-center gap-4 p-3 rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-all hover:border-red-200 dark:hover:border-red-900 bg-white dark:bg-gray-900">
                                     {/* Small Circular Image */}
-                                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800 shadow-sm">
                                         {match.photoUrl ? (
                                             <Image
                                                 src={match.photoUrl}
@@ -92,7 +92,7 @@ export function AutomaticMatchingModal({
                                     </div>
 
                                     <div className="flex-1 min-w-0">
-                                        <h4 className="font-semibold text-sm truncate text-gray-900 dark:text-gray-100" title={match.fullName}>
+                                        <h4 className="font-semibold text-sm truncate text-gray-900 dark:text-gray-100 group-hover:text-red-600 transition-colors" title={match.fullName}>
                                             {match.fullName}
                                         </h4>
                                         <div className="flex items-center text-xs text-muted-foreground gap-3 mt-0.5" dir="ltr">

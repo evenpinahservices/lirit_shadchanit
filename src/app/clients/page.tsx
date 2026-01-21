@@ -148,7 +148,7 @@ export default function ClientsPage() {
                                 paginatedClients.map((client, index) => (
                                     <tr key={client.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors">
                                         <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">
-                                            <Link href={`/clients/${client.id}`} className="hover:underline flex items-center gap-2">
+                                            <Link href={`/clients/${client.id}`} className="hover:text-red-600 transition-colors flex items-center gap-2">
                                                 <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
                                                     {client.photoUrl ? (
                                                         <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
@@ -221,8 +221,8 @@ export default function ClientsPage() {
                                 </div>
                             </Link>
 
-                            <Link href={`/clients/${client.id}`} className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{client.fullName}</h3>
+                            <Link href={`/clients/${client.id}`} className="flex-1 min-w-0 group">
+                                <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-red-600 transition-colors">{client.fullName}</h3>
                                 <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 mt-0.5">
                                     <p>{calculateAge(client.dob)} y/o • {client.gender}</p>
                                     <p className="truncate">{client.location}</p>

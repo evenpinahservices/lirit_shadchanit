@@ -155,7 +155,7 @@ const ETHNICITIES = ["Ashkenazi", "Sephardi", "Yemenite", "Ethiopian"];
 const HASHKAFOS = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
 const PROFESSIONS = ["Accountant", "Lawyer", "Doctor", "Nurse", "Student", "Teacher", "Rebbi", "Programmer", "Engineer", "Architect", "Designer", "Social Worker", "Psychologist", "Business Owner", "Sales", "Real Estate", "Therapist", "Actuary", "Dentist", "Consultant"];
 const HOBBIES_LIST = ["Reading", "Hiking", "Music", "Cooking", "Traveling", "Learning Torah", "Sports", "Art", "Writing", "Volunteering", "Photography", "Gardening", "Chess", "History", "Swimming", "Running"];
-const LEARNING_STATUS = ["Full Time", "Half Time", "Koveah Itim", "Working", "N/A"];
+const LEARNING_STATUS = ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning"];
 const HEAD_COVERING_FEMALE = ["Uncovered", "Wig", "Hat", "Scarf", "Flexible"];
 const PREFERRED_HEAD_COVERING_MALE = ["Uncovered", "Wig", "Hat", "Scarf", "I don't mind"];
 
@@ -207,14 +207,14 @@ export const generateMockClients = (count: number): Client[] => {
         let preferredHeadCovering: string[] = [];
 
         if (isMale) {
-            headCovering = "N/A"; // Male head covering defaults to N/A
-            // Men prefer female head covering
+            headCovering = "N/A"; // Male head covering once married defaults to N/A
+            // Men prefer female head covering once married
             preferredHeadCovering = Math.random() > 0.4
                 ? [getRandomElement(HEAD_COVERING_FEMALE)]
                 : ["I don't mind"];
         } else {
             headCovering = getRandomElement(HEAD_COVERING_FEMALE);
-            preferredHeadCovering = []; // Women don't ask about male head covering anymore
+            preferredHeadCovering = []; // Women don't ask about male head covering once married anymore
         }
 
         // Vary preference strictness for matching tests
@@ -254,7 +254,7 @@ export const generateMockClients = (count: number): Client[] => {
             ethnicity: getRandomElement(ETHNICITIES),
             tribalStatus: isMale ? getRandomElement(["Cohen", "Levi", "Yisrael"]) : "Yisrael",
             religiousAffiliation: getRandomElements(HASHKAFOS, 1),
-            learningStatus: getRandomElement(LEARNING_STATUS) || "Working",
+            learningStatus: getRandomElement(LEARNING_STATUS) || "Working - Not Learning",
             maritalStatus: getRandomElement(["Single", "Divorced", "Widowed"]),
             children: getRandomInt(0, 3),
             languages: getRandomElements(["English", "Hebrew", "French", "Spanish", "Yiddish"], getRandomInt(1, 3)),

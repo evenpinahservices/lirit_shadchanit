@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { createPendingClient, getPendingClientByIdentifier, updatePendingClient } from "@/actions/pendingClient";
+import { createPendingClient, getPendingClientByIdentifier, updatePendingClient, validateAndIncrementToken } from "@/actions/pendingClient";
 import { getApprovedClientByIdentifier } from "@/actions/client";
 import { ClientForm } from "@/components/clients/ClientForm";
 import { FormLanguage } from "@/lib/translations";
@@ -33,7 +33,10 @@ export default function ExternalFormPage() {
                 setIsLoading(false);
                 return;
             }
-            setIsValidToken(true);
+            
+            // Validate token (this increments usage count)
+            const isValid = await validateAndIncrementToken(token);
+            setIsValidToken(isValid);
             setIsLoading(false);
         };
 

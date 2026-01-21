@@ -23,7 +23,7 @@ export default function LoginPage() {
 
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 z-50">
-            <div className="w-full max-w-md space-y-8 bg-white dark:bg-gray-950 p-8 rounded-xl shadow-lg border">
+            <div className="w-full max-w-md space-y-8 bg-white dark:bg-gray-950 p-8 rounded-xl shadow-lg">
                 <div className="flex flex-col items-center text-center">
                     <div className="rounded-full bg-red-100 p-3 mb-4">
                         <Heart className="h-8 w-8 text-red-500 fill-red-500" />
@@ -51,7 +51,7 @@ export default function LoginPage() {
                                     name="username"
                                     type="text"
                                     required
-                                    className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm dark:bg-gray-900 dark:border-gray-700"
+                                    className="block w-full rounded-lg px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-sm placeholder:text-sm dark:bg-gray-900"
                                     placeholder="admin"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
@@ -69,7 +69,7 @@ export default function LoginPage() {
                                     name="password"
                                     type="password"
                                     required
-                                    className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-red-500 focus:outline-none focus:ring-red-500 sm:text-sm dark:bg-gray-900 dark:border-gray-700"
+                                    className="block w-full rounded-lg px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-sm placeholder:text-sm dark:bg-gray-900"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}

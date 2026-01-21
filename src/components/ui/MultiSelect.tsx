@@ -84,12 +84,12 @@ export function MultiSelect({
     return (
         <div className={cn("relative", className)} ref={containerRef}>
             <div
-                className="min-h-[38px] w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 cursor-pointer flex flex-wrap gap-1 bg-white dark:bg-gray-900 dark:text-gray-100 dark:ring-gray-700"
+                className="min-h-[38px] w-full rounded-lg py-1.5 px-3 text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm leading-6 cursor-pointer flex flex-wrap gap-1 bg-white dark:bg-gray-900 dark:text-gray-100"
                 style={style}
                 onClick={() => setIsOpen(!isOpen)}
             >
                 {selected.length === 0 && (
-                    <span className="text-gray-500">{placeholder}</span>
+                    <span className="text-gray-500 text-sm">{placeholder}</span>
                 )}
                 {selected.map((option) => (
                     <span

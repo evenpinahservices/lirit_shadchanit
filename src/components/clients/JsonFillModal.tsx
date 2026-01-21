@@ -243,7 +243,7 @@ export function JsonFillModal({
                                     }
                                 }
                             }}
-                            className="w-full h-64 p-3 border rounded-md dark:bg-gray-800 dark:border-gray-700 font-mono text-sm"
+                            className="w-full h-64 p-3 border rounded-md dark:bg-gray-800 dark:border-gray-700 font-mono text-sm placeholder:text-sm"
                             placeholder='Paste JSON or text with JSON here:\n{\n  "fullName": "John Doe",\n  "email": "john@example.com",\n  ...\n}\n\nOr text with markdown:\n```json\n{...}\n```'
                         />
                     </div>

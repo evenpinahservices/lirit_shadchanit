@@ -86,4 +86,14 @@ body {
       scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
     }
   }
+
+  /* Scrollbar on left side for desktop */
+  @media (min-width: 768px) {
+    .scrollbar-left {
+      direction: rtl;
+    }
+    .scrollbar-left > * {
+      direction: ltr;
+    }
+  }
 }

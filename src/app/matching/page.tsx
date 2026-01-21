@@ -145,7 +145,7 @@ export default function MatchingPage() {
         check("Hashkafa", client.preferredHashkafos);
         check("Ethnicity", client.preferredEthnicities);
         check("Learning Status", client.preferredLearningStatus);
-        check("Head Covering", client.preferredHeadCovering);
+        check("Head Covering Once Married", client.preferredHeadCovering);
 
         return active;
     };
@@ -207,7 +207,7 @@ export default function MatchingPage() {
                                     <button
                                         onClick={handleMatch}
                                         disabled={!selectedClientId}
-                                        className="w-full flex items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="w-full flex items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:cursor-not-allowed transition-colors"
                                     >
                                         <Sparkles className="h-4 w-4" />
                                         Generate Matches
