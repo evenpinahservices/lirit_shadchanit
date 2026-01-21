@@ -108,6 +108,21 @@ export default function MatchingPage() {
 
     const selectedClient = allClients.find((c) => c.id === selectedClientId);
 
+    // Helper function to convert country code to readable country name
+    const getCountryName = (countryCode: CountryCode): string => {
+        const countryMap: Record<CountryCode, string> = {
+            "IL": "Israel",
+            "US": "United States",
+            "UK": "England",
+            "FR": "France",
+            "BE": "Belgium",
+            "AU": "Australia",
+            "CA": "Canada",
+            "OTHER": "Other"
+        };
+        return countryMap[countryCode] || "Other";
+    };
+
     const getActiveDealBreakers = (client: Client) => {
         const active: { label: string, value: string }[] = [];
 
@@ -139,12 +154,15 @@ export default function MatchingPage() {
         check("Age Gap", client.ageGapPreference);
 
         if (client.willingToRelocate && client.willingToRelocate !== "Yes" && !isPass(client.willingToRelocate)) {
-            active.push({ label: "Relocation", value: "Check compatibility" });
+            // Get the country from the client's location
+            const countryCode = client.location ? getLocationCountry(client.location) : "OTHER";
+            const countryName = getCountryName(countryCode);
+            active.push({ label: "Location", value: `${countryName} only` });
         }
 
         check("Hashkafa", client.preferredHashkafos);
         check("Ethnicity", client.preferredEthnicities);
-        check("Learning Status", client.preferredLearningStatus);
+        check("Learning Torah Status", client.preferredLearningStatus);
         check("Head Covering Once Married", client.preferredHeadCovering);
 
         return active;

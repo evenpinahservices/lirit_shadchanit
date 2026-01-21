@@ -201,6 +201,7 @@ export const translations = {
         { value: "Half Time", label: "Half Time" },
         { value: "Koveah Itim", label: "Koveah Itim" },
         { value: "Working - Not Learning", label: "Working - Not Learning" },
+        { value: "N/A", label: "N/A" },
       ],
       headCovering: [
         { value: "N/A", label: "N/A" },
@@ -480,6 +481,7 @@ export const translations = {
         { value: "Half Time", label: "לומד במשרה חלקית" },
         { value: "Koveah Itim", label: "קובע עיתים" },
         { value: "Working - Not Learning", label: "עובד - לא לומד" },
+        { value: "N/A", label: "לא רלוונטי" },
       ],
       headCovering: [
         { value: "N/A", label: "לא רלוונטי" },

@@ -164,7 +164,7 @@
     "type": "string",
     "required": false,
     "restricted": true,
-    "allowedValues": ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning"]
+    "allowedValues": ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"]
   },
   
   "headCovering": {
@@ -251,7 +251,7 @@
     "type": "array",
     "required": false,
     "restricted": true,
-    "allowedValues": ["I don't mind", "Full Time", "Half Time", "Koveah Itim", "Working - Not Learning"],
+    "allowedValues": ["I don't mind", "Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"],
     "description": "Array of strings - can select multiple",
     "default": []
   },

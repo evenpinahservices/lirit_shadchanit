@@ -155,7 +155,7 @@ const ETHNICITIES = ["Ashkenazi", "Sephardi", "Yemenite", "Ethiopian"];
 const HASHKAFOS = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
 const PROFESSIONS = ["Accountant", "Lawyer", "Doctor", "Nurse", "Student", "Teacher", "Rebbi", "Programmer", "Engineer", "Architect", "Designer", "Social Worker", "Psychologist", "Business Owner", "Sales", "Real Estate", "Therapist", "Actuary", "Dentist", "Consultant"];
 const HOBBIES_LIST = ["Reading", "Hiking", "Music", "Cooking", "Traveling", "Learning Torah", "Sports", "Art", "Writing", "Volunteering", "Photography", "Gardening", "Chess", "History", "Swimming", "Running"];
-const LEARNING_STATUS = ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning"];
+const LEARNING_STATUS = ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"];
 const HEAD_COVERING_FEMALE = ["Uncovered", "Wig", "Hat", "Scarf", "Flexible"];
 const PREFERRED_HEAD_COVERING_MALE = ["Uncovered", "Wig", "Hat", "Scarf", "I don't mind"];
 

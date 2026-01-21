@@ -208,7 +208,7 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": "Selection",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_learningStatus_options": ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning"]
+    "_learningStatus_options": ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"]
   },
   "headCovering": {
     "value": "Selection",
@@ -284,7 +284,7 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": ["Selection (Multiple Allowed)"] | null,
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_preferredLearningStatus_options": ["I don't mind", "Full Time", "Half Time", "Koveah Itim", "Working - Not Learning"],
+    "_preferredLearningStatus_options": ["I don't mind", "Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"],
     "_note": "CRITICAL: Only fill if confidence >= 0.9. Otherwise set to null or []"
   },
   "preferredHeadCovering": {

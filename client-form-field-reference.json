@@ -65,7 +65,7 @@
     "learningStatus": {
       "type": "select",
       "required": false,
-      "options": ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning"]
+      "options": ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"]
     },
     
     "headCovering": {
@@ -164,7 +164,8 @@
         "Full Time",
         "Half Time",
         "Koveah Itim",
-        "Working - Not Learning"
+        "Working - Not Learning",
+        "N/A"
       ]
     },
     

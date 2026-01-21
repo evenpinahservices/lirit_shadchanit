@@ -1194,7 +1194,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                             <div><span className="font-medium">{t(lang, "labels.fullName")}:</span> {watch("fullName") || "—"}</div>
                                             <div><span className="font-medium">{t(lang, "labels.email")}:</span> {watch("email") || "—"}</div>
                                             <div><span className="font-medium">{t(lang, "labels.phone")}:</span> {watch("phone") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.dob")}:</span> {watch("dob") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.dob")}:</span> <span className="text-xs">{watch("dob") || "—"}</span></div>
                                             <div><span className="font-medium">{t(lang, "labels.gender")}:</span> {watch("gender") || "—"}</div>
                                             <div><span className="font-medium">{t(lang, "labels.location")}:</span> {watch("location") || "—"}</div>
                                         </div>
