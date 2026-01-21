@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useClients } from "@/context/ClientContext";
 import { Client } from "@/lib/mockData";
 import { findMatches, calculateAge } from "@/lib/matchingUtils";
+import { CountryCode, getLocationCountry } from "@/lib/locationMapping";
 import { Heart, Sparkles, ArrowRight, Check, X, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
