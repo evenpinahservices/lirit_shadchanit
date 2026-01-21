@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
+import { requireAuthAndRateLimit } from "@/lib/apiAuth";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -8,7 +9,13 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+    // Require authentication and rate limiting (100 requests per hour)
+    const authResult = await requireAuthAndRateLimit(request, 100, 3600000);
+    if ("error" in authResult) {
+        return authResult.error;
+    }
+    
     try {
         const timestamp = Math.round(new Date().getTime() / 1000);
         
@@ -22,11 +29,11 @@ export async function GET() {
             process.env.CLOUDINARY_API_SECRET!
         );
 
+        // Don't expose API keys - only return signature and public info
         return NextResponse.json({
             signature,
             timestamp,
             cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-            apiKey: process.env.CLOUDINARY_API_KEY,
             folder: "shadchanit_clients",
         });
     } catch (error: any) {

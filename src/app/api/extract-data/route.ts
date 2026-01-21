@@ -120,6 +120,13 @@ function detectLanguageFromJSON(jsonData: any): string {
 }
 
 export async function POST(request: NextRequest) {
+    // Require authentication and rate limiting (50 extractions per hour - expensive API)
+    const { requireAuthAndRateLimit } = await import("@/lib/apiAuth");
+    const authResult = await requireAuthAndRateLimit(request, 50, 3600000);
+    if ("error" in authResult) {
+        return authResult.error;
+    }
+    
     try {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         

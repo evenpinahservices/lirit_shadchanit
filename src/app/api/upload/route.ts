@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
+import { requireAuthAndRateLimit } from "@/lib/apiAuth";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -11,6 +12,12 @@ cloudinary.config({
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(request: NextRequest) {
+    // Require authentication and rate limiting (50 uploads per hour)
+    const authResult = await requireAuthAndRateLimit(request, 50, 3600000);
+    if ("error" in authResult) {
+        return authResult.error;
+    }
+    
     try {
         const formData = await request.formData();
         const file = formData.get("file") as File;
@@ -24,7 +31,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Maximum upload size is 10 MB." }, { status: 400 });
         }
 
-        // Validate file type
+        // Validate file type by MIME type
         if (!file.type.startsWith("image/")) {
             return NextResponse.json({ error: "File must be an image." }, { status: 400 });
         }
@@ -32,6 +39,24 @@ export async function POST(request: NextRequest) {
         // Convert to buffer and base64
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        
+        // Basic file signature validation (magic bytes)
+        // Check first few bytes to verify it's actually an image
+        const allowedSignatures = [
+            [0xFF, 0xD8, 0xFF], // JPEG
+            [0x89, 0x50, 0x4E, 0x47], // PNG
+            [0x47, 0x49, 0x46, 0x38], // GIF
+            [0x52, 0x49, 0x46, 0x46], // WEBP (RIFF)
+        ];
+        
+        const fileSignature = Array.from(buffer.slice(0, 4));
+        const isValidImage = allowedSignatures.some(sig => 
+            sig.every((byte, index) => fileSignature[index] === byte)
+        );
+        
+        if (!isValidImage) {
+            return NextResponse.json({ error: "Invalid image file format." }, { status: 400 });
+        }
         const base64Data = `data:${file.type};base64,${buffer.toString("base64")}`;
 
         // Upload to Cloudinary

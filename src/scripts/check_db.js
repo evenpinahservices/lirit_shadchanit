@@ -1,9 +1,15 @@
 
 const mongoose = require('mongoose');
+require('dotenv').config({ path: '.env.local' });
 
-// Use the URI from .env.local (or hardcoded backup if needed, but carefully)
-// We'll use the one we found in .env.local
-const MONGODB_URI = "mongodb+srv://evenpinahservices_lirit_shadchanit:mGGpWlgcomNbRymF@liritshadchanit.c4b1dgl.mongodb.net/test?appName=LiritShadchanit";
+// Use the URI from environment variables - NEVER hardcode credentials!
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+    console.error("ERROR: MONGODB_URI not found in environment variables!");
+    console.error("Please set MONGODB_URI in .env.local file");
+    process.exit(1);
+}
 
 async function main() {
     try {

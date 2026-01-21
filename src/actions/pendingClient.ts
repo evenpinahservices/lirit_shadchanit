@@ -2,11 +2,14 @@
 
 import dbConnect from "@/lib/db";
 import PendingClientModel from "@/models/PendingClient";
+import FormTokenModel from "@/models/FormToken";
 import { Client } from "@/lib/mockData";
 import { revalidatePath } from "next/cache";
 import { createClient } from "./client";
 import crypto from "crypto";
 import { deleteCloudinaryImages, extractImageUrls } from "@/lib/cloudinaryCleanup";
+import { requireAuth } from "@/lib/serverAuth";
+import { isValidObjectId } from "@/lib/validation";
 
 // Type definition for PendingClient Input (excluding auto-generated fields)
 type PendingClientInput = Omit<Client, "id" | "createdAt"> & {
@@ -47,6 +50,18 @@ export async function getPendingClients(): Promise<(PendingClientInput & { id: s
 
 export async function createPendingClient(data: PendingClientInput): Promise<PendingClientInput & { id: string }> {
     await dbConnect();
+
+    // Rate limiting: Check if too many submissions from this token/IP
+    // Allow 5 submissions per 30 minutes to give users time to fill out the form
+    if (data.token) {
+        const { checkRateLimit } = await import("@/lib/rateLimit");
+        const rateLimitKey = `form_submission:${data.token}`;
+        const rateLimitResult = await checkRateLimit(rateLimitKey, 5, 30 * 60 * 1000); // 5 per 30 minutes
+        
+        if (!rateLimitResult.allowed) {
+            throw new Error("Rate limit exceeded. Please wait before submitting again.");
+        }
+    }
 
     // Normalize email and phone for consistent lookup
     const normalizedData = {
@@ -135,6 +150,14 @@ export async function createPendingClient(data: PendingClientInput): Promise<Pen
 }
 
 export async function approvePendingClient(pendingClientId: string, overwriteExisting: boolean = false): Promise<Client> {
+    // Require authentication
+    await requireAuth();
+    
+    // Validate ObjectId
+    if (!isValidObjectId(pendingClientId)) {
+        throw new Error("Invalid pending client ID");
+    }
+    
     await dbConnect();
     
     const pendingClient = await PendingClientModel.findById(pendingClientId);
@@ -287,6 +310,14 @@ export async function updatePendingClient(
     pendingClientId: string, 
     updates: Partial<PendingClientInput>
 ): Promise<PendingClientInput & { id: string }> {
+    // Note: This is used by external forms, so we don't require auth here
+    // But we validate the ObjectId for security
+    
+    // Validate ObjectId
+    if (!isValidObjectId(pendingClientId)) {
+        throw new Error("Invalid pending client ID");
+    }
+    
     await dbConnect();
     
     // Normalize email and phone if provided
@@ -327,6 +358,14 @@ export async function updatePendingClient(
 }
 
 export async function rejectPendingClient(pendingClientId: string): Promise<void> {
+    // Require authentication
+    await requireAuth();
+    
+    // Validate ObjectId
+    if (!isValidObjectId(pendingClientId)) {
+        throw new Error("Invalid pending client ID");
+    }
+    
     await dbConnect();
     
     // Get the pending client before deleting to extract image URLs
@@ -348,11 +387,70 @@ export async function rejectPendingClient(pendingClientId: string): Promise<void
 }
 
 export async function generateFormToken(): Promise<string> {
+    // Require authentication
+    await requireAuth();
+    
+    await dbConnect();
+    
     // Generate a secure random token
-    return crypto.randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString('hex');
+    
+    // Set expiration to 1 week from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+    
+    // Create token record in database
+    await FormTokenModel.create({
+        token,
+        expiresAt,
+        usageCount: 0,
+        maxUsage: 30,
+        isActive: true,
+    });
+    
+    return token;
+}
+
+/**
+ * Validate a form token and increment usage count
+ * Returns true if token is valid, false otherwise
+ */
+export async function validateAndIncrementToken(token: string): Promise<boolean> {
+    await dbConnect();
+    
+    const tokenDoc = await FormTokenModel.findOne({ token, isActive: true });
+    
+    if (!tokenDoc) {
+        return false;
+    }
+    
+    // Check if expired
+    if (new Date() > tokenDoc.expiresAt) {
+        tokenDoc.isActive = false;
+        await tokenDoc.save();
+        return false;
+    }
+    
+    // Check if usage limit exceeded
+    if (tokenDoc.usageCount >= tokenDoc.maxUsage) {
+        tokenDoc.isActive = false;
+        await tokenDoc.save();
+        return false;
+    }
+    
+    // Increment usage count
+    tokenDoc.usageCount += 1;
+    await tokenDoc.save();
+    
+    return true;
 }
 
 export async function getPendingClientByToken(token: string): Promise<(PendingClientInput & { id: string }) | null> {
+    // Validate token format (should be hex string)
+    if (!token || typeof token !== 'string' || !/^[a-f0-9]{64}$/i.test(token)) {
+        return null;
+    }
+    
     await dbConnect();
     // Get the most recent pending client with this token (for editing)
     const pendingClient = await PendingClientModel.findOne({ token })
@@ -383,18 +481,44 @@ export async function getPendingClientByTokenAndIdentifier(
     email?: string, 
     phone?: string
 ): Promise<(PendingClientInput & { id: string }) | null> {
+    // Validate token format
+    if (!token || typeof token !== 'string' || !/^[a-f0-9]{64}$/i.test(token)) {
+        return null;
+    }
+    
+    // Sanitize inputs
+    const { sanitizeInput, isValidEmail, isValidPhone } = await import("@/lib/validation");
+    
+    let sanitizedEmail: string | undefined;
+    let sanitizedPhone: string | undefined;
+    
+    if (email) {
+        sanitizedEmail = sanitizeInput(email.trim().toLowerCase(), 255);
+        if (!isValidEmail(sanitizedEmail)) {
+            return null;
+        }
+    }
+    
+    if (phone) {
+        sanitizedPhone = sanitizeInput(phone.trim(), 50);
+        if (!isValidPhone(sanitizedPhone)) {
+            return null;
+        }
+    }
+    
+    if (!sanitizedEmail && !sanitizedPhone) {
+        return null;
+    }
+    
     await dbConnect();
     
     // Build query: must match token AND (email OR phone)
     const query: any = { token };
     
-    if (email && email.trim()) {
-        query.email = email.trim().toLowerCase();
-    } else if (phone && phone.trim()) {
-        query.phone = phone.trim();
-    } else {
-        // If neither provided, return null
-        return null;
+    if (sanitizedEmail) {
+        query.email = sanitizedEmail;
+    } else if (sanitizedPhone) {
+        query.phone = sanitizedPhone;
     }
     
     // Get the most recent pending client matching token + identifier
@@ -426,18 +550,41 @@ export async function getPendingClientByIdentifier(
     email?: string, 
     phone?: string
 ): Promise<(PendingClientInput & { id: string }) | null> {
+    // Sanitize inputs
+    const { sanitizeInput, isValidEmail, isValidPhone } = await import("@/lib/validation");
+    
+    let sanitizedEmail: string | undefined;
+    let sanitizedPhone: string | undefined;
+    
+    if (email) {
+        sanitizedEmail = sanitizeInput(email.trim().toLowerCase(), 255);
+        // Basic email validation
+        if (!isValidEmail(sanitizedEmail)) {
+            return null;
+        }
+    }
+    
+    if (phone) {
+        sanitizedPhone = sanitizeInput(phone.trim(), 50);
+        // Basic phone validation
+        if (!isValidPhone(sanitizedPhone)) {
+            return null;
+        }
+    }
+    
+    if (!sanitizedEmail && !sanitizedPhone) {
+        return null;
+    }
+    
     await dbConnect();
     
     // Build query: must match email OR phone
     const query: any = {};
     
-    if (email && email.trim()) {
-        query.email = email.trim().toLowerCase();
-    } else if (phone && phone.trim()) {
-        query.phone = phone.trim();
-    } else {
-        // If neither provided, return null
-        return null;
+    if (sanitizedEmail) {
+        query.email = sanitizedEmail;
+    } else if (sanitizedPhone) {
+        query.phone = sanitizedPhone;
     }
     
     // Get the most recent pending client matching identifier
@@ -465,6 +612,11 @@ export async function getPendingClientByIdentifier(
 }
 
 export async function getAllPendingClientsByToken(token: string): Promise<(PendingClientInput & { id: string })[]> {
+    // Validate token format (should be hex string)
+    if (!token || typeof token !== 'string' || !/^[a-f0-9]{64}$/i.test(token)) {
+        return [];
+    }
+    
     await dbConnect();
     // Get all pending clients with this token (for viewing submission history)
     const pendingClients = await PendingClientModel.find({ token })

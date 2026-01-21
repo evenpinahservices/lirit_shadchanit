@@ -4,6 +4,8 @@ import dbConnect from "@/lib/db";
 import ClientModel from "@/models/Client";
 import { Client, MOCK_CLIENTS, generateMockClients } from "@/lib/mockData";
 import { revalidatePath } from "next/cache";
+import { requireAuth } from "@/lib/serverAuth";
+import { isValidObjectId } from "@/lib/validation";
 
 // Type definition for Client Input (excluding auto-generated fields)
 type ClientInput = Omit<Client, "id" | "createdAt">;
@@ -41,6 +43,9 @@ export async function getClients(): Promise<Client[]> {
 }
 
 export async function createClient(data: ClientInput): Promise<Client> {
+    // Require authentication
+    await requireAuth();
+    
     await dbConnect();
 
     const newClient = new ClientModel({
@@ -59,6 +64,14 @@ export async function createClient(data: ClientInput): Promise<Client> {
 }
 
 export async function updateClient(id: string, updates: Partial<Client>): Promise<void> {
+    // Require authentication
+    await requireAuth();
+    
+    // Validate ObjectId
+    if (!isValidObjectId(id)) {
+        throw new Error("Invalid client ID");
+    }
+    
     await dbConnect();
     // Use $set to ensure all fields are properly updated
     // Exclude id and createdAt from updates to preserve them
@@ -70,6 +83,14 @@ export async function updateClient(id: string, updates: Partial<Client>): Promis
 }
 
 export async function deleteClient(id: string): Promise<void> {
+    // Require authentication
+    await requireAuth();
+    
+    // Validate ObjectId
+    if (!isValidObjectId(id)) {
+        throw new Error("Invalid client ID");
+    }
+    
     await dbConnect();
     
     // Get the client before deleting to extract image URLs
@@ -133,14 +154,36 @@ export async function getApprovedClientByIdentifier(
     email?: string,
     phone?: string
 ): Promise<Client | null> {
+    // Sanitize inputs
+    const { sanitizeInput, isValidEmail, isValidPhone } = await import("@/lib/validation");
+    
+    let sanitizedEmail: string | undefined;
+    let sanitizedPhone: string | undefined;
+    
+    if (email) {
+        sanitizedEmail = sanitizeInput(email.trim().toLowerCase(), 255);
+        if (!isValidEmail(sanitizedEmail)) {
+            return null;
+        }
+    }
+    
+    if (phone) {
+        sanitizedPhone = sanitizeInput(phone.trim(), 50);
+        if (!isValidPhone(sanitizedPhone)) {
+            return null;
+        }
+    }
+    
+    if (!sanitizedEmail && !sanitizedPhone) {
+        return null;
+    }
+    
     await dbConnect();
     const query: any = {};
-    if (email && email.trim()) {
-        query.email = email.trim().toLowerCase();
-    } else if (phone && phone.trim()) {
-        query.phone = phone.trim();
-    } else {
-        return null;
+    if (sanitizedEmail) {
+        query.email = sanitizedEmail;
+    } else if (sanitizedPhone) {
+        query.phone = sanitizedPhone;
     }
     const client = await ClientModel.findOne(query).sort({ createdAt: -1 }).lean();
     if (!client) return null;
