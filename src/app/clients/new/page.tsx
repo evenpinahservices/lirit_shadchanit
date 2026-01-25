@@ -58,7 +58,7 @@ export default function NewClientPage() {
                                     <span className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-500 dark:text-gray-400 mt-1">טופס בעברית</span>
                                 </button>
 
-                                {/* Auto-Generate with AI Option - Only for admin users */}
+                                {/* Auto-Generate Option - Only for admin users */}
                                 {isAdmin && (
                                     <button
                                         onClick={() => setSelectedMode("ai")}
@@ -67,8 +67,8 @@ export default function NewClientPage() {
                                         <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-2 sm:mb-4 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
                                             <Sparkles className="w-5 h-5 sm:w-7 sm:h-7 md:w-8 md:h-8 lg:w-10 lg:h-10 text-purple-600 dark:text-purple-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
                                         </div>
-                                        <span className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-gray-900 dark:text-gray-100">Auto-Generate with AI</span>
-                                        <span className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-500 dark:text-gray-400 mt-1">AI-Powered Extraction</span>
+                                        <span className="text-base sm:text-xl md:text-2xl lg:text-3xl font-semibold text-gray-900 dark:text-gray-100">Auto-Generate</span>
+                                        <span className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-500 dark:text-gray-400 mt-1">Gemini-Powered Extraction</span>
                                     </button>
                                 )}
                             </div>
