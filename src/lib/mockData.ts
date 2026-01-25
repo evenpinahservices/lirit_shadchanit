@@ -38,7 +38,8 @@ export interface Client {
     languages: string[]; // Multi-select
     familyBackground: string;
     education: string;
-    occupation: string;
+    occupationTitle: string;
+    occupationDescription: string;
     smoking: string; // Drop-down
 
     // Personal
@@ -96,7 +97,8 @@ export const ClientSchema = z.object({
     }),
     familyBackground: z.string().optional().default(""),
     education: z.string().optional().default(""),
-    occupation: z.string().optional().default(""),
+    occupationTitle: z.string().optional().default(""),
+    occupationDescription: z.string().optional().default(""),
     learningStatus: z.string().optional().default(""),
     headCovering: z.string().optional().default(""),
     religiousDetailsFreeText: z.string().optional().default(""),
@@ -260,7 +262,8 @@ export const generateMockClients = (count: number): Client[] => {
             languages: getRandomElements(["English", "Hebrew", "French", "Spanish", "Yiddish"], getRandomInt(1, 3)),
             familyBackground: getRandomElement(["Baal Teshuva", "FFB", "Modern", "Traditional"]),
             education: getRandomElement(["High School", "Seminary", "Yeshiva", "Bachelor's", "Master's", "PhD"]),
-            occupation: getRandomElement(PROFESSIONS),
+            occupationTitle: getRandomElement(PROFESSIONS),
+            occupationDescription: `Works as a ${getRandomElement(PROFESSIONS).toLowerCase()} with experience in the field.`,
             smoking: Math.random() > 0.9 ? "Yes" : "No",
             headCovering: headCovering,
             hobbies: getRandomElements(HOBBIES_LIST, getRandomInt(2, 4)).join(", "),

@@ -56,7 +56,7 @@ export function parseTextToClientData(text: string): Partial<Client> {
     const occupationKeywords = ['teacher', 'doctor', 'lawyer', 'engineer', 'student', 'nurse', 'accountant', 'developer', 'programmer'];
     for (const keyword of occupationKeywords) {
         if (lowerText.includes(keyword)) {
-            data.occupation = keyword.charAt(0).toUpperCase() + keyword.slice(1);
+            data.occupationTitle = keyword.charAt(0).toUpperCase() + keyword.slice(1);
             break;
         }
     }

@@ -171,7 +171,7 @@ export default function ClientsPage() {
                                         <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
                                             <div className="flex items-center gap-1">
                                                 <Briefcase className="h-3 w-3" />
-                                                {client.occupation}
+                                                {client.occupationTitle || "—"}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
@@ -226,7 +226,7 @@ export default function ClientsPage() {
                                 <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 mt-0.5">
                                     <p>{calculateAge(client.dob)} y/o • {client.gender}</p>
                                     <p className="truncate">{client.location}</p>
-                                    <p className="truncate text-gray-400">{client.occupation}</p>
+                                    <p className="truncate text-gray-400">{client.occupationTitle || "—"}</p>
                                 </div>
                             </Link>
 

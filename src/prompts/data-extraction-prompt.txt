@@ -12,7 +12,7 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
             * *Example 1:* If "personality" field in the resume image shows "בחור טוב לב" (Hebrew), you MUST output "בחור טוב לב" (Hebrew) - NOT "good-hearted guy" or any translation.
             * *Example 2:* If "familyBackground" field in the resume image shows "Family from Jerusalem" (English), you MUST output "Family from Jerusalem" (English) - NOT translate to Hebrew.
             * *Example 3:* If "education" field shows mixed language "לומד ב-Yeshiva University", output exactly "לומד ב-Yeshiva University" - preserve the mixed format.
-            * **This applies to ALL open text fields:** fullName, email, phone, dob, location, familyBackground, education, occupation, personality, medicalHistoryDetails, religiousDetailsFreeText, references, notes, resumeRawText, shadchanName, fatherDetails.name, fatherDetails.occupation, motherDetails.name, motherDetails.occupation, etc.
+            * **This applies to ALL open text fields:** fullName, email, phone, dob, location, familyBackground, education, occupationTitle, occupationDescription, personality, medicalHistoryDetails, religiousDetailsFreeText, references, notes, resumeRawText, shadchanName, fatherDetails.name, fatherDetails.occupation, motherDetails.name, motherDetails.occupation, etc.
     * **SELECTION Fields:** (Fields with `_options` in the schema).
         * **Rule:** You must **MAP** the meaning from the resume to the **EXACT English string** provided in the option list.
         * *Example:* If the resume says "ספרדי" (Sephardi), and the options are `["Ashkenazi", "Sephardi"]`, you must output `"Sephardi"`.
@@ -191,10 +191,17 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null"
   },
-  "occupation": {
+  "occupationTitle": {
     "value": "string - OPEN TEXT",
     "confidence": 0.0-1.0,
-    "sourceQuote": "string or null"
+    "sourceQuote": "string or null",
+    "_note": "The job title or profession (e.g., 'Teacher', 'Software Developer', 'Doctor'). Extract the main occupation title from the resume."
+  },
+  "occupationDescription": {
+    "value": "string - OPEN TEXT",
+    "confidence": 0.0-1.0,
+    "sourceQuote": "string or null",
+    "_note": "A detailed description of the occupation, including responsibilities, experience, company, or any additional details about their work. If only a title is mentioned without description, you can leave this as null or provide a brief description based on the title."
   },
 
   "religiousAffiliation": {

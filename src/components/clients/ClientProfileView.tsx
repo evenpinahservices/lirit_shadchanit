@@ -203,7 +203,10 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                     <Field label={t(lang, "labels.languages")} value={client.languages} lang={lang} optionKey="languages" isRtl={isRtl} />
                     <Field label={t(lang, "labels.familyBackground")} value={client.familyBackground} lang={lang} isRtl={isRtl} />
                     <Field label={t(lang, "labels.education")} value={client.education} lang={lang} isRtl={isRtl} />
-                    <Field label={t(lang, "labels.occupation")} value={client.occupation} lang={lang} isRtl={isRtl} />
+                    <Field label={t(lang, "labels.occupationTitle")} value={client.occupationTitle} lang={lang} isRtl={isRtl} />
+                    {client.occupationDescription && (
+                        <Field label={t(lang, "labels.occupationDescription")} value={client.occupationDescription} lang={lang} isRtl={isRtl} />
+                    )}
                 </div>
             )
         },
@@ -386,7 +389,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                             </span>
                             <span className="hidden w-0.5 h-0.5 bg-gray-300 rounded-full sm:inline-block"></span>
                             <span className={cn("flex items-center gap-1", isRtl && "flex-row-reverse")} dir={isRtl ? "rtl" : "ltr"}>
-                                <Briefcase className="h-2.5 w-2.5" /> {client.occupation || "—"}
+                                <Briefcase className="h-2.5 w-2.5" /> {client.occupationTitle || "—"}
                             </span>
                             <span className="hidden w-0.5 h-0.5 bg-gray-300 rounded-full sm:inline-block"></span>
                             <span className={cn("font-medium bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full text-xs", isRtl && "text-right")} dir={isRtl ? "rtl" : "ltr"}>

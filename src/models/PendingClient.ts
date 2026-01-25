@@ -37,7 +37,8 @@ const PendingClientSchema = new Schema<PendingClient>(
         languages: { type: [String], default: [] },
         familyBackground: { type: String },
         education: { type: String },
-        occupation: { type: String },
+        occupationTitle: { type: String },
+        occupationDescription: { type: String },
         smoking: { type: String },
         headCovering: { type: String },
 

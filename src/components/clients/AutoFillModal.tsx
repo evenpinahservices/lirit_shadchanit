@@ -601,7 +601,7 @@ export function AutoFillModal({
                     </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between gap-3 p-4 border-t border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center justify-between gap-3 p-4 pb-20 md:pb-4 border-t border-gray-200 dark:border-gray-800">
                         <button
                             onClick={simulateProgress}
                             disabled={isProcessing}
@@ -757,7 +757,7 @@ export function AutoFillModal({
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between gap-3 p-4">
+                <div className="flex items-center justify-between gap-3 p-4 pb-20 md:pb-4">
                     <button
                         onClick={simulateProgress}
                         disabled={isProcessing}

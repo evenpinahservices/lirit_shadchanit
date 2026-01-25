@@ -59,13 +59,18 @@ export default function BillingPage() {
         setLoading(true);
         try {
             // Load estimates
-            const estimateRes = await fetch("/api/whatsapp/cost-calculator");
+            const estimateRes = await fetch("/api/whatsapp/cost-calculator", {
+                credentials: "include", // Include cookies for authentication
+            });
             const estimate = await estimateRes.json();
             setEstimateData(estimate);
 
             // Load actual costs
             const costRes = await fetch(
-                `/api/whatsapp/cost-calculator?all=true&startDate=${dateRange.start}&endDate=${dateRange.end}`
+                `/api/whatsapp/cost-calculator?all=true&startDate=${dateRange.start}&endDate=${dateRange.end}`,
+                {
+                    credentials: "include", // Include cookies for authentication
+                }
             );
             const costs = await costRes.json();
             setCostData(costs);
@@ -80,7 +85,10 @@ export default function BillingPage() {
         setLoading(true);
         try {
             const res = await fetch(
-                `/api/whatsapp/cost-calculator?all=true&startDate=${dateRange.start}&endDate=${dateRange.end}`
+                `/api/whatsapp/cost-calculator?all=true&startDate=${dateRange.start}&endDate=${dateRange.end}`,
+                {
+                    credentials: "include", // Include cookies for authentication
+                }
             );
             const data = await res.json();
             setCostData(data);

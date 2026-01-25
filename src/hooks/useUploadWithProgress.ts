@@ -54,10 +54,19 @@ export function useUploadWithProgress() {
                 ? `/api/upload/signature?token=${encodeURIComponent(token)}`
                 : "/api/upload/signature";
             
-            const sigResponse = await fetch(signatureUrl);
+            const sigResponse = await fetch(signatureUrl, {
+                credentials: "include", // Include cookies for authentication
+            });
             if (!sigResponse.ok) {
                 const errorData = await sigResponse.json().catch(() => ({}));
-                throw new Error(errorData.error || "Failed to get upload signature");
+                let errorMessage = errorData.error || "Failed to get upload signature";
+                
+                // Provide more helpful message for authentication errors
+                if (sigResponse.status === 401 || errorMessage.includes("Unauthorized") || errorMessage.includes("Authentication required")) {
+                    errorMessage = "Your session has expired. Please refresh the page and try again.";
+                }
+                
+                throw new Error(errorMessage);
             }
             const sigData: SignatureResponse = await sigResponse.json();
 

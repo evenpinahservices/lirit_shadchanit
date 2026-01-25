@@ -557,7 +557,7 @@ export default function SearchPage() {
                                                                 {client.location || <span className="italic">Unknown Location</span>} • {calculateAge(client.dob) !== null ? `${calculateAge(client.dob)} y/o` : '—'}
                                                             </p>
                                                             <div className="text-xs text-muted-foreground space-y-0.5 mt-1">
-                                                                <p>Occupation: {client.occupation || "—"}</p>
+                                                                <p>Occupation: {client.occupationTitle || "—"}</p>
                                                             </div>
                                                             <div className="mt-2 flex items-center justify-end">
                                                                 <span className="text-xs font-medium text-red-600 group-hover:underline flex items-center gap-1">

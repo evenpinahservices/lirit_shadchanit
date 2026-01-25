@@ -11,7 +11,7 @@ interface PendingClient {
     fullName: string;
     dob: string;
     location: string;
-    occupation: string;
+    occupationTitle: string;
     photoUrl?: string;
     gender: "Male" | "Female";
     submittedAt: string;

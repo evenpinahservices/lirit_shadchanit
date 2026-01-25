@@ -127,7 +127,7 @@ interface ClientFormProps {
 const STEP_KEYS = [
     { titleKey: "basicInfo", fields: ["fullName", "email", "phone", "dob", "gender", "location"] },
     { titleKey: "appearance", fields: ["height", "eyeColor", "hairColor", "photoUrl"] },
-    { titleKey: "background", fields: ["ethnicity", "tribalStatus", "maritalStatus", "languages", "familyBackground", "education", "occupation"] },
+    { titleKey: "background", fields: ["ethnicity", "tribalStatus", "maritalStatus", "languages", "familyBackground", "education", "occupationTitle", "occupationDescription"] },
     { titleKey: "religiousDetails", fields: ["religiousAffiliation", "learningStatus", "headCovering", "religiousDetailsFreeText"] },
     { titleKey: "personal", fields: ["hobbies", "personality", "smoking", "medicalHistory", "medicalHistoryDetails"] },
     { titleKey: "preferences", fields: ["ageGapPreference", "willingToRelocate", "preferredEthnicities", "preferredHashkafos", "preferredLearningStatus", "preferredHeadCovering", "preferencesFreeText"] },
@@ -166,7 +166,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         religiousDetailsFreeText: "",
         ethnicity: "Ashkenazi",
         education: "",
-        occupation: "",
+        occupationTitle: "",
+        occupationDescription: "",
         languages: [],
         hobbies: "",
         personality: "",
@@ -255,7 +256,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
 
     const [createdClient, setCreatedClient] = useState<Client | null>(null);
     const [filledFromWhatsApp, setFilledFromWhatsApp] = useState(false);
-    const [submitToPending, setSubmitToPending] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
 
     // Date Logic - Flexible DOB
@@ -566,18 +566,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                 await updateClient(client.id, valuesWithLang);
                 router.push("/clients");
             } else {
-                // If form was filled from WhatsApp and submitToPending is checked, submit to pending
-                if (filledFromWhatsApp && submitToPending) {
-                    await createPendingClient({
-                        ...valuesWithLang,
-                        submittedAt: new Date().toISOString(),
-                        source: "whatsapp",
-                        sourceDescription: "Extracted from WhatsApp images",
-                    });
-                    router.push("/inbox");
-                    return;
-                }
-                
+                // Admin-created clients always go directly to approved clients
+                // Only external form submissions (via isExternalForm) go to pending
                 const newClient = await addClient(valuesWithLang);
                 // Calculate matches for the new client against existing clients
                 const matches = findMatches(newClient, clients);
@@ -850,8 +840,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     // Auto-fill handlers (for image-based auto-fill)
     const handleAutoFill = (data: any) => {
         console.log("handleAutoFill called with data:", data);
-        setFilledFromWhatsApp(true); // Mark that form was filled from WhatsApp images
-        setSubmitToPending(true); // Default to submitting to pending when filled from WhatsApp
+        setFilledFromWhatsApp(true); // Mark that form was filled from WhatsApp/images
         
         const confidences: Record<string, number> = {};
         
@@ -1219,7 +1208,10 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                             <div><span className="font-medium">{t(lang, "labels.maritalStatus")}:</span> {watch("maritalStatus") || "—"}</div>
                                             <div><span className="font-medium">{t(lang, "labels.languages")}:</span> {(() => { const langs = watch("languages"); return Array.isArray(langs) ? langs.join(", ") || "—" : langs || "—"; })()}</div>
                                             <div><span className="font-medium">{t(lang, "labels.education")}:</span> {watch("education") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.occupation")}:</span> {watch("occupation") || "—"}</div>
+                                            <div><span className="font-medium">{t(lang, "labels.occupationTitle")}:</span> {watch("occupationTitle") || "—"}</div>
+                                            {watch("occupationDescription") && (
+                                                <div><span className="font-medium">{t(lang, "labels.occupationDescription")}:</span> {watch("occupationDescription")}</div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1760,9 +1752,15 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">{t(lang, "labels.occupation")}</label>
-                                    <FieldWithTooltip sourceQuote={sourceQuotes.occupation} fieldName="occupation">
-                                        <input {...register("occupation")} style={getFieldStyle("occupation")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.occupation")} dir={rtl ? "rtl" : "ltr"} />
+                                    <label className="text-sm font-medium">{t(lang, "labels.occupationTitle")}</label>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.occupationTitle} fieldName="occupationTitle">
+                                        <input {...register("occupationTitle")} style={getFieldStyle("occupationTitle")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.occupationTitle")} dir={rtl ? "rtl" : "ltr"} />
+                                    </FieldWithTooltip>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">{t(lang, "labels.occupationDescription")}</label>
+                                    <FieldWithTooltip sourceQuote={sourceQuotes.occupationDescription} fieldName="occupationDescription">
+                                        <textarea {...register("occupationDescription")} style={getFieldStyle("occupationDescription")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 h-24 dark:bg-gray-900 text-sm placeholder:text-sm" placeholder={t(lang, "placeholders.occupationDescription")} dir={rtl ? "rtl" : "ltr"} />
                                     </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">
@@ -2054,6 +2052,12 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                 <textarea {...register("notes")} style={getFieldStyle("notes")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 h-32 dark:bg-gray-900 text-sm placeholder:text-sm" dir={rtl ? "rtl" : "ltr"} />
                                             </FieldWithTooltip>
                                         </div>
+                                        <div className="space-y-2">
+                                            <label className="text-sm font-medium">{t(lang, "labels.resumeRawText")}</label>
+                                            <FieldWithTooltip sourceQuote={sourceQuotes.resumeRawText} fieldName="resumeRawText">
+                                                <textarea {...register("resumeRawText")} style={getFieldStyle("resumeRawText")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 h-32 dark:bg-gray-900 text-sm placeholder:text-sm" dir={rtl ? "rtl" : "ltr"} />
+                                            </FieldWithTooltip>
+                                        </div>
                                     </>
                                 )}
                             </div>
@@ -2143,17 +2147,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     </button>
                                 ) : (
                                     <>
-                                        {filledFromWhatsApp && !isEditing && !isExternalForm && (
-                                            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={submitToPending}
-                                                    onChange={(e) => setSubmitToPending(e.target.checked)}
-                                                    className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                                                />
-                                                <span>{lang === "he" ? "שלח לבדיקה" : "Submit for review"}</span>
-                                            </label>
-                                        )}
                                         {showSummary && (
                                             <button
                                                 type="button"
