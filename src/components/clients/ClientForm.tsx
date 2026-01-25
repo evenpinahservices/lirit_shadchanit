@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, Check, UploadCloud, X, FileJson, CheckCircle
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { useUploadWithProgress } from "@/hooks/useUploadWithProgress";
 import Image from "next/image";
-import { cn, detectClientLanguage, convertHebrewYearToLetters, parseHebrewYearToNumber } from "@/lib/utils";
+import { cn, detectClientLanguage, convertHebrewYearToLetters } from "@/lib/utils";
 import { AutomaticMatchingModal } from "./AutomaticMatchingModal";
 import { AutoFillModal } from "./AutoFillModal";
 import { JsonFillModal } from "./JsonFillModal";
@@ -21,155 +21,11 @@ import { DateCarousel } from "@/components/ui/DateCarousel";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { FormLanguage, translations, t, getOptions, isRTL } from "@/lib/translations";
 import { createPendingClient } from "@/actions/pendingClient";
+import { FieldWithTooltip } from "./FieldWithTooltip";
+import { FormSummaryView } from "./FormSummaryView";
+import { useDateHandling } from "./hooks/useDateHandling";
 
 const formSchema = ClientSchema;
-
-// Tooltip component for showing source quotes with smart positioning
-function FieldWithTooltip({ 
-    children, 
-    sourceQuote, 
-    fieldName 
-}: { 
-    children: React.ReactNode; 
-    sourceQuote: string | null | undefined; 
-    fieldName: string;
-}) {
-    const [showTooltip, setShowTooltip] = useState(false);
-    const [position, setPosition] = useState<"top" | "bottom">("bottom");
-    const [isTouchDevice, setIsTouchDevice] = useState(false);
-    const fieldRef = useRef<HTMLDivElement>(null);
-    const tooltipRef = useRef<HTMLDivElement>(null);
-    
-    // Detect touch device on mount
-    useEffect(() => {
-        // Check if device supports touch or if it's a tablet/laptop (screen width >= 768px)
-        const checkTouch = () => {
-            const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-            const isTabletOrLaptop = window.innerWidth >= 768;
-            setIsTouchDevice(hasTouch && isTabletOrLaptop);
-        };
-        checkTouch();
-        window.addEventListener('resize', checkTouch);
-        return () => window.removeEventListener('resize', checkTouch);
-    }, []);
-    
-    // Close tooltip when clicking outside
-    useEffect(() => {
-        if (!showTooltip) return;
-        
-        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-            if (
-                fieldRef.current && 
-                tooltipRef.current &&
-                !fieldRef.current.contains(event.target as Node) &&
-                !tooltipRef.current.contains(event.target as Node)
-            ) {
-                setShowTooltip(false);
-            }
-        };
-        
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('touchstart', handleClickOutside);
-        
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-            document.removeEventListener('touchstart', handleClickOutside);
-        };
-    }, [showTooltip]);
-    
-    // Only show tooltip if sourceQuote exists and is not empty
-    if (!sourceQuote || (typeof sourceQuote === 'string' && sourceQuote.trim() === '') || sourceQuote === 'null') {
-        return <>{children}</>;
-    }
-    
-    const calculatePosition = () => {
-        if (fieldRef.current) {
-            const rect = fieldRef.current.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-            const spaceAbove = rect.top;
-            const spaceBelow = viewportHeight - rect.bottom;
-            const tooltipHeight = 250; // Approximate tooltip height with padding
-            
-            // Always show below if field is within 300px from top of viewport
-            if (rect.top < 300) {
-                setPosition("bottom");
-            } 
-            // Or if not enough space above (less than tooltip height)
-            else if (spaceAbove < tooltipHeight) {
-                setPosition("bottom");
-            } 
-            // Or if there's more space below than above
-            else if (spaceBelow > spaceAbove) {
-                setPosition("bottom");
-            } 
-            // Otherwise show above
-            else {
-                setPosition("top");
-            }
-        }
-    };
-    
-    const handleMouseEnter = () => {
-        if (!isTouchDevice) {
-            calculatePosition();
-            setShowTooltip(true);
-        }
-    };
-    
-    const handleClick = (e: React.MouseEvent | React.TouchEvent) => {
-        // For touch devices or when hover doesn't work, toggle on click
-        if (isTouchDevice || window.innerWidth >= 768) {
-            e.preventDefault();
-            e.stopPropagation();
-            if (showTooltip) {
-                setShowTooltip(false);
-            } else {
-                calculatePosition();
-                setShowTooltip(true);
-            }
-        }
-    };
-    
-    return (
-        <div 
-            ref={fieldRef}
-            className="relative w-full group"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={() => {
-                if (!isTouchDevice) {
-                    setShowTooltip(false);
-                }
-            }}
-            onClick={handleClick}
-            onTouchStart={handleClick}
-        >
-            {children}
-            {showTooltip && (
-                <div 
-                    ref={tooltipRef}
-                    className={`absolute z-50 w-80 max-w-[90vw] p-3 text-sm bg-white dark:bg-gray-100 text-gray-900 dark:text-gray-800 rounded-lg shadow-xl border border-gray-300 dark:border-gray-400 pointer-events-auto`}
-                    style={position === "top" ? {
-                        bottom: 'calc(100% + 8px)',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                    } : {
-                        top: 'calc(100% + 8px)',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                    }}
-                >
-                    <div className="font-semibold mb-2 text-xs text-gray-600 dark:text-gray-700 uppercase tracking-wide">AI Source Quote:</div>
-                    <div className="text-xs whitespace-pre-wrap wrap-break-word leading-relaxed text-gray-800 dark:text-gray-900">{sourceQuote}</div>
-                    {position === "top" ? (
-                        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-white dark:border-t-gray-100"></div>
-                    ) : (
-                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-b-[6px] border-transparent border-b-white dark:border-b-gray-100"></div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
 
 interface ClientFormProps {
     client?: Client;
@@ -324,256 +180,24 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const [filledFromWhatsApp, setFilledFromWhatsApp] = useState(false);
     const [showSummary, setShowSummary] = useState(false);
 
-    // Date Logic - Flexible DOB
-    const [dateMode, setDateMode] = useState<"Gregorian" | "Hebrew" | "Year">("Gregorian");
-    const [lastGregorianDate, setLastGregorianDate] = useState<string>(""); // Store last known Gregorian date
-    const currentDob = watch("dob");
-    const [age, setAge] = useState<number | "">("");
-    const isUpdatingFromAgeRef = useRef(false);
-    const isUpdatingFromDobRef = useRef(false);
-    
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     
-    // Initialize date mode based on existing dob
-    useEffect(() => {
-        if (client?.dob) {
-            if (/^\d{4}$/.test(client.dob)) {
-                setDateMode("Year");
-            } else if (client.dob.includes("Hebrew:")) {
-                setDateMode("Hebrew");
-            } else {
-                setDateMode("Gregorian");
-                // Store the Gregorian date when initializing
-                if (!client.dob.includes("Hebrew:")) {
-                    setLastGregorianDate(client.dob);
-                }
-            }
-        }
-    }, [client]);
+    // Date handling hook
+    const {
+        dateMode,
+        setDateMode,
+        age,
+        setAge,
+        convertDateFormat,
+        calculateAgeFromDob,
+        calculateDobFromAge,
+        handleAgeChange,
+        handleAgeBlur,
+        isUpdatingFromAgeRef,
+        isUpdatingFromDobRef,
+    } = useDateHandling(client?.dob, setValue, watch, trigger);
     
-    // Store Gregorian date when it changes (if in Gregorian mode)
-    useEffect(() => {
-        if (dateMode === "Gregorian" && currentDob && !currentDob.includes("Hebrew:") && !/^\d{4}$/.test(currentDob)) {
-            setLastGregorianDate(currentDob);
-        }
-    }, [currentDob, dateMode]);
-
-
-    // Helper function to convert between date formats
-    const convertDateFormat = (currentDob: string, fromMode: "Gregorian" | "Hebrew" | "Year", toMode: "Gregorian" | "Hebrew" | "Year"): string => {
-        if (!currentDob || currentDob.trim() === "") {
-            return "";
-        }
-
-        // Year mode - just extract year
-        if (fromMode === "Year") {
-            const year = parseInt(currentDob);
-            if (isNaN(year)) return "";
-            
-            if (toMode === "Year") return currentDob;
-            if (toMode === "Gregorian") {
-                // Try to restore the original Gregorian date if we have it stored
-                if (lastGregorianDate) {
-                    const storedDate = new Date(lastGregorianDate);
-                    if (!isNaN(storedDate.getTime())) {
-                        // Use the stored month/day with the current year
-                        const month = (storedDate.getMonth() + 1).toString().padStart(2, '0');
-                        const day = storedDate.getDate().toString().padStart(2, '0');
-                        return `${year}-${month}-${day}`;
-                    }
-                }
-                // Fallback: Use January 1st as default
-                return `${year}-01-01`;
-            }
-            if (toMode === "Hebrew") {
-                // Convert to Hebrew year (approximate)
-                const hebrewYear = year + 3760;
-                const hebrewYearLetters = convertHebrewYearToLetters(hebrewYear);
-                return `Hebrew: א תשרי ${hebrewYearLetters}`;
-            }
-        }
-
-        // Gregorian mode
-        if (fromMode === "Gregorian") {
-            if (toMode === "Gregorian") return currentDob;
-            
-            const date = new Date(currentDob);
-            if (isNaN(date.getTime())) return "";
-            
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
-            
-            if (toMode === "Year") {
-                return year.toString();
-            }
-            if (toMode === "Hebrew") {
-                // Approximate conversion: Gregorian + 3760
-                const hebrewYear = year + 3760;
-                const hebrewYearLetters = convertHebrewYearToLetters(hebrewYear);
-                // Use Hebrew letters for day and month
-                const hebrewDays = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י",
-                    "יא", "יב", "יג", "יד", "טו", "טז", "יז", "יח", "יט", "כ",
-                    "כא", "כב", "כג", "כד", "כה", "כו", "כז", "כח", "כט", "ל"];
-                const hebrewMonths = ["תשרי", "חשון", "כסלו", "טבת", "שבט", "אדר", 
-                    "אדר א", "אדר ב", "ניסן", "אייר", "סיון", "תמוז", "אב", "אלול"];
-                
-                const hebrewDay = hebrewDays[Math.min(day - 1, 29)] || "א";
-                // Map Gregorian month to approximate Hebrew month
-                const monthIndex = month <= 12 ? (month + 5) % 12 : 0;
-                const hebrewMonth = hebrewMonths[monthIndex] || "תשרי";
-                
-                return `Hebrew: ${hebrewDay} ${hebrewMonth} ${hebrewYearLetters}`;
-            }
-        }
-
-        // Hebrew mode
-        if (fromMode === "Hebrew") {
-            if (toMode === "Hebrew") return currentDob;
-            
-            // Parse Hebrew date: "Hebrew: Day Month Year"
-            const parts = currentDob.replace("Hebrew: ", "").split(" ");
-            if (parts.length < 3) return "";
-            
-            // Extract year (could be Hebrew numerals or numeric)
-            const hebrewYearStr = parts[2];
-            let numericYear = parseInt(hebrewYearStr);
-            
-            if (isNaN(numericYear) || numericYear < 1000) {
-                // Parse Hebrew numerals
-                numericYear = parseHebrewYearToNumber(hebrewYearStr);
-            }
-            
-            // Convert Hebrew year to Gregorian (approximate)
-            const gregorianYear = numericYear - 3760;
-            
-            if (toMode === "Year") {
-                return gregorianYear.toString();
-            }
-            if (toMode === "Gregorian") {
-                // Try to map Hebrew day/month back to Gregorian (simplified)
-                const hebrewDay = parts[0];
-                const hebrewMonth = parts[1];
-                
-                const hebrewDays = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י",
-                    "יא", "יב", "יג", "יד", "טו", "טז", "יז", "יח", "יט", "כ",
-                    "כא", "כב", "כג", "כד", "כה", "כו", "כז", "כח", "כט", "ל"];
-                const hebrewMonths = ["תשרי", "חשון", "כסלו", "טבת", "שבט", "אדר", 
-                    "אדר א", "אדר ב", "ניסן", "אייר", "סיון", "תמוז", "אב", "אלול"];
-                
-                let dayNum = hebrewDays.indexOf(hebrewDay) + 1;
-                if (dayNum < 1 || dayNum > 31) dayNum = 1;
-                
-                let monthNum = hebrewMonths.indexOf(hebrewMonth);
-                // Convert Hebrew month index to Gregorian month (approximate)
-                monthNum = monthNum >= 0 ? ((monthNum + 7) % 12) + 1 : 1;
-                
-                const paddedMonth = monthNum.toString().padStart(2, '0');
-                const paddedDay = dayNum.toString().padStart(2, '0');
-                
-                return `${gregorianYear}-${paddedMonth}-${paddedDay}`;
-            }
-        }
-
-        return currentDob;
-    };
-
-    // Calculate age from DOB
-    const calculateAgeFromDob = (dob: string): number | "" => {
-        if (!dob || dob.trim() === "") return "";
-        
-        // Handle Year Only (YYYY)
-        if (/^\d{4}$/.test(dob)) {
-            const year = parseInt(dob);
-            if (isNaN(year)) return "";
-            return new Date().getFullYear() - year;
-        }
-        
-        // Handle Hebrew Date
-        if (dob.includes("Hebrew:")) {
-            const parts = dob.trim().split(" ");
-            const hebrewYearStr = parts[parts.length - 1];
-            let numericYear = parseInt(hebrewYearStr);
-            
-            if (isNaN(numericYear) || numericYear < 1000) {
-                numericYear = parseHebrewYearToNumber(hebrewYearStr);
-            }
-            
-            const gregorianYear = numericYear - 3760;
-            return new Date().getFullYear() - gregorianYear;
-        }
-        
-        // Handle Standard Date (YYYY-MM-DD)
-        const birthDate = new Date(dob);
-        if (isNaN(birthDate.getTime())) return "";
-        
-        const ageDifMs = Date.now() - birthDate.getTime();
-        const ageDate = new Date(ageDifMs);
-        return Math.abs(ageDate.getUTCFullYear() - 1970);
-    };
-
-    // Calculate DOB from age (using current year)
-    const calculateDobFromAge = (age: number | "", currentDob: string): string => {
-        if (age === "" || typeof age !== "number") return currentDob || "";
-        if (isNaN(age) || age < 18 || age > 60) return currentDob || "";
-        
-        const currentYear = new Date().getFullYear();
-        const birthYear = currentYear - age;
-        
-        // Preserve the date mode and format
-        if (dateMode === "Year") {
-            return birthYear.toString();
-        } else if (dateMode === "Hebrew") {
-            const hebrewYear = birthYear + 3760;
-            const hebrewYearLetters = convertHebrewYearToLetters(hebrewYear);
-            // Try to preserve Hebrew day/month from current DOB if available
-            if (currentDob && currentDob.includes("Hebrew:")) {
-                const parts = currentDob.replace("Hebrew: ", "").split(" ");
-                if (parts.length >= 2) {
-                    // Preserve the Hebrew day and month letters
-                    return `Hebrew: ${parts[0]} ${parts[1]} ${hebrewYearLetters}`;
-                }
-            }
-            // Default to first day of Tishrei with Hebrew letters
-            return `Hebrew: א תשרי ${hebrewYearLetters}`;
-        } else {
-            // Gregorian mode - try to preserve month/day from current DOB
-            if (currentDob && !currentDob.includes("Hebrew:") && !/^\d{4}$/.test(currentDob)) {
-                const date = new Date(currentDob);
-                if (!isNaN(date.getTime())) {
-                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                    const day = date.getDate().toString().padStart(2, '0');
-                    return `${birthYear}-${month}-${day}`;
-                }
-            }
-            // Fallback: Use January 1st
-            return `${birthYear}-01-01`;
-        }
-    };
-
-    // Sync DOB -> Age
-    useEffect(() => {
-        if (isUpdatingFromAgeRef.current) return; // Don't update if age is being changed
-        
-        const calculatedAge = calculateAgeFromDob(currentDob || "");
-        if (calculatedAge !== age) {
-            isUpdatingFromDobRef.current = true;
-            setAge(calculatedAge);
-            // Reset flag after state update
-            setTimeout(() => {
-                isUpdatingFromDobRef.current = false;
-            }, 0);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentDob, dateMode]);
-
-    // Initialize age from client DOB
-    useEffect(() => {
-        if (client?.dob) {
-            const calculatedAge = calculateAgeFromDob(client.dob);
-            setAge(calculatedAge);
-        }
-    }, [client]);
+    const currentDob = watch("dob");
 
 
 
@@ -1221,106 +845,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                     >
                         {/* SUMMARY VIEW - For external forms */}
                         {showSummary && isExternalForm && (
-                            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 shrink-0">
-                                    <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                                        {lang === "he" ? "סיכום המידע" : "Review Your Information"}
-                                    </h3>
-                                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                                        {lang === "he" 
-                                            ? "אנא בדוק את כל הפרטים לפני השליחה. לאחר האישור, הטופס יישלח לבדיקה."
-                                            : "Please review all your information before submitting. After confirmation, the form will be sent for review."}
-                                    </p>
-                                </div>
-
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    {/* Basic Info */}
-                                    <div className="space-y-4">
-                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.basicInfo")}</h4>
-                                        <div className="space-y-2 text-sm">
-                                            <div><span className="font-medium">{t(lang, "labels.fullName")}:</span> {watch("fullName") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.email")}:</span> {watch("email") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.phone")}:</span> {watch("phone") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.dob")}:</span> <span className="text-xs">{watch("dob") || "—"}</span></div>
-                                            <div><span className="font-medium">{t(lang, "labels.gender")}:</span> {watch("gender") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.location")}:</span> {watch("location") || "—"}</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Appearance */}
-                                    <div className="space-y-4">
-                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.appearance")}</h4>
-                                        <div className="space-y-2 text-sm">
-                                            <div><span className="font-medium">{t(lang, "labels.height")}:</span> {watch("height") ? `${watch("height")} cm` : "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.eyeColor")}:</span> {watch("eyeColor") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.hairColor")}:</span> {watch("hairColor") || "—"}</div>
-                                            {watch("photoUrl") && (
-                                                <div className="mt-2">
-                                                    <img src={watch("photoUrl")} alt="Profile" className="w-24 h-24 rounded-full object-cover shadow-sm" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Background */}
-                                    <div className="space-y-4">
-                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.background")}</h4>
-                                        <div className="space-y-2 text-sm">
-                                            <div><span className="font-medium">{t(lang, "labels.ethnicity")}:</span> {watch("ethnicity") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.maritalStatus")}:</span> {watch("maritalStatus") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.languages")}:</span> {(() => { const langs = watch("languages"); return Array.isArray(langs) ? langs.join(", ") || "—" : langs || "—"; })()}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.education")}:</span> {watch("education") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.occupationTitle")}:</span> {watch("occupationTitle") || "—"}</div>
-                                            {watch("occupationDescription") && (
-                                                <div><span className="font-medium">{t(lang, "labels.occupationDescription")}:</span> {watch("occupationDescription")}</div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Religious Details */}
-                                    <div className="space-y-4">
-                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.religiousDetails")}</h4>
-                                        <div className="space-y-2 text-sm">
-                                            <div><span className="font-medium">{t(lang, "labels.religiousAffiliation")}:</span> {(() => { const aff = watch("religiousAffiliation"); return Array.isArray(aff) ? aff.join(", ") || "—" : aff || "—"; })()}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.learningStatus")}:</span> {watch("learningStatus") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.headCovering")}:</span> {watch("headCovering") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.religiousDetailsFreeText")}:</span> {watch("religiousDetailsFreeText") || "—"}</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Personal */}
-                                    <div className="space-y-4">
-                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.personal")}</h4>
-                                        <div className="space-y-2 text-sm">
-                                            <div><span className="font-medium">{t(lang, "labels.hobbies")}:</span> {watch("hobbies") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.personality")}:</span> {watch("personality") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.smoking")}:</span> {watch("smoking") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.medicalHistory")}:</span> {watch("medicalHistory") ? (lang === "he" ? "כן" : "Yes") : (lang === "he" ? "לא" : "No")}</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Preferences */}
-                                    <div className="space-y-4">
-                                        <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.preferences")}</h4>
-                                        <div className="space-y-2 text-sm">
-                                            <div><span className="font-medium">{t(lang, "labels.ageGapPreference")}:</span> {(() => { const gap = watch("ageGapPreference"); return Array.isArray(gap) ? gap.join(", ") || "—" : gap || "—"; })()}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.willingToRelocate")}:</span> {watch("willingToRelocate") || "—"}</div>
-                                            <div><span className="font-medium">{t(lang, "labels.preferredEthnicities")}:</span> {(() => { const ethnicities = watch("preferredEthnicities"); return Array.isArray(ethnicities) ? ethnicities.join(", ") || "—" : ethnicities || "—"; })()}</div>
-                                            {watch("preferencesFreeText") && (
-                                                <div><span className="font-medium">{t(lang, "labels.preferencesFreeText")}:</span> {watch("preferencesFreeText") || "—"}</div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* References - For external forms */}
-                                    {watch("references") && (
-                                        <div className="space-y-4">
-                                            <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "labels.references")}</h4>
-                                            <div className="text-sm whitespace-pre-wrap">{watch("references") || "—"}</div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            <FormSummaryView watch={watch} lang={lang} />
                         )}
 
                         {/* STEP 0: BASIC INFO */}
@@ -1366,10 +891,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                 <button
                                                     type="button"
                                                     onClick={() => {
-                                                        // Store the current Gregorian date before switching to Year Only
-                                                        if (dateMode === "Gregorian" && currentDob && !currentDob.includes("Hebrew:") && !/^\d{4}$/.test(currentDob)) {
-                                                            setLastGregorianDate(currentDob);
-                                                        }
                                                         const converted = convertDateFormat(currentDob || "", dateMode, "Year");
                                                         setDateMode("Year");
                                                         setValue("dob", converted || new Date().getFullYear().toString());
@@ -1416,80 +937,9 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                             min="18"
                                             max="60"
                                             value={age}
-                                            onChange={(e) => {
-                                                const inputValue = e.target.value;
-                                                // Allow typing any value, including empty and values outside range
-                                                if (inputValue === "") {
-                                                    setAge("");
-                                                    return;
-                                                }
-                                                
-                                                const parsedAge = parseInt(inputValue);
-                                                if (!isNaN(parsedAge)) {
-                                                    setAge(parsedAge);
-                                                    
-                                                    // Update DOB for valid ages (within range)
-                                                    const MIN_AGE = 18;
-                                                    const MAX_AGE = 60;
-                                                    if (parsedAge >= MIN_AGE && parsedAge <= MAX_AGE) {
-                                                        if (!isUpdatingFromDobRef.current) {
-                                                            isUpdatingFromAgeRef.current = true;
-                                                            const newDob = calculateDobFromAge(parsedAge, currentDob || "");
-                                                            if (newDob) {
-                                                                setValue("dob", newDob);
-                                                                trigger("dob");
-                                                            }
-                                                            setTimeout(() => {
-                                                                isUpdatingFromAgeRef.current = false;
-                                                            }, 100);
-                                                        }
-                                                    }
-                                                } else {
-                                                    setAge("");
-                                                }
-                                            }}
-                                            onBlur={(e) => {
-                                                // Clamp values when user finishes typing
-                                                const inputValue = e.target.value;
-                                                if (inputValue === "") {
-                                                    return;
-                                                }
-                                                
-                                                const parsedAge = parseInt(inputValue);
-                                                if (isNaN(parsedAge)) {
-                                                    return;
-                                                }
-                                                
-                                                const MIN_AGE = 18;
-                                                const MAX_AGE = 60;
-                                                let clampedAge = parsedAge;
-                                                
-                                                if (parsedAge < MIN_AGE) {
-                                                    clampedAge = MIN_AGE;
-                                                } else if (parsedAge > MAX_AGE) {
-                                                    clampedAge = MAX_AGE;
-                                                }
-                                                
-                                                // Only update if value was clamped
-                                                if (clampedAge !== parsedAge) {
-                                                    setAge(clampedAge);
-                                                }
-                                                
-                                                // Update DOB with the (possibly clamped) age
-                                                if (!isUpdatingFromDobRef.current) {
-                                                    isUpdatingFromAgeRef.current = true;
-                                                    const newDob = calculateDobFromAge(clampedAge, currentDob || "");
-                                                    if (newDob) {
-                                                        setValue("dob", newDob);
-                                                        trigger("dob");
-                                                    }
-                                                    setTimeout(() => {
-                                                        isUpdatingFromAgeRef.current = false;
-                                                    }, 100);
-                                                }
-                                            }}
+                                            onChange={(e) => handleAgeChange(e.target.value)}
+                                            onBlur={(e) => handleAgeBlur(e.target.value)}
                                             onKeyDown={(e) => {
-                                                // Update DOB when Enter is pressed
                                                 if (e.key === "Enter") {
                                                     e.currentTarget.blur();
                                                 }
