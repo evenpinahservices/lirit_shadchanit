@@ -87,6 +87,34 @@ body {
     scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
   }
 
+  /* Prevent iOS zoom on input focus - ensure all inputs have at least 16px font-size */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* On larger screens, allow smaller text but still prevent zoom */
+  @media (min-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="password"],
+    input[type="search"],
+    input[type="url"],
+    textarea,
+    select {
+      font-size: 14px; /* Allow smaller text on desktop */
+    }
+  }
+
   @media (prefers-color-scheme: dark) {
     .custom-scrollbar {
       scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
