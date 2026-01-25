@@ -82,7 +82,9 @@ export default function NewClientPage() {
     // Handle AutoFill callbacks
     const handleAutoFill = (data: any) => {
         setAutoFillData(data);
-        setSelectedMode("en"); // Switch to English form with filled data
+        // Switch to English form with filled data - this will automatically close the AI modal
+        // because the modal only renders when selectedMode === "ai"
+        setSelectedMode("en");
     };
 
     const handleAddToGallery = (urls: string[]) => {
@@ -94,7 +96,12 @@ export default function NewClientPage() {
     };
 
     const handleCloseAutoFill = () => {
-        setSelectedMode(null);
+        // Only reset mode if user manually closes (cancels) without filling form
+        // If form was filled, onFillForm already changed selectedMode to "en"
+        // and the modal will close automatically because selectedMode !== "ai"
+        if (selectedMode === "ai") {
+            setSelectedMode(null);
+        }
     };
 
     // Form with selected language

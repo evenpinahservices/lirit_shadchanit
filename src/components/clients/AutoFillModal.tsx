@@ -268,6 +268,7 @@ export function AutoFillModal({
                 const fetchPromise = fetch("/api/extract-data", {
                     method: "POST",
                     body: formData,
+                    credentials: "include", // Include cookies for authentication
                 });
                 
                 response = await fetchPromise;
@@ -292,12 +293,22 @@ export function AutoFillModal({
                 try {
                     const errorData = await response.json();
                     errorMessage = errorData.error || errorMessage;
+                    
+                    // Provide more helpful message for authentication errors
+                    if (response.status === 401 || errorMessage.includes("Unauthorized") || errorMessage.includes("Authentication required")) {
+                        errorMessage = "Your session has expired. Please refresh the page and try again.";
+                    }
+                    
                     if (errorData.details) {
                         console.error("API error details:", errorData.details);
                     }
                 } catch (parseError) {
                     const text = await response.text();
-                    errorMessage = `Server error (${response.status}): ${text.substring(0, 200)}`;
+                    if (response.status === 401) {
+                        errorMessage = "Your session has expired. Please refresh the page and try again.";
+                    } else {
+                        errorMessage = `Server error (${response.status}): ${text.substring(0, 200)}`;
+                    }
                 }
                 throw new Error(errorMessage);
             }
@@ -415,6 +426,7 @@ export function AutoFillModal({
             setProcessingProgress(99);
             
             // Update form with extracted data
+            // This will set selectedMode to "en" and autoFillData, which will cause the modal to close automatically
             onFillForm(finalFormData);
             
             // Add to gallery
@@ -432,7 +444,6 @@ export function AutoFillModal({
             setProcessingProgress(100);
             
             setTimeout(() => {
-                onClose();
                 // Reset state
                 setAllImages([]);
                 setExtractedText("");
@@ -441,6 +452,8 @@ export function AutoFillModal({
                 setProcessingSubStatus("");
                 setProcessingProgress(0);
                 startTimeRef.current = null;
+                // Don't call onClose() here - the modal will close automatically when selectedMode changes
+                // Calling onClose() would reset selectedMode to null, undoing the form fill
             }, 1500);
         } catch (error: any) {
             console.error("Processing error:", error);
