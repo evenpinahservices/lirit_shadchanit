@@ -1,43 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Users, Heart, Search, LogOut, User as UserIcon, Maximize, Minimize, HelpCircle, StickyNote, Hourglass } from "lucide-react";
+import { LayoutDashboard, Users, Heart, Search, LogOut, HelpCircle, StickyNote, Hourglass } from "lucide-react";
 import { useOnboardingTour } from "@/components/OnboardingTour";
 import { BugReportButton } from "@/components/ui/BugReportButton";
 
 export function Navbar() {
     const pathname = usePathname();
     const { user, logout } = useAuth();
-    const [isFullscreen, setIsFullscreen] = useState(false);
     const { startTour, isRunning: isTourRunning } = useOnboardingTour();
-
-    // if (!user) return null; // Allow navbar to show for logged out users (for bug reporting)
-
-    // Check fullscreen state
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement);
-        };
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    }, []);
-
-    const toggleFullscreen = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => {
-                console.error('Error attempting to enable fullscreen:', err);
-            });
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
-        }
-    };
 
     const links = [
         { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -101,14 +75,6 @@ export function Navbar() {
                     <div className="flex-shrink-0">
                         <BugReportButton />
                     </div>
-
-                    <button
-                        onClick={toggleFullscreen}
-                        className="p-1.5 sm:p-2 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors flex-shrink-0"
-                        title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                    >
-                        {isFullscreen ? <Minimize className="h-4 w-4 sm:h-5 sm:w-5" /> : <Maximize className="h-4 w-4 sm:h-5 sm:w-5" />}
-                    </button>
 
                     {user && (
                         <button

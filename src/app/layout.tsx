@@ -6,7 +6,6 @@ import { ClientProvider } from "@/context/ClientContext";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Navbar } from "@/components/ui/Navbar";
 import { BottomNav } from "@/components/ui/BottomNav";
-import { AutoFullscreen } from "@/components/AutoFullscreen";
 import { KeyboardScrollHandler } from "@/components/KeyboardScrollHandler";
 import { cn } from "@/lib/utils";
 import { Suspense } from "react";
@@ -45,7 +44,6 @@ export default function RootLayout({
         <AuthProvider>
           <ClientProvider>
             <AuthGuard>
-              <AutoFullscreen />
               <KeyboardScrollHandler />
               <div className="flex flex-col h-dvh min-h-0 overflow-hidden">
                 <Suspense fallback={null}>
