@@ -545,6 +545,34 @@ export async function getPendingClientByTokenAndIdentifier(
     } as PendingClientInput & { id: string };
 }
 
+/**
+ * Normalize phone number for consistent matching
+ * Removes spaces, dashes, parentheses, and handles country codes
+ */
+function normalizePhone(phone: string): string {
+    // Remove all non-digit characters except +
+    let normalized = phone.replace(/[^\d+]/g, '');
+    
+    // Handle Israeli numbers: convert 05X-XXXXXXX to +9725X-XXXXXXX
+    if (normalized.startsWith('05') && normalized.length === 10) {
+        normalized = '+972' + normalized.substring(1);
+    }
+    // Handle numbers starting with 0 (Israeli) - convert to +972
+    else if (normalized.startsWith('0') && normalized.length === 10) {
+        normalized = '+972' + normalized.substring(1);
+    }
+    // If it's already in +972 format, keep it
+    else if (normalized.startsWith('+972')) {
+        // Already normalized
+    }
+    // If it starts with 972 (without +), add +
+    else if (normalized.startsWith('972') && normalized.length >= 12) {
+        normalized = '+' + normalized;
+    }
+    
+    return normalized;
+}
+
 // Find pending client by email OR phone only (no token required)
 export async function getPendingClientByIdentifier(
     email?: string, 
@@ -555,6 +583,7 @@ export async function getPendingClientByIdentifier(
     
     let sanitizedEmail: string | undefined;
     let sanitizedPhone: string | undefined;
+    let normalizedPhone: string | undefined;
     
     if (email) {
         sanitizedEmail = sanitizeInput(email.trim().toLowerCase(), 255);
@@ -570,6 +599,8 @@ export async function getPendingClientByIdentifier(
         if (!isValidPhone(sanitizedPhone)) {
             return null;
         }
+        // Normalize phone for better matching
+        normalizedPhone = normalizePhone(sanitizedPhone);
     }
     
     if (!sanitizedEmail && !sanitizedPhone) {
@@ -578,13 +609,43 @@ export async function getPendingClientByIdentifier(
     
     await dbConnect();
     
-    // Build query: must match email OR phone
-    const query: any = {};
+    // Build query: match by email OR phone (improved matching)
+    const query: any = {
+        $or: []
+    };
     
     if (sanitizedEmail) {
-        query.email = sanitizedEmail;
-    } else if (sanitizedPhone) {
-        query.phone = sanitizedPhone;
+        query.$or.push({ email: sanitizedEmail });
+    }
+    
+    if (sanitizedPhone) {
+        // Extract just the digits for flexible matching
+        const phoneDigits = sanitizedPhone.replace(/\D/g, '');
+        
+        // Try exact match with normalized phone
+        if (normalizedPhone) {
+            query.$or.push({ phone: normalizedPhone });
+        }
+        // Try exact match with original phone
+        query.$or.push({ phone: sanitizedPhone });
+        // Try matching with common phone formats (handles formatting differences)
+        // For Israeli numbers: try 05X-XXX-XXXX, 05X-XXXXXXX, 05XXXXXXXXX, +9725X-XXX-XXXX
+        if (phoneDigits.length >= 9) {
+            // Try with dashes: 050-123-4567
+            if (phoneDigits.length === 10 && phoneDigits.startsWith('05')) {
+                const formatted = `${phoneDigits.substring(0, 3)}-${phoneDigits.substring(3, 6)}-${phoneDigits.substring(6)}`;
+                query.$or.push({ phone: formatted });
+                const formatted2 = `${phoneDigits.substring(0, 3)}-${phoneDigits.substring(3)}`;
+                query.$or.push({ phone: formatted2 });
+            }
+            // Try digits only: 0501234567
+            query.$or.push({ phone: phoneDigits });
+            // Try with +972 prefix
+            if (phoneDigits.startsWith('05') && phoneDigits.length === 10) {
+                const intlFormat = '+972' + phoneDigits.substring(1);
+                query.$or.push({ phone: intlFormat });
+            }
+        }
     }
     
     // Get the most recent pending client matching identifier
