@@ -319,7 +319,7 @@ export const translations = {
       occupationTitle: "עיסוק - כותרת",
       occupationDescription: "עיסוק - תיאור",
       religiousAffiliation: "זרם דתי",
-      learningStatus: "סטטוס נחיתה",
+      learningStatus: "סטטוס לימוד תורה",
       headCovering: "כיסוי ראש לאחר נישואין (אם רלוונטי)",
       religiousDetailsFreeText: "פרטים דתיים נוספים",
       smoking: "האם אתה מעשן?",

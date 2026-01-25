@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { X, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 // Checking previous file list, I didn't see a `dialog` in `components/ui` list (only BottomNav, Navbar, MultiSelect...). 
@@ -16,6 +16,20 @@ interface ImageGalleryModalProps {
 export function ImageGalleryModal({ images, initialIndex = 0, isOpen, onClose }: ImageGalleryModalProps) {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    
+    // Touch swipe state
+    const touchStartX = useRef<number | null>(null);
+    const touchStartY = useRef<number | null>(null);
+    const touchEndX = useRef<number | null>(null);
+    const touchEndY = useRef<number | null>(null);
+    const minSwipeDistance = 50; // Minimum distance in pixels to trigger a swipe
+
+    // Update currentIndex when initialIndex changes (e.g., when modal opens with a different image)
+    useEffect(() => {
+        if (isOpen) {
+            setCurrentIndex(initialIndex);
+        }
+    }, [initialIndex, isOpen]);
 
     if (!isOpen) return null;
 
@@ -29,6 +43,55 @@ export function ImageGalleryModal({ images, initialIndex = 0, isOpen, onClose }:
         setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
     };
 
+    // Touch event handlers for swipe support
+    const onTouchStart = (e: React.TouchEvent) => {
+        touchEndX.current = null;
+        touchEndY.current = null;
+        touchStartX.current = e.targetTouches[0].clientX;
+        touchStartY.current = e.targetTouches[0].clientY;
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        touchEndX.current = e.targetTouches[0].clientX;
+        touchEndY.current = e.targetTouches[0].clientY;
+        
+        // Prevent scrolling if this is a horizontal swipe
+        if (touchStartX.current !== null && touchStartY.current !== null) {
+            const deltaX = Math.abs(touchEndX.current - touchStartX.current);
+            const deltaY = Math.abs(touchEndY.current - touchStartY.current);
+            // If horizontal movement is greater than vertical, prevent default to avoid scrolling
+            if (deltaX > deltaY && deltaX > 10) {
+                e.preventDefault();
+            }
+        }
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStartX.current || !touchEndX.current || !touchStartY.current || !touchEndY.current) return;
+        
+        const distanceX = touchStartX.current - touchEndX.current;
+        const distanceY = touchStartY.current - touchEndY.current;
+        const isLeftSwipe = distanceX > minSwipeDistance;
+        const isRightSwipe = distanceX < -minSwipeDistance;
+        const isVerticalSwipe = Math.abs(distanceY) > Math.abs(distanceX);
+
+        // Only handle horizontal swipes (ignore vertical scrolling)
+        if (!isVerticalSwipe) {
+            if (isLeftSwipe && images.length > 1) {
+                nextImage();
+            }
+            if (isRightSwipe && images.length > 1) {
+                prevImage();
+            }
+        }
+        
+        // Reset touch positions
+        touchStartX.current = null;
+        touchStartY.current = null;
+        touchEndX.current = null;
+        touchEndY.current = null;
+    };
+
     return (
         <div className="fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center animate-in fade-in duration-200">
             {/* Controls */}
@@ -40,7 +103,12 @@ export function ImageGalleryModal({ images, initialIndex = 0, isOpen, onClose }:
             </button>
 
             {/* Main Image Container */}
-            <div className="relative w-full h-full flex items-center justify-center p-4">
+            <div 
+                className="relative w-full h-full flex items-center justify-center p-4"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+            >
                 {images.length > 1 && (
                     <button
                         onClick={prevImage}
