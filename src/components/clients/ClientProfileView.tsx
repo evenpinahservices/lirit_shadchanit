@@ -295,6 +295,52 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
         }
     }, [isRtl, displaySections.length]);
 
+    // Swipe gesture support for touch devices
+    useEffect(() => {
+        const contentDiv = document.querySelector('[data-profile-content]') as HTMLElement;
+        if (!contentDiv) return;
+
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const minSwipeDistance = 50; // Minimum distance for a swipe
+
+        const handleTouchStart = (e: TouchEvent) => {
+            touchStartX = e.changedTouches[0].screenX;
+        };
+
+        const handleTouchEnd = (e: TouchEvent) => {
+            touchEndX = e.changedTouches[0].screenX;
+            const swipeDistance = touchEndX - touchStartX;
+
+            // Only trigger swipe if distance is significant
+            if (Math.abs(swipeDistance) > minSwipeDistance) {
+                if (swipeDistance > 0) {
+                    // Swipe right - go to previous section
+                    if (isRtl) {
+                        setCurrentSectionIndex((prev) => (prev + 1) % displaySections.length);
+                    } else {
+                        setCurrentSectionIndex((prev) => (prev - 1 + displaySections.length) % displaySections.length);
+                    }
+                } else {
+                    // Swipe left - go to next section
+                    if (isRtl) {
+                        setCurrentSectionIndex((prev) => (prev - 1 + displaySections.length) % displaySections.length);
+                    } else {
+                        setCurrentSectionIndex((prev) => (prev + 1) % displaySections.length);
+                    }
+                }
+            }
+        };
+
+        contentDiv.addEventListener('touchstart', handleTouchStart, { passive: true });
+        contentDiv.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+        return () => {
+            contentDiv.removeEventListener('touchstart', handleTouchStart);
+            contentDiv.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [isRtl, displaySections.length]);
+
 
     return (
         <div className={cn("w-full flex flex-col h-full min-h-0 overflow-hidden pb-4", isRtl ? "rtl" : "ltr")} dir={isRtl ? "rtl" : "ltr"}>
@@ -441,6 +487,7 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
 
                 {/* Section Content - Scrollable */}
                 <div
+                    data-profile-content
                     className="flex-1 overflow-y-auto p-4 custom-scrollbar"
                     dir={isRtl ? "rtl" : "ltr"}
                     style={isRtl ? { textAlign: "right" } : { textAlign: "left" }}

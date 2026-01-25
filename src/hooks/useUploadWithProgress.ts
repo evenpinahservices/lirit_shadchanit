@@ -31,7 +31,7 @@ export function useUploadWithProgress() {
         error: null,
     });
 
-    const uploadWithProgress = useCallback(async (file: File): Promise<UploadResult> => {
+    const uploadWithProgress = useCallback(async (file: File, token?: string): Promise<UploadResult> => {
         // Validate file
         if (file.size > MAX_FILE_SIZE) {
             const error = "Maximum upload size is 10 MB.";
@@ -49,9 +49,15 @@ export function useUploadWithProgress() {
 
         try {
             // Get upload signature from our server
-            const sigResponse = await fetch("/api/upload/signature");
+            // If token is provided (for external form links), pass it as query parameter
+            const signatureUrl = token 
+                ? `/api/upload/signature?token=${encodeURIComponent(token)}`
+                : "/api/upload/signature";
+            
+            const sigResponse = await fetch(signatureUrl);
             if (!sigResponse.ok) {
-                throw new Error("Failed to get upload signature");
+                const errorData = await sigResponse.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to get upload signature");
             }
             const sigData: SignatureResponse = await sigResponse.json();
 

@@ -16,6 +16,7 @@ interface AutoFillModalProps {
     onFillForm: (data: any) => void;
     onAddToGallery: (urls: string[]) => void;
     onSetProfilePhoto: (url: string) => void;
+    fullScreen?: boolean;
 }
 
 export function AutoFillModal({
@@ -24,6 +25,7 @@ export function AutoFillModal({
     onFillForm,
     onAddToGallery,
     onSetProfilePhoto,
+    fullScreen = false,
 }: AutoFillModalProps) {
     const [allImages, setAllImages] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -468,6 +470,162 @@ export function AutoFillModal({
             setSelectedProfileIndex(null);
         }
     };
+
+    if (fullScreen) {
+        return (
+            <>
+                <ProgressOverlay 
+                    isVisible={isProcessing} 
+                    status={processingStatus}
+                    subStatus={processingSubStatus}
+                    progress={processingProgress}
+                />
+                <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col" dir="ltr">
+                    {/* Header */}
+                    <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+                        <h2 className="text-xl font-semibold">Auto-Fill from Images</h2>
+                        <button
+                            onClick={handleClose}
+                            disabled={isProcessing}
+                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md disabled:opacity-50"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                        {/* Images Section */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                <ImageIcon className="h-5 w-5 text-blue-600" />
+                                <h3 className="text-lg font-medium">Upload Images</h3>
+                            </div>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Upload all images (resumes, forms, profile pictures, etc.). Select one image to use as the main profile photo. All images will be added to the gallery and processed by AI.
+                            </p>
+                            
+                            <div className="grid grid-cols-3 gap-3">
+                                {allImages.map((file, index) => (
+                                    <div
+                                        key={index}
+                                        className={`relative aspect-square rounded-md overflow-hidden border-2 ${
+                                            selectedProfileIndex === index
+                                                ? 'border-blue-500'
+                                                : 'border-gray-300'
+                                        }`}
+                                    >
+                                        <Image
+                                            src={URL.createObjectURL(file)}
+                                            alt={`Image ${index + 1}`}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                        {selectedProfileIndex === index && (
+                                            <div className="absolute inset-0 bg-blue-500 bg-opacity-20 flex items-center justify-center">
+                                                <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded">Main Photo</span>
+                                            </div>
+                                        )}
+                                        <div className="absolute top-1 right-1 flex gap-1">
+                                            <button
+                                                onClick={() => setSelectedProfileIndex(index)}
+                                                disabled={isProcessing}
+                                                className="bg-blue-500 text-white rounded-full p-1 hover:bg-blue-600 disabled:opacity-50"
+                                                title="Set as main photo"
+                                            >
+                                                <ImageIcon className="h-3 w-3" />
+                                            </button>
+                                            <button
+                                                onClick={() => removeImage(index)}
+                                                disabled={isProcessing}
+                                                className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 disabled:opacity-50"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                <label
+                                    className={`relative flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed cursor-pointer bg-gray-50 dark:bg-gray-800 transition-colors ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''} ${
+                                        isDraggingImages 
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                                            : 'border-gray-300 hover:border-gray-400'
+                                    }`}
+                                    style={{ pointerEvents: isProcessing ? 'none' : 'auto' }}
+                                    onDrop={handleImageDrop}
+                                    onDragOver={(e) => {
+                                        e.preventDefault();
+                                        if (!isProcessing) {
+                                            setIsDraggingImages(true);
+                                        }
+                                    }}
+                                    onDragLeave={() => setIsDraggingImages(false)}
+                                >
+                                    <UploadCloud className="h-6 w-6 text-gray-400" />
+                                    <span className="text-xs text-gray-500 mt-1">
+                                        {isDraggingImages ? "Drop images here" : "Add Images"}
+                                    </span>
+                                    <input
+                                        ref={imageInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        className="hidden"
+                                        onChange={handleImageUpload}
+                                        disabled={isProcessing}
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Processing Status */}
+                        {isProcessing && (
+                            <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900 rounded-md">
+                                <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                                <span className="text-sm text-blue-700 dark:text-blue-300">{processingStatus}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between gap-3 p-4 border-t border-gray-200 dark:border-gray-800">
+                        <button
+                            onClick={simulateProgress}
+                            disabled={isProcessing}
+                            className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 disabled:opacity-50 flex items-center gap-1"
+                            title="Test progress overlay without using AI tokens"
+                        >
+                            <Loader2 className="h-3 w-3" />
+                            Test Progress
+                        </button>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleClose}
+                                disabled={isProcessing}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={processImages}
+                                disabled={isProcessing || allImages.length === 0}
+                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    "Process & Fill Form"
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
 
     return (
         <>

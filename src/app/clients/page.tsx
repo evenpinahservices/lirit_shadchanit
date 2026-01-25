@@ -252,7 +252,7 @@ export default function ClientsPage() {
             </div>
 
             {/* Pagination Controls */}
-            <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none overflow-visible">
+            <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-2 px-2 md:px-4 py-2 bg-white dark:bg-gray-950 z-20 md:static md:p-0 md:pb-4 md:bg-transparent shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:shadow-none overflow-visible">
                 <div className="flex-shrink-0 relative z-30">
                     <ItemsPerPageSelector
                         value={itemsPerPage}
@@ -265,21 +265,23 @@ export default function ClientsPage() {
                         <button
                             onClick={() => handlePageChange(currentPage - 1)}
                             disabled={currentPage === 1}
-                            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                            className="flex items-center gap-1 px-2 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                            style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}
                         >
-                            <ChevronLeft className="h-4 w-4" />
-                            Prev
+                            <ChevronLeft className="h-3 w-3 md:h-4 md:w-4" />
+                            <span className="hidden sm:inline">Prev</span>
                         </button>
-                        <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                        <span className="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-medium" style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}>
                             Page {currentPage} of {totalPages}
                         </span>
                         <button
                             onClick={() => handlePageChange(currentPage + 1)}
                             disabled={currentPage === totalPages}
-                            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="flex items-center gap-1 px-2 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}
                         >
-                            Next
-                            <ChevronRight className="h-4 w-4" />
+                            <span className="hidden sm:inline">Next</span>
+                            <ChevronRight className="h-3 w-3 md:h-4 md:w-4" />
                         </button>
                     </>
                 )}

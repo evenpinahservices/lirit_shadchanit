@@ -292,7 +292,7 @@ export default function ExternalFormPage() {
 
     // Form with selected language
     return (
-        <div className={`min-h-screen flex flex-col ${selectedLanguage === "he" ? "rtl" : "ltr"}`} dir={selectedLanguage === "he" ? "rtl" : "ltr"}>
+        <div className={`w-full h-full flex flex-col flex-1 min-h-0 overflow-hidden ${selectedLanguage === "he" ? "rtl" : "ltr"}`} dir={selectedLanguage === "he" ? "rtl" : "ltr"}>
             <div className="flex items-center justify-between shrink-0 mb-2 px-4 pt-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">
@@ -472,6 +472,8 @@ function ExternalClientForm({
             language={language}
             onSubmitToPending={handleSubmitToPending}
             isExternalForm={true}
+            token={token}
+            hideAutoFillOptions={true}
         />
     );
 }

@@ -1,16 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { generateFormToken } from "@/actions/pendingClient";
-import { Copy, Check, Link as LinkIcon, ArrowLeft } from "lucide-react";
+import { verifySession } from "@/actions/auth";
+import { Copy, Check, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 
 export default function GenerateLinkPage() {
     const router = useRouter();
+    const { logout, user } = useAuth();
     const [token, setToken] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [isVerifying, setIsVerifying] = useState(true);
+
+    // Verify server session on mount
+    useEffect(() => {
+        const checkSession = async () => {
+            if (user) {
+                // If user is in localStorage, verify server session exists
+                const serverUser = await verifySession();
+                if (!serverUser) {
+                    // Server session is missing, redirect to login
+                    console.warn("Server session missing, redirecting to login");
+                    logout();
+                    return;
+                }
+            }
+            setIsVerifying(false);
+        };
+        checkSession();
+    }, [user, logout]);
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -19,7 +41,17 @@ export default function GenerateLinkPage() {
             setToken(newToken);
         } catch (error: any) {
             console.error("Failed to generate token:", error);
-            alert("Failed to generate link: " + (error.message || error));
+            const errorMessage = error.message || error;
+            
+            // If authentication error, redirect to login
+            if (errorMessage.includes("Unauthorized") || errorMessage.includes("Authentication required")) {
+                alert("Your session has expired. Please log in again.");
+                // Clear localStorage and redirect to login
+                logout();
+                return;
+            }
+            
+            alert("Failed to generate link: " + errorMessage);
         } finally {
             setIsGenerating(false);
         }
@@ -41,13 +73,6 @@ export default function GenerateLinkPage() {
     return (
         <div className="flex flex-col h-full min-h-0 gap-4">
             <div className="flex items-center gap-4 shrink-0 px-1 pt-4">
-                <Link
-                    href="/inbox"
-                    className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Pending
-                </Link>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Generate Form Link</h1>
                     <p className="text-muted-foreground">
@@ -56,8 +81,16 @@ export default function GenerateLinkPage() {
                 </div>
             </div>
 
+            {isVerifying ? (
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
+                        <p className="text-muted-foreground">Verifying session...</p>
+                    </div>
+                </div>
+            ) : (
             <div className="flex-1 flex items-center justify-center">
-                <div className="max-w-2xl w-full space-y-6 p-6 bg-white dark:bg-gray-950 rounded-lg border shadow-sm">
+                <div className="max-w-2xl w-full space-y-6 p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 rounded-2xl shadow-xl backdrop-blur-sm">
                     {!token ? (
                         <div className="text-center space-y-4">
                             <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto">
@@ -153,6 +186,7 @@ export default function GenerateLinkPage() {
                     )}
                 </div>
             </div>
+            )}
         </div>
     );
 }

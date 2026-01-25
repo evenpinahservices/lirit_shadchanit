@@ -58,7 +58,7 @@ export function ItemsPerPageSelector({ value, onChange, totalItems, className = 
                 }}
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
             >
-                <span>Show: {displayValue}</span>
+                <span className="text-xs md:text-sm" style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}>Show: {displayValue}</span>
                 <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
             </button>
 

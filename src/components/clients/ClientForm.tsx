@@ -116,6 +116,11 @@ interface ClientFormProps {
     onReject?: () => void; // Handler for rejecting (used in inbox review)
     isApproving?: boolean; // Loading state for approval
     isRejecting?: boolean; // Loading state for rejection
+    token?: string; // Form token for external form links (used for image uploads)
+    hideAutoFillOptions?: boolean; // If true, hide Auto Fill and JSON Fill buttons
+    initialAutoFillData?: any; // Data from AI extraction
+    initialGalleryUrls?: string[]; // Gallery images from AI
+    initialProfilePhotoUrl?: string; // Profile photo from AI
 }
 
 // Step definitions for the wizard (keys for translation lookup)
@@ -129,7 +134,7 @@ const STEP_KEYS = [
     { titleKey: "admin", fields: ["references", "notes"] },
 ];
 
-export function ClientForm({ client, isEditing = false, onCancel, language = "en", onSubmitToPending, isExternalForm = false, onApprove, onReject, isApproving = false, isRejecting = false }: ClientFormProps) {
+export function ClientForm({ client, isEditing = false, onCancel, language = "en", onSubmitToPending, isExternalForm = false, onApprove, onReject, isApproving = false, isRejecting = false, token, hideAutoFillOptions = false, initialAutoFillData, initialGalleryUrls, initialProfilePhotoUrl }: ClientFormProps) {
     // Detect language from client data or use provided language
     const detectedLang = client ? detectClientLanguage(client) : language;
     
@@ -597,7 +602,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         setCurrentUploadFile(file);
 
         try {
-            const result = await profileUpload.uploadWithProgress(file);
+            const result = await profileUpload.uploadWithProgress(file, token);
             
             if (result.url) {
                 const newPhotoUrl = result.url;
@@ -646,7 +651,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         setCurrentUploadFile(file);
 
         try {
-            const result = await profileUpload.uploadWithProgress(file);
+            const result = await profileUpload.uploadWithProgress(file, token);
             
             if (result.url) {
                 const newPhotoUrl = result.url;
@@ -696,7 +701,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         for (const file of files) {
             setGalleryUploadFile(file);
             try {
-                const result = await galleryUpload.uploadWithProgress(file);
+                const result = await galleryUpload.uploadWithProgress(file, token);
                 if (result.url) {
                     uploadedUrls.push(result.url);
                     setUploadError(null);
@@ -1086,7 +1091,18 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         }
     };
 
-
+    // Handle initial auto-fill data from AI extraction
+    useEffect(() => {
+        if (initialAutoFillData) {
+            handleAutoFill(initialAutoFillData);
+        }
+        if (initialGalleryUrls && initialGalleryUrls.length > 0) {
+            handleAddToGallery(initialGalleryUrls);
+        }
+        if (initialProfilePhotoUrl) {
+            handleSetProfilePhoto(initialProfilePhotoUrl);
+        }
+    }, [initialAutoFillData, initialGalleryUrls, initialProfilePhotoUrl]);
 
     return (
         <>
@@ -1125,27 +1141,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                           )
                                     }
                                 </h2>
-                                {!isEditing && !isExternalForm && (
-                                    <>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setShowAutoFillModal(true)} 
-                                            className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded border border-green-200 hover:bg-green-200 flex items-center gap-1"
-                                        >
-                                            <UploadCloud className="h-3 w-3" />
-                                            {t(lang, "buttons.autoFill")}
-                                        </button>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setShowJsonFillModal(true)} 
-                                            className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded border border-purple-200 hover:bg-purple-200 flex items-center gap-1"
-                                            title="Fill form with JSON file (for testing)"
-                                        >
-                                            <FileJson className="h-3 w-3" />
-                                            JSON Fill
-                                        </button>
-                                    </>
-                                )}
+                                {/* AutoFill and JSON Fill buttons removed - no longer available on any forms */}
                             </div>
                             <span className="text-sm text-gray-500">
                                 {showSummary 
@@ -1677,7 +1673,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                         for (const file of files) {
                                                             setGalleryUploadFile(file);
                                                             try {
-                                                                const result = await galleryUpload.uploadWithProgress(file);
+                                                                const result = await galleryUpload.uploadWithProgress(file, token);
                                                                 if (result.url) {
                                                                     uploadedUrls.push(result.url);
                                                                     setUploadError(null); // Clear errors on success

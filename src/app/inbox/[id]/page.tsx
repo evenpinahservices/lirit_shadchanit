@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { getPendingClients, approvePendingClient, rejectPendingClient, willOverwriteApprovedClient } from "@/actions/pendingClient";
 import { ClientForm } from "@/components/clients/ClientForm";
 import { Client } from "@/lib/mockData";
-import { ArrowLeft, CheckCircle2, X, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
@@ -115,13 +115,6 @@ export default function InboxApprovalPage() {
     return (
         <div className="flex flex-col h-full min-h-0 gap-4">
             <div className="flex items-center gap-4 shrink-0 px-1 pt-4">
-                <Link
-                    href="/inbox"
-                    className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1"
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to Pending
-                </Link>
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Review Client Submission</h1>
                     <p className="text-muted-foreground">
@@ -140,6 +133,7 @@ export default function InboxApprovalPage() {
                     onReject={() => setRejectModalOpen(true)}
                     isApproving={isApproving}
                     isRejecting={isRejecting}
+                    hideAutoFillOptions={true}
                 />
             </div>
 

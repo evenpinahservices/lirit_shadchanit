@@ -99,13 +99,13 @@ export function BugReportButton() {
                 id="bug-report-btn"
                 onClick={captureScreenshot}
                 disabled={isCapturing}
-                className="p-2 text-gray-500 hover:text-orange-600 dark:hover:text-orange-400 transition-colors disabled:opacity-50"
+                className="p-1.5 sm:p-2 text-gray-500 hover:text-orange-600 dark:hover:text-orange-400 transition-colors disabled:opacity-50 flex-shrink-0"
                 title="Report a Bug"
             >
                 {isCapturing ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                 ) : (
-                    <Bug className="h-5 w-5" />
+                    <Bug className="h-4 w-4 sm:h-5 sm:w-5" />
                 )}
             </button>
 
