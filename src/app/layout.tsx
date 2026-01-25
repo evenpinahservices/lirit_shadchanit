@@ -30,6 +30,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   userScalable: true,
   viewportFit: "cover",
+  // Prevent keyboard from causing layout issues
+  interactiveWidget: "resizes-visual",
 };
 
 export default function RootLayout({
@@ -45,11 +47,11 @@ export default function RootLayout({
             <AuthGuard>
               <AutoFullscreen />
               <KeyboardScrollHandler />
-              <div className="flex flex-col h-full max-h-dvh min-h-0 overflow-hidden">
+              <div className="flex flex-col h-dvh min-h-0 overflow-hidden">
                 <Suspense fallback={null}>
                   <Navbar />
                 </Suspense>
-                <main className="flex-1 min-h-0 overflow-hidden flex flex-col w-full pt-2 px-4">
+                <main className="flex-1 min-h-0 overflow-hidden flex flex-col w-full pt-2 px-4 pb-16 md:pb-2">
                   {children}
                 </main>
                 <BottomNav />

@@ -24,6 +24,7 @@ import { createPendingClient } from "@/actions/pendingClient";
 import { FieldWithTooltip } from "./FieldWithTooltip";
 import { FormSummaryView } from "./FormSummaryView";
 import { useDateHandling } from "./hooks/useDateHandling";
+import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 
 const formSchema = ClientSchema;
 
@@ -233,6 +234,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [showSummary]);
+
 
     const onSubmit = async (values: z.output<typeof formSchema>) => {
         // Prevent duplicate submissions
@@ -467,6 +469,58 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         setCurrentStep((prev) => Math.max(prev - 1, 0));
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
+
+    // Swipe navigation for form steps
+    // In RTL (Hebrew), directions are reversed: swipe right = next, swipe left = previous
+    const swipeRef = useSwipeNavigation({
+        onSwipeLeft: rtl ? () => {
+            // RTL: Swipe left = previous step
+            if (currentStep > 0) {
+                prevStep();
+            } else if (currentStep === 0) {
+                // On first step
+                if (isExternalForm) {
+                    // External forms: do nothing (security - prevent navigation)
+                    return;
+                } else if (onCancel) {
+                    // Internal forms: use onCancel if provided
+                    onCancel();
+                } else {
+                    // Internal forms: go back in browser history
+                    router.back();
+                }
+            }
+        } : () => {
+            // LTR: Swipe left = next step
+            if (currentStep < STEPS.length - 1) {
+                nextStep();
+            }
+        },
+        onSwipeRight: rtl ? () => {
+            // RTL: Swipe right = next step
+            if (currentStep < STEPS.length - 1) {
+                nextStep();
+            }
+        } : () => {
+            // LTR: Swipe right = previous step
+            if (currentStep > 0) {
+                prevStep();
+            } else if (currentStep === 0) {
+                // On first step
+                if (isExternalForm) {
+                    // External forms: do nothing (security - prevent navigation)
+                    return;
+                } else if (onCancel) {
+                    // Internal forms: use onCancel if provided
+                    onCancel();
+                } else {
+                    // Internal forms: go back in browser history
+                    router.back();
+                }
+            }
+        },
+        enabled: !showSummary, // Disable swipe when showing summary
+    });
 
 
     const watchedPhotoUrl = watch("photoUrl");
@@ -857,6 +911,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                         }
                     }}
                     className="flex flex-col h-full overflow-hidden relative"
+                    ref={swipeRef}
                 >
                     {/* Wizard Header - Sticky on Mobile */}
                     <div className="shrink-0 bg-white dark:bg-gray-950 p-4 z-30">
@@ -1679,12 +1734,24 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 type="button"
                                 onClick={() => {
                                     if (currentStep === 0) {
-                                        router.push("/clients");
+                                        // On first step
+                                        if (isExternalForm) {
+                                            // External forms: do nothing or show message (security - prevent navigation)
+                                            // Don't allow navigation away from external form
+                                            return;
+                                        } else if (onCancel) {
+                                            // Internal forms: use onCancel if provided
+                                            onCancel();
+                                        } else {
+                                            // Internal forms: go back in browser history
+                                            router.back();
+                                        }
                                     } else {
                                         prevStep();
                                     }
                                 }}
-                                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
+                                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isExternalForm && currentStep === 0}
                             >
                                 {rtl ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                                 {t(lang, "buttons.back")}

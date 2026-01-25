@@ -14,8 +14,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
+        const isPublicPath = PUBLIC_PATHS.includes(pathname) || PUBLIC_PATH_PREFIXES.some(prefix => pathname.startsWith(prefix));
+        
         // If we are on a public path, we don't need to check auth
-        if (PUBLIC_PATHS.includes(pathname) || PUBLIC_PATH_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
+        if (isPublicPath) {
             setIsChecking(false);
             return;
         }
@@ -40,6 +42,32 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         return () => clearTimeout(timeout);
 
     }, [user, pathname, router]);
+
+    // Prevent navigation to protected routes from external form pages
+    useEffect(() => {
+        const isOnExternalForm = PUBLIC_PATH_PREFIXES.some(prefix => pathname.startsWith(prefix));
+        
+        if (isOnExternalForm) {
+            // Store that we're on an external form page
+            sessionStorage.setItem("isExternalFormUser", "true");
+            // Clear any auth tokens to prevent access
+            localStorage.removeItem("mock_user");
+            localStorage.removeItem("auth_token");
+        } else {
+            // If not on external form, check if user came from external form
+            const wasExternalFormUser = sessionStorage.getItem("isExternalFormUser");
+            if (wasExternalFormUser && !PUBLIC_PATHS.includes(pathname)) {
+                // User from external form trying to access protected route - block access
+                sessionStorage.removeItem("isExternalFormUser");
+                // Clear any auth tokens
+                localStorage.removeItem("mock_user");
+                localStorage.removeItem("auth_token");
+                // Redirect to login (don't allow access)
+                router.replace("/login");
+                return;
+            }
+        }
+    }, [pathname, router]);
 
     if (isChecking && !PUBLIC_PATHS.includes(pathname) && !PUBLIC_PATH_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
         return null; // Or a loading spinner

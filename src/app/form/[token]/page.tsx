@@ -43,6 +43,74 @@ export default function ExternalFormPage() {
         validateToken();
     }, [token]);
 
+    // Prevent navigation away from external form page (security)
+    useEffect(() => {
+        // Mark that we're on an external form
+        sessionStorage.setItem("isExternalFormUser", "true");
+        
+        // Intercept browser back/forward navigation
+        const handlePopState = (e: PopStateEvent) => {
+            // If user tries to navigate away, redirect back to form
+            const currentPath = window.location.pathname;
+            if (!currentPath.startsWith("/form/") && currentPath !== "/login") {
+                // User navigated away - redirect back to form
+                e.preventDefault();
+                window.history.pushState(null, "", `/form/${token}`);
+                window.location.reload();
+            }
+        };
+
+        // Intercept all link clicks to prevent navigation
+        const handleClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+            const link = target.closest('a');
+            if (link && link.href) {
+                const url = new URL(link.href);
+                // Only allow navigation within the same form page
+                if (!url.pathname.startsWith(`/form/${token}`) && url.pathname !== "/login") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            }
+        };
+
+        // Intercept programmatic navigation
+        const originalPushState = window.history.pushState;
+        const originalReplaceState = window.history.replaceState;
+        
+        window.history.pushState = function(...args) {
+            const newPath = args[2] as string;
+            if (newPath && !newPath.startsWith("/form/") && newPath !== "/login") {
+                console.warn("Navigation blocked: External form users cannot navigate to protected routes");
+                return;
+            }
+            return originalPushState.apply(window.history, args);
+        };
+        
+        window.history.replaceState = function(...args) {
+            const newPath = args[2] as string;
+            if (newPath && !newPath.startsWith("/form/") && newPath !== "/login") {
+                console.warn("Navigation blocked: External form users cannot navigate to protected routes");
+                return;
+            }
+            return originalReplaceState.apply(window.history, args);
+        };
+
+        // Override history to prevent navigation
+        window.history.pushState(null, "", window.location.href);
+        window.addEventListener("popstate", handlePopState);
+        document.addEventListener("click", handleClick, true); // Use capture phase
+
+        return () => {
+            window.removeEventListener("popstate", handlePopState);
+            document.removeEventListener("click", handleClick, true);
+            // Restore original functions
+            window.history.pushState = originalPushState;
+            window.history.replaceState = originalReplaceState;
+        };
+    }, [token]);
+
     // Handle identifier submission
     const handleIdentifierSubmit = async () => {
         if (!email.trim() && !phone.trim()) {
@@ -157,20 +225,23 @@ export default function ExternalFormPage() {
                         </p>
                     </div>
 
-                    <div className="space-y-4 bg-white dark:bg-gray-950 p-6 rounded-lg border shadow-sm">
-                        <div className="space-y-2">
+                    <div className="space-y-4 bg-white dark:bg-gray-950 p-6 rounded-lg border shadow-sm relative">
+                        <div className="space-y-2 relative">
                             <label className="text-sm font-medium flex items-center gap-2">
                                 <Mail className="w-4 h-4" />
                                 Email (optional) / אימייל (אופציונלי)
                             </label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="your.email@example.com"
-                                className="w-full p-2 border rounded-md dark:bg-gray-900"
-                                dir="ltr"
-                            />
+                            <div className="relative">
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="your.email@example.com"
+                                    className="w-full p-2 border rounded-md dark:bg-gray-900 relative z-10"
+                                    dir="ltr"
+                                    autoComplete="email"
+                                />
+                            </div>
                         </div>
 
                         <div className="relative">

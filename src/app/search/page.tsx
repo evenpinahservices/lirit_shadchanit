@@ -9,6 +9,7 @@ import Link from "next/link";
 import { cn, compareLocations, detectClientLanguage } from "@/lib/utils";
 import { MultiSelect } from "@/components/ui/MultiSelect";
 import { ItemsPerPageSelector } from "@/components/ui/ItemsPerPageSelector";
+import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 
 export default function SearchPage() {
     const { clients, isLoading } = useClients();
@@ -286,6 +287,23 @@ export default function SearchPage() {
         }
     };
 
+    // Swipe navigation for pagination
+    const swipeRef = useSwipeNavigation({
+        onSwipeLeft: () => {
+            // Swipe left = next page
+            if (currentPage < totalPages) {
+                handlePageChange(currentPage + 1);
+            }
+        },
+        onSwipeRight: () => {
+            // Swipe right = previous page
+            if (currentPage > 1) {
+                handlePageChange(currentPage - 1);
+            }
+        },
+        enabled: showResults && totalPages > 1, // Only enable when showing results and multiple pages
+    });
+
     return (
         <div className="flex flex-col h-full min-h-0 overflow-hidden">
             <div className="flex items-center justify-between shrink-0 px-1 pt-4">
@@ -516,7 +534,10 @@ export default function SearchPage() {
                                 ) : (
                                     <div className="flex-1 min-h-0 overflow-y-auto p-1 md:p-1 md:pr-4 pb-24 md:pb-0 custom-scrollbar relative" style={{ height: "100%", maxHeight: "calc(100vh - 12rem)", WebkitOverflowScrolling: "touch" }}>
                                         <div 
-                                            ref={scrollContainerRef}
+                                            ref={(node) => {
+                                                scrollContainerRef.current = node;
+                                                swipeRef(node);
+                                            }}
                                             className="grid gap-3 grid-cols-1"
                                         >
                                             {paginatedClients.map((client) => (

@@ -19,19 +19,25 @@
   }
 }
 
-html,
-body {
-  min-height: 100dvh;
+html {
+  /* Use dynamic viewport height - adjusts when keyboard appears */
+  height: 100dvh;
   overflow: hidden;
-  /* Prevent window-level scrolling */
 }
 
 body {
+  /* Use dynamic viewport height - will resize when keyboard pushes viewport up */
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   /* Safe area support for notched devices */
   padding-top: env(safe-area-inset-top);
+  /* Allow natural viewport resizing when keyboard appears */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 @layer utilities {
@@ -94,6 +100,53 @@ body {
     }
     .scrollbar-left > * {
       direction: ltr;
+    }
+  }
+
+  /* Allow keyboard to push viewport up naturally on mobile/tablet */
+  @media (max-width: 1024px) {
+    /* Use dynamic viewport height - adjusts when keyboard appears */
+    html {
+      height: 100dvh;
+    }
+
+    body {
+      /* Let viewport resize naturally when keyboard appears */
+      height: 100dvh;
+      min-height: 100dvh;
+    }
+
+    /* Ensure scrollable containers work with reduced viewport */
+    .custom-scrollbar,
+    [class*="overflow-y-auto"],
+    [class*="overflow-auto"] {
+      /* Allow scrolling even when viewport is reduced by keyboard */
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      /* Ensure containers can scroll properly */
+      touch-action: pan-y;
+    }
+
+    /* Fix for iOS Safari - use fill-available for better keyboard handling */
+    @supports (-webkit-touch-callout: none) {
+      html {
+        height: -webkit-fill-available;
+      }
+
+      body {
+        min-height: -webkit-fill-available;
+        min-height: 100dvh;
+      }
+    }
+
+    /* Ensure fixed bottom nav stays visible above keyboard */
+    #mobile-bottom-nav {
+      /* Fixed positioning relative to visual viewport */
+      position: fixed;
+      bottom: 0;
+      /* Ensure it's above keyboard by using visual viewport */
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
     }
   }
 }

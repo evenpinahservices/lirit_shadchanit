@@ -23,7 +23,10 @@ export function BottomNav() {
     ];
 
     return (
-        <div id="mobile-bottom-nav" className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-50 dark:bg-gray-900 z-50 pb-[env(safe-area-inset-bottom)] shadow-sm border-t border-gray-200/50 dark:border-gray-700/50">
+        <div 
+            id="mobile-bottom-nav" 
+            className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-50 dark:bg-gray-900 z-50 pb-[env(safe-area-inset-bottom)] shadow-sm border-t border-gray-200/50 dark:border-gray-700/50"
+        >
             <div className="flex items-center justify-around h-16 px-2">
                 {links.map((link) => {
                     const Icon = link.icon;

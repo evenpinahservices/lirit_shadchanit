@@ -10,6 +10,7 @@ import { Heart, Sparkles, ArrowRight, Check, X, ChevronLeft, ChevronRight, Searc
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ItemsPerPageSelector } from "@/components/ui/ItemsPerPageSelector";
+import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 
 export default function MatchingPage() {
     const { clients } = useClients();
@@ -106,6 +107,23 @@ export default function MatchingPage() {
             localStorage.setItem("itemsPerPage", value === "all" ? "all" : value.toString());
         }
     };
+
+    // Swipe navigation for pagination
+    const swipeRef = useSwipeNavigation({
+        onSwipeLeft: () => {
+            // Swipe left = next page
+            if (currentPage < totalPages) {
+                handlePageChange(currentPage + 1);
+            }
+        },
+        onSwipeRight: () => {
+            // Swipe right = previous page
+            if (currentPage > 1) {
+                handlePageChange(currentPage - 1);
+            }
+        },
+        enabled: isResultsView && matches.length > 0 && totalPages > 1, // Only enable when showing results with multiple pages
+    });
 
     const selectedClient = allClients.find((c) => c.id === selectedClientId);
 
@@ -297,7 +315,10 @@ export default function MatchingPage() {
                                     </p>
                                 </div>
                             ) : (
-                                <div className="flex-1 min-h-0 h-0 overflow-y-auto overscroll-contain p-1 pb-28 md:pb-6 custom-scrollbar">
+                                <div 
+                                    ref={swipeRef}
+                                    className="flex-1 min-h-0 h-0 overflow-y-auto overscroll-contain p-1 pb-28 md:pb-6 custom-scrollbar"
+                                >
                                     <div id="tour-matching-results-grid" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                         {paginatedMatches.map((match) => (
                                             <Link

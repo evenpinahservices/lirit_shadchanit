@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, MapPin, Briefcase, Search, ChevronLeft, ChevronRi
 import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { ItemsPerPageSelector } from "@/components/ui/ItemsPerPageSelector";
+import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 
 export default function ClientsPage() {
     const { clients, deleteClient, error, clearError, isLoading } = useClients();
@@ -67,6 +68,23 @@ export default function ClientsPage() {
         }
     };
 
+    // Swipe navigation for pagination
+    const swipeRef = useSwipeNavigation({
+        onSwipeLeft: () => {
+            // Swipe left = next page
+            if (currentPage < totalPages) {
+                handlePageChange(currentPage + 1);
+            }
+        },
+        onSwipeRight: () => {
+            // Swipe right = previous page
+            if (currentPage > 1) {
+                handlePageChange(currentPage - 1);
+            }
+        },
+        enabled: totalPages > 1, // Only enable when multiple pages
+    });
+
     // Helper to calculate age from DOB
     const calculateAge = (dob: string) => {
         if (!dob) return "N/A";
@@ -77,7 +95,7 @@ export default function ClientsPage() {
     };
 
     return (
-        <div id="clients-page-root" className="flex flex-col h-full min-h-0 gap-4 overflow-hidden relative z-0">
+        <div id="clients-page-root" ref={swipeRef} className="flex flex-col h-full min-h-0 gap-4 overflow-hidden relative z-0">
             {error && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
