@@ -36,14 +36,53 @@ function FieldWithTooltip({
 }) {
     const [showTooltip, setShowTooltip] = useState(false);
     const [position, setPosition] = useState<"top" | "bottom">("bottom");
+    const [isTouchDevice, setIsTouchDevice] = useState(false);
     const fieldRef = useRef<HTMLDivElement>(null);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+    
+    // Detect touch device on mount
+    useEffect(() => {
+        // Check if device supports touch or if it's a tablet/laptop (screen width >= 768px)
+        const checkTouch = () => {
+            const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const isTabletOrLaptop = window.innerWidth >= 768;
+            setIsTouchDevice(hasTouch && isTabletOrLaptop);
+        };
+        checkTouch();
+        window.addEventListener('resize', checkTouch);
+        return () => window.removeEventListener('resize', checkTouch);
+    }, []);
+    
+    // Close tooltip when clicking outside
+    useEffect(() => {
+        if (!showTooltip) return;
+        
+        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+            if (
+                fieldRef.current && 
+                tooltipRef.current &&
+                !fieldRef.current.contains(event.target as Node) &&
+                !tooltipRef.current.contains(event.target as Node)
+            ) {
+                setShowTooltip(false);
+            }
+        };
+        
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [showTooltip]);
     
     // Only show tooltip if sourceQuote exists and is not empty
     if (!sourceQuote || (typeof sourceQuote === 'string' && sourceQuote.trim() === '') || sourceQuote === 'null') {
         return <>{children}</>;
     }
     
-    const handleMouseEnter = () => {
+    const calculatePosition = () => {
         if (fieldRef.current) {
             const rect = fieldRef.current.getBoundingClientRect();
             const viewportHeight = window.innerHeight;
@@ -68,7 +107,27 @@ function FieldWithTooltip({
                 setPosition("top");
             }
         }
-        setShowTooltip(true);
+    };
+    
+    const handleMouseEnter = () => {
+        if (!isTouchDevice) {
+            calculatePosition();
+            setShowTooltip(true);
+        }
+    };
+    
+    const handleClick = (e: React.MouseEvent | React.TouchEvent) => {
+        // For touch devices or when hover doesn't work, toggle on click
+        if (isTouchDevice || window.innerWidth >= 768) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (showTooltip) {
+                setShowTooltip(false);
+            } else {
+                calculatePosition();
+                setShowTooltip(true);
+            }
+        }
     };
     
     return (
@@ -76,12 +135,19 @@ function FieldWithTooltip({
             ref={fieldRef}
             className="relative w-full group"
             onMouseEnter={handleMouseEnter}
-            onMouseLeave={() => setShowTooltip(false)}
+            onMouseLeave={() => {
+                if (!isTouchDevice) {
+                    setShowTooltip(false);
+                }
+            }}
+            onClick={handleClick}
+            onTouchStart={handleClick}
         >
             {children}
             {showTooltip && (
                 <div 
-                    className={`absolute z-50 w-80 max-w-[90vw] p-3 text-sm bg-white dark:bg-gray-100 text-gray-900 dark:text-gray-800 rounded-lg shadow-xl border border-gray-300 dark:border-gray-400 pointer-events-none`}
+                    ref={tooltipRef}
+                    className={`absolute z-50 w-80 max-w-[90vw] p-3 text-sm bg-white dark:bg-gray-100 text-gray-900 dark:text-gray-800 rounded-lg shadow-xl border border-gray-300 dark:border-gray-400 pointer-events-auto`}
                     style={position === "top" ? {
                         bottom: 'calc(100% + 8px)',
                         left: '50%',
@@ -569,12 +635,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                 // Admin-created clients always go directly to approved clients
                 // Only external form submissions (via isExternalForm) go to pending
                 const newClient = await addClient(valuesWithLang);
-                // Calculate matches for the new client against existing clients
-                const matches = findMatches(newClient, clients);
-                setCreatedClient(newClient);
-                setMatchResults(matches);
-                setShowMatchModal(true);
-                // Don't redirect yet
+                // Automatically navigate to matching page to show matches
+                router.push(`/matching?clientId=${newClient.id}&view=results`);
             }
         } catch (error: any) {
             console.error("Failed to submit client:", error);

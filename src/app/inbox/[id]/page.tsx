@@ -59,8 +59,9 @@ export default function InboxApprovalPage() {
         
         setIsApproving(true);
         try {
-            await approvePendingClient(pendingClientId, shouldOverwrite);
-            router.push("/inbox");
+            const approvedClient = await approvePendingClient(pendingClientId, shouldOverwrite);
+            // Navigate to matching page to show matches for the newly approved client
+            router.push(`/matching?clientId=${approvedClient.id}&view=results`);
         } catch (error: any) {
             console.error("Failed to approve client:", error);
             alert("Failed to approve client: " + (error.message || error));
