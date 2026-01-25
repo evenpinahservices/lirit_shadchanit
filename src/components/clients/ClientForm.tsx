@@ -647,11 +647,16 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                 }
                 
                 // Special handling for age: convert to DOB
+                // Only use age if DOB is not already provided (AI might provide both)
                 if (key === "age") {
-                    if (value !== null && value !== undefined && value !== "") {
+                    const existingDob = watch("dob");
+                    // Only convert age to DOB if DOB is not already set
+                    if (!existingDob && value !== null && value !== undefined && value !== "") {
                         const ageNum = typeof value === "number" ? value : parseInt(String(value));
                         if (!isNaN(ageNum) && ageNum >= 18 && ageNum <= 60) {
-                            const currentDob = watch("dob") || "";
+                            // When no existing DOB, use a conservative approach:
+                            // Assume birthday has passed (most common case) to get minimum age
+                            const currentDob = "";
                             const newDob = calculateDobFromAge(ageNum, currentDob);
                             if (newDob) {
                                 setValue("dob", newDob);
@@ -665,6 +670,56 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                         }
                     }
                     return; // Don't try to set "age" as a field since it's not in the schema
+                }
+                
+                // Special handling for dob: ensure it's set correctly and update dateMode if needed
+                if (key === "dob") {
+                    if (value !== null && value !== undefined && value !== "") {
+                        const dobValue = String(value).trim();
+                        // Validate DOB format
+                        const isValidFormat = 
+                            /^\d{4}$/.test(dobValue) || // Year only
+                            dobValue.includes("Hebrew:") || // Hebrew date
+                            /^\d{4}-\d{2}-\d{2}$/.test(dobValue); // YYYY-MM-DD format
+                        
+                        if (isValidFormat) {
+                            // Set DOB
+                            setValue("dob", dobValue);
+                            // Update dateMode based on the format
+                            if (/^\d{4}$/.test(dobValue)) {
+                                setDateMode("Year");
+                            } else if (dobValue.includes("Hebrew:")) {
+                                setDateMode("Hebrew");
+                            } else {
+                                setDateMode("Gregorian");
+                            }
+                            confidences["dob"] = confidence !== undefined ? confidence : 0.8;
+                            if (sourceQuote) {
+                                newSourceQuotes["dob"] = sourceQuote;
+                            }
+                            trigger("dob");
+                            fieldsSet++;
+                        } else {
+                            console.warn(`Invalid DOB format from AI: ${dobValue}`);
+                            // Try to parse and normalize the date
+                            const parsedDate = new Date(dobValue);
+                            if (!isNaN(parsedDate.getTime())) {
+                                const year = parsedDate.getFullYear();
+                                const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+                                const day = parsedDate.getDate().toString().padStart(2, '0');
+                                const normalizedDob = `${year}-${month}-${day}`;
+                                setValue("dob", normalizedDob);
+                                setDateMode("Gregorian");
+                                confidences["dob"] = (confidence !== undefined ? confidence : 0.8) * 0.9; // Slightly lower confidence due to normalization
+                                if (sourceQuote) {
+                                    newSourceQuotes["dob"] = sourceQuote;
+                                }
+                                trigger("dob");
+                                fieldsSet++;
+                            }
+                        }
+                    }
+                    return; // Don't process dob as a regular field
                 }
                 
                 // Special handling for headCovering: default to "Flexible" if not mentioned

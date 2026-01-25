@@ -144,12 +144,17 @@ export function useDateHandling(
         if (!dob || dob.trim() === "") return "";
         
         if (/^\d{4}$/.test(dob)) {
+            // Year-only: calculate approximate age (can be off by 1 year)
             const year = parseInt(dob);
             if (isNaN(year)) return "";
-            return new Date().getFullYear() - year;
+            const currentYear = new Date().getFullYear();
+            // For year-only, assume birthday has passed (most conservative estimate)
+            // This gives the minimum possible age
+            return currentYear - year;
         }
         
         if (dob.includes("Hebrew:")) {
+            // Hebrew date: extract year and calculate approximate age
             const parts = dob.trim().split(" ");
             const hebrewYearStr = parts[parts.length - 1];
             let numericYear = parseInt(hebrewYearStr);
@@ -158,24 +163,54 @@ export function useDateHandling(
                 numericYear = parseHebrewYearToNumber(hebrewYearStr);
             }
             
+            if (isNaN(numericYear) || numericYear < 1000) return "";
+            
             const gregorianYear = numericYear - 3760;
-            return new Date().getFullYear() - gregorianYear;
+            const currentYear = new Date().getFullYear();
+            // For Hebrew dates without full conversion, assume birthday has passed
+            return currentYear - gregorianYear;
         }
         
+        // Full date (YYYY-MM-DD): calculate exact age accounting for whether birthday has passed
         const birthDate = new Date(dob);
         if (isNaN(birthDate.getTime())) return "";
         
-        const ageDifMs = Date.now() - birthDate.getTime();
-        const ageDate = new Date(ageDifMs);
-        return Math.abs(ageDate.getUTCFullYear() - 1970);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age;
     };
 
     const calculateDobFromAge = (age: number | "", currentDob: string): string => {
         if (age === "" || typeof age !== "number") return currentDob || "";
         if (isNaN(age) || age < 18 || age > 60) return currentDob || "";
         
-        const currentYear = new Date().getFullYear();
-        const birthYear = currentYear - age;
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        // Calculate birth year: if birthday hasn't passed yet this year, subtract one more year
+        // We assume the person has already had their birthday this year (most common case)
+        // This gives the most recent possible birth year for the given age
+        let birthYear = currentYear - age;
+        
+        // If we have an existing full date, check if we should adjust based on whether birthday has passed
+        if (currentDob && !currentDob.includes("Hebrew:") && !/^\d{4}$/.test(currentDob)) {
+            const existingDate = new Date(currentDob);
+            if (!isNaN(existingDate.getTime())) {
+                const existingMonth = existingDate.getMonth();
+                const existingDay = existingDate.getDate();
+                const currentMonth = today.getMonth();
+                const currentDay = today.getDate();
+                
+                // If existing birthday hasn't passed yet this year, the person is actually age+1
+                // So we need to adjust birth year
+                if (existingMonth > currentMonth || (existingMonth === currentMonth && existingDay > currentDay)) {
+                    birthYear = currentYear - age - 1;
+                }
+            }
+        }
         
         if (dateMode === "Year") {
             return birthYear.toString();

@@ -117,7 +117,10 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
 
         // Handle Year Only (YYYY)
         if (/^\d{4}$/.test(dob)) {
-            return new Date().getFullYear() - parseInt(dob);
+            const year = parseInt(dob);
+            if (isNaN(year)) return "N/A";
+            // For year-only, assume birthday has passed (most conservative estimate)
+            return new Date().getFullYear() - year;
         }
 
         // Handle Hebrew Date
@@ -134,16 +137,23 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
             
             // Approximate Gregorian year: Hebrew Year - 3760
             if (!isNaN(numericYear) && numericYear > 1000) {
+                // For Hebrew dates without full conversion, assume birthday has passed
                 return new Date().getFullYear() - (numericYear - 3760);
             }
             return "N/A";
         }
 
-        // Handle Standard Date (YYYY-MM-DD)
+        // Handle Standard Date (YYYY-MM-DD) - calculate exact age
         const birthDate = new Date(dob);
-        const ageDifMs = Date.now() - birthDate.getTime();
-        const ageDate = new Date(ageDifMs);
-        return Math.abs(ageDate.getUTCFullYear() - 1970);
+        if (isNaN(birthDate.getTime())) return "N/A";
+        
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        return age;
     };
 
     const sections = [
