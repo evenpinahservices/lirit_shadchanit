@@ -73,9 +73,12 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
             * **Other:** Any other ethnicity not listed above
         * Only select an ethnicity if you have clear evidence from the resume (e.g., explicitly stated as "Ashkenazi", "Sephardi", "Yemenite", "Ethiopian", "Convert", or "Other").
         * If the resume mentions multiple ethnicities or is ambiguous, set to `null` rather than guessing.
+    * **`learningStatus` (vs `preferredLearningStatus`):**
+        * **`learningStatus`**: This is the candidate's OWN current learning Torah status (yeshiva/kollel, kovea itim, working, etc.). **For women, this is often "N/A"** (women typically do not have a "learning status" in the yeshiva sense). For men, extract from the resume (e.g. "learns full time", "works", "kovea itim"). Do NOT put here what they want in a spouse; that goes in `preferredLearningStatus`.
+        * **`preferredLearningStatus`**: What the candidate wants in a spouse (e.g. "looking for someone who learns full time"). Typically used when the candidate is a woman describing the learning level she wants in a husband.
     * **`headCovering` (vs `preferredHeadCovering`):**
-        * **`headCovering`**: This is the candidate's OWN planned/intended head covering practice ONCE MARRIED. For unmarried women, this describes how they plan to cover their hair once married (e.g., "will wear wig", "plans to cover with tichel", "intends to use hat"). For men, use "N/A". Look for future-tense language or explicit statements about head covering plans once married. **If not mentioned, default to "Flexible".**
-        * **`preferredHeadCovering`**: This is what the candidate PREFERS in a potential match (e.g., "looking for someone who wears wig", "prefers tichel"). This is a PREFERENCE about their match, not about themselves.
+        * **`headCovering`**: This is the candidate's OWN planned/intended head covering practice ONCE MARRIED. For unmarried women, this describes how they plan to cover their hair once married (e.g., "will wear wig", "plans to cover with tichel", "intends to use hat"). **For men, use "N/A"** (men do not cover their hair). Look for future-tense language or explicit statements about head covering plans once married. **If not mentioned, default to "Flexible".**
+        * **`preferredHeadCovering`**: This is what the candidate PREFERS in a potential match (e.g., "looking for someone who wears wig", "prefers tichel"). Typically used when the candidate is a man describing how he wants his wife to cover her hair. This is a PREFERENCE about their match, not about themselves.
         * **Key distinction:** `headCovering` = about the candidate themselves (head covering once married). `preferredHeadCovering` = about what they want in a match.
 
 ### REFERENCE SCHEMA
@@ -215,7 +218,8 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": "Selection",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_learningStatus_options": ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"]
+    "_learningStatus_options": ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"],
+    "_note": "Candidate's OWN current learning Torah status. For women use 'N/A' unless explicitly stated. For men, extract from yeshiva/kollel/work. Do not confuse with preferredLearningStatus (what they want in a spouse)."
   },
   "headCovering": {
     "value": "Selection",

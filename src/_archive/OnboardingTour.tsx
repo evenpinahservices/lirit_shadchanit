@@ -1,3 +1,8 @@
+/**
+ * ARCHIVED: Tutorial/onboarding tour feature.
+ * Replaced in UI by fullscreen toggle. Kept for reference; not imported anywhere.
+ */
+
 "use client";
 
 import { useCallback, useState, useRef, useEffect } from "react";

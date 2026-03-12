@@ -85,88 +85,6 @@ export function AutoFillModal({
         }
     };
 
-    const simulateProgress = async () => {
-        // Simulation mode - shows all progress steps without calling AI
-        setIsProcessing(true);
-        setProcessingProgress(0);
-        startTimeRef.current = Date.now();
-        
-        // Step 1: Uploading (0-15%)
-        setProcessingStatus("Uploading images");
-        setProcessingSubStatus("Preparing images for upload...");
-        setProcessingProgress(2);
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        setProcessingSubStatus("Uploading image 1 of 3...");
-        setProcessingProgress(5);
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        setProcessingSubStatus("Uploading image 2 of 3...");
-        setProcessingProgress(8);
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        setProcessingSubStatus("Uploading image 3 of 3...");
-        setProcessingProgress(12);
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        // Step 2: Processing with AI (15-90%)
-        setProcessingStatus("Processing with AI");
-        setProcessingSubStatus("Compressing and preparing images for AI analysis...");
-        setProcessingProgress(15);
-        await new Promise(resolve => setTimeout(resolve, 400));
-        
-        setProcessingSubStatus("Querying AI model...");
-        setProcessingProgress(20);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Simulate AI processing with time-based progress
-        const aiStartTime = Date.now();
-        const aiDuration = 60000; // 60 seconds average
-        const progressInterval = setInterval(() => {
-            const elapsed = Date.now() - aiStartTime;
-            const progress = Math.min(20 + (elapsed / aiDuration) * 70, 90);
-            setProcessingProgress(progress);
-        }, 100);
-        
-        setProcessingSubStatus("AI is analyzing images...");
-        await new Promise(resolve => setTimeout(resolve, 20000));
-        
-        setProcessingSubStatus("Extracting details from images...");
-        await new Promise(resolve => setTimeout(resolve, 20000));
-        
-        setProcessingSubStatus("Verifying and confirming information...");
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        
-        setProcessingSubStatus("Measuring confidence levels...");
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        
-        clearInterval(progressInterval);
-        setProcessingProgress(90);
-        
-        // Step 3: Final processing (90-100%)
-        setProcessingSubStatus("Formatting extracted data...");
-        setProcessingProgress(93);
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        setProcessingSubStatus("Populating form fields...");
-        setProcessingProgress(97);
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        // Step 4: Complete
-        setProcessingStatus("Complete!");
-        setProcessingSubStatus("Form has been populated successfully!");
-        setProcessingProgress(100);
-        
-        setTimeout(() => {
-            setIsProcessing(false);
-            setProcessingStatus("");
-            setProcessingSubStatus("");
-            setProcessingProgress(0);
-            startTimeRef.current = null;
-            alert("Simulation complete! This was a test - no AI was called and no tokens were used.");
-        }, 2000);
-    };
-
     const processImages = async () => {
         if (allImages.length === 0) {
             alert("Please upload at least one image");
@@ -290,8 +208,9 @@ export function AutoFillModal({
             
             if (!response.ok) {
                 let errorMessage = "Failed to extract data from images";
+                const text = await response.text();
                 try {
-                    const errorData = await response.json();
+                    const errorData = JSON.parse(text);
                     errorMessage = errorData.error || errorMessage;
                     
                     // Provide more helpful message for authentication errors
@@ -302,8 +221,7 @@ export function AutoFillModal({
                     if (errorData.details) {
                         console.error("API error details:", errorData.details);
                     }
-                } catch (parseError) {
-                    const text = await response.text();
+                } catch {
                     if (response.status === 401) {
                         errorMessage = "Your session has expired. Please refresh the page and try again.";
                     } else {
@@ -602,16 +520,7 @@ export function AutoFillModal({
 
                     {/* Footer */}
                     <div className="flex items-center justify-between gap-3 p-4 pb-20 md:pb-4 border-t border-gray-200 dark:border-gray-800">
-                        <button
-                            onClick={simulateProgress}
-                            disabled={isProcessing}
-                            className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 disabled:opacity-50 flex items-center gap-1"
-                            title="Test progress overlay without using AI tokens"
-                        >
-                            <Loader2 className="h-3 w-3" />
-                            Test Progress
-                        </button>
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 ml-auto">
                             <button
                                 onClick={handleClose}
                                 disabled={isProcessing}
@@ -757,16 +666,7 @@ export function AutoFillModal({
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between gap-3 p-4 pb-20 md:pb-4">
-                    <button
-                        onClick={simulateProgress}
-                        disabled={isProcessing}
-                        className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 disabled:opacity-50 flex items-center gap-1"
-                        title="Test progress overlay without using AI tokens"
-                    >
-                        <Loader2 className="h-3 w-3" />
-                        Test Progress
-                    </button>
+                <div className="flex items-center justify-end gap-3 p-4 pb-20 md:pb-4">
                     <div className="flex gap-3">
                         <button
                             onClick={handleClose}

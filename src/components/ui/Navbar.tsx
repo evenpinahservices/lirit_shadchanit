@@ -1,17 +1,33 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Users, Heart, Search, LogOut, HelpCircle, StickyNote, Hourglass } from "lucide-react";
-import { useOnboardingTour } from "@/components/OnboardingTour";
+import { LayoutDashboard, Users, Heart, Search, LogOut, Maximize2, Minimize2, StickyNote, Hourglass } from "lucide-react";
 import { BugReportButton } from "@/components/ui/BugReportButton";
 
 export function Navbar() {
     const pathname = usePathname();
     const { user, logout } = useAuth();
-    const { startTour, isRunning: isTourRunning } = useOnboardingTour();
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const toggleFullscreen = useCallback(() => {
+        if (typeof document === "undefined") return;
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen?.();
+        } else {
+            document.exitFullscreen?.();
+        }
+    }, []);
+
+    useEffect(() => {
+        if (typeof document === "undefined") return;
+        const onFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+        document.addEventListener("fullscreenchange", onFullscreenChange);
+        return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+    }, []);
 
     const links = [
         { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -63,12 +79,15 @@ export function Navbar() {
                 <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-shrink-0">
                     {user && (
                         <button
-                            onClick={startTour}
-                            disabled={isTourRunning}
-                            className="p-1.5 sm:p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50 flex-shrink-0"
-                            title="Start Tutorial"
+                            onClick={toggleFullscreen}
+                            className="p-1.5 sm:p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors flex-shrink-0"
+                            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
                         >
-                            <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                            {isFullscreen ? (
+                                <Minimize2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                            ) : (
+                                <Maximize2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                            )}
                         </button>
                     )}
 

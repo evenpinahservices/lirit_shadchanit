@@ -181,8 +181,8 @@ export default function MatchingPage() {
 
         check("Hashkafa", client.preferredHashkafos);
         check("Ethnicity", client.preferredEthnicities);
-        check("Learning Torah Status", client.preferredLearningStatus);
-        check("Head Covering Once Married", client.preferredHeadCovering);
+        check("Learning status (in husband)", client.preferredLearningStatus);
+        check("Head covering (in wife)", client.preferredHeadCovering);
 
         return active;
     };
