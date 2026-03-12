@@ -342,7 +342,10 @@ export function AutoFillModal({
             // Step 7: Populate form
             setProcessingSubStatus("Populating form fields...");
             setProcessingProgress(99);
-            
+            // DEBUG: What we're sending to the form (check Console, filter "Age/DOB")
+            const fdAge = finalFormData?.age?.value ?? finalFormData?.age;
+            const fdDob = finalFormData?.dob?.value ?? finalFormData?.dob;
+            console.log("[Age/DOB debug] AutoFillModal passing to form:", { age: fdAge, dob: fdDob });
             // Update form with extracted data
             // This will set selectedMode to "en" and autoFillData, which will cause the modal to close automatically
             onFillForm(finalFormData);

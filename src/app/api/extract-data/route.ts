@@ -291,6 +291,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // DEBUG: Log raw age/dob from AI to trace wrong-age issues (check server/terminal logs)
+        const rawDob = extractedData.dob;
+        const rawAge = extractedData.age;
+        console.log("[Age/DOB debug] AI returned:", {
+            dob: rawDob,
+            dobValue: typeof rawDob === "object" && rawDob?.value != null ? rawDob.value : rawDob,
+            age: rawAge,
+            ageValue: typeof rawAge === "object" && rawAge?.value != null ? rawAge.value : rawAge,
+        });
+
         // Preserve nested structure with confidence data for color coding
         // The ClientForm's handleAutoFill function expects {value, confidence, sourceQuote} structure
         // Don't flatten - keep the nested structure so confidence can be extracted for color coding
@@ -327,6 +337,13 @@ export async function POST(request: NextRequest) {
             data: processedData, // Keep nested structure for confidence extraction
             language: detectedLanguage,
             raw_response: responseText.substring(0, 1000), // First 1000 chars for debugging
+            // DEBUG: Inspect in DevTools → Network → extract-data → Response to see what AI returned for age/dob
+            _debugAgeDob: {
+                dob: rawDob,
+                dobValue: typeof rawDob === "object" && rawDob?.value != null ? rawDob.value : rawDob,
+                age: rawAge,
+                ageValue: typeof rawAge === "object" && rawAge?.value != null ? rawAge.value : rawAge,
+            },
         });
     } catch (error: any) {
         console.error("Error in extract-data route:", error);
