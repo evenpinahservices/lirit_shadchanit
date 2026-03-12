@@ -700,33 +700,36 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                     newSourceQuotes[key] = sourceQuote;
                 }
                 
-                // Special handling for age: convert to DOB
-                // Only use age if DOB is not already provided (AI might provide both)
+                // Special handling for age: use only when there is no DOB in the payload.
+                // DOB is the source of truth (dynamic); when only age is present, derive year-only DOB and show year by calendar (Gregorian for English, Hebrew for Hebrew). Decimal ages are rounded down (21.5 → 21).
                 if (key === "age") {
-                    const existingDob = watch("dob");
-                    // Only convert age to DOB if DOB is not already set
-                    if (!existingDob && value !== null && value !== undefined && value !== "") {
-                        const ageNum = typeof value === "number" ? value : parseInt(String(value));
+                    const dobInPayload = data.dob != null && data.dob !== "" && extractValueAndConfidence(data.dob).value != null && String(extractValueAndConfidence(data.dob).value).trim() !== "";
+                    if (!dobInPayload && value !== null && value !== undefined && value !== "") {
+                        const ageRaw = typeof value === "number" ? value : parseFloat(String(value).replace(",", "."));
+                        const ageNum = Number.isInteger(ageRaw) ? ageRaw : Math.floor(ageRaw);
                         if (!isNaN(ageNum) && ageNum >= 18 && ageNum <= 60) {
-                            // When no existing DOB, use a conservative approach:
-                            // Assume birthday has passed (most common case) to get minimum age
-                            const currentDob = "";
-                            const newDob = calculateDobFromAge(ageNum, currentDob);
-                            if (newDob) {
-                                setValue("dob", newDob);
-                                confidences["dob"] = confidence !== undefined ? confidence : 0.8;
-                                if (sourceQuote) {
-                                    newSourceQuotes["dob"] = sourceQuote;
-                                }
-                                trigger("dob");
-                                fieldsSet++;
+                            const currentYear = new Date().getFullYear();
+                            const birthYear = currentYear - ageNum;
+                            if (lang === "he") {
+                                setDateMode("Hebrew");
+                                const hebrewYearLetters = convertHebrewYearToLetters(birthYear + 3760);
+                                setValue("dob", `Hebrew: א תשרי ${hebrewYearLetters}`);
+                            } else {
+                                setDateMode("Year");
+                                setValue("dob", birthYear.toString());
                             }
+                            confidences["dob"] = confidence !== undefined ? confidence : 0.8;
+                            if (sourceQuote) {
+                                newSourceQuotes["dob"] = sourceQuote;
+                            }
+                            trigger("dob");
+                            fieldsSet++;
                         }
                     }
-                    return; // Don't try to set "age" as a field since it's not in the schema
+                    return;
                 }
-                
-                // Special handling for dob: ensure it's set correctly and update dateMode if needed
+
+                // Special handling for dob: prioritize DOB when present (it is the dynamic source of truth).
                 if (key === "dob") {
                     if (value !== null && value !== undefined && value !== "") {
                         const dobValue = String(value).trim();

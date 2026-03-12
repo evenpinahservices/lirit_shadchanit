@@ -107,10 +107,10 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "sourceQuote": "string or null"
   },
   "age": {
-    "value": "integer (number of years) - Extract age directly if explicitly stated in resume",
+    "value": "number (integer or decimal years, e.g. 21 or 21.5) - Extract age exactly as stated in resume",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_note": "Extract age as a number if explicitly mentioned (e.g., 'Age: 25', '25 years old', 'גיל 25'). If only DOB is given, calculate age and include the calculation method in sourceQuote. If age is not mentioned, set to null."
+    "_note": "Extract age as a number if explicitly mentioned (e.g., 'Age: 25', '21.5', '25 years old', 'גיל 25'). Preserve decimals when the resume states them (e.g. 21.5). The form will use this to set date of birth; prefer returning age when the profile states age clearly, so DOB can be derived correctly. If only DOB is given, calculate age and include the calculation method in sourceQuote. If age is not mentioned, set to null."
   },
   "gender": {
     "value": "Selection",
