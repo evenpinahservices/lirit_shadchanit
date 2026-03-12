@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { getPendingCount } from "@/actions/pendingClient";
 import { LayoutDashboard, Users, Heart, Search, LogOut, Maximize2, Minimize2, StickyNote, Hourglass } from "lucide-react";
 import { BugReportButton } from "@/components/ui/BugReportButton";
 
@@ -13,12 +12,6 @@ export function Navbar() {
     const pathname = usePathname();
     const { user, logout } = useAuth();
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [pendingCount, setPendingCount] = useState(0);
-
-    useEffect(() => {
-        if (!user) return;
-        getPendingCount().then(setPendingCount);
-    }, [user, pathname]); // refetch when navigating (e.g. after approving/rejecting on inbox)
 
     const toggleFullscreen = useCallback(() => {
         if (typeof document === "undefined") return;
@@ -64,24 +57,16 @@ export function Navbar() {
                             {links.map((link) => {
                                 const Icon = link.icon;
                                 const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
-                                const showBadge = link.href === "/inbox" && pendingCount > 0;
                                 return (
                                     <Link
                                         key={link.href}
                                         href={link.href}
                                         className={cn(
-                                            "flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 relative",
+                                            "flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0",
                                             isActive ? "text-primary" : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                                         )}
                                     >
-                                        <span className="relative inline-flex">
-                                            <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                                            {showBadge && (
-                                                <span className="absolute -top-1.5 -right-1.5 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-semibold leading-tight">
-                                                    {pendingCount > 99 ? "99+" : pendingCount}
-                                                </span>
-                                            )}
-                                        </span>
+                                        <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
                                         <span className="hidden lg:inline">{link.label}</span>
                                     </Link>
                                 );

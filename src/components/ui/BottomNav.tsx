@@ -1,19 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { getPendingCount } from "@/actions/pendingClient";
 import { LayoutDashboard, Users, Heart, Search, StickyNote, Hourglass } from "lucide-react";
 
 export function BottomNav() {
     const pathname = usePathname();
-    const [pendingCount, setPendingCount] = useState(0);
-
-    useEffect(() => {
-        getPendingCount().then(setPendingCount);
-    }, [pathname]); // refetch when navigating (e.g. after approving/rejecting on inbox)
 
     // Hide bottom nav on login page and external form pages
     if (pathname === "/login" || pathname.startsWith("/form/")) {
@@ -39,27 +32,19 @@ export function BottomNav() {
                     const Icon = link.icon;
                     const isActive =
                         pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
-                    const showBadge = link.href === "/inbox" && pendingCount > 0;
 
                     return (
                         <Link
                             key={link.href}
                             href={link.href}
                             className={cn(
-                                "flex flex-col items-center justify-center w-full h-full space-y-1 text-xs font-medium transition-colors relative",
+                                "flex flex-col items-center justify-center w-full h-full space-y-1 text-xs font-medium transition-colors",
                                 isActive 
                                     ? "text-primary" 
                                     : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                             )}
                         >
-                            <span className="relative inline-flex">
-                                <Icon className="h-4 w-4" />
-                                {showBadge && (
-                                    <span className="absolute -top-2 left-1/2 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-semibold leading-tight -translate-x-1/2">
-                                        {pendingCount > 99 ? "99+" : pendingCount}
-                                    </span>
-                                )}
-                            </span>
+                            <Icon className="h-4 w-4" />
                             <span>{link.label}</span>
                         </Link>
                     );

@@ -21,17 +21,6 @@ type PendingClientInput = Omit<Client, "id" | "createdAt"> & {
     existingApprovedClientId?: string; // ID of approved client that will be overwritten
 };
 
-export async function getPendingCount(): Promise<number> {
-    try {
-        await requireAuth();
-        await dbConnect();
-        return await PendingClientModel.countDocuments();
-    } catch (error: any) {
-        console.error("Error in getPendingCount:", error);
-        return 0;
-    }
-}
-
 export async function getPendingClients(): Promise<(PendingClientInput & { id: string })[]> {
     try {
         await dbConnect();
