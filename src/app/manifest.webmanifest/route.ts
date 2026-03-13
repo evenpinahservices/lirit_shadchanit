@@ -26,6 +26,7 @@ export function GET() {
   return NextResponse.json(manifest, {
     headers: {
       "Content-Type": "application/manifest+json",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
     },
   });
 }

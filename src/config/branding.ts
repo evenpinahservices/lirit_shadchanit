@@ -27,9 +27,9 @@ export const brands: Record<BrandId, BrandConfig> = {
     appName: "ShadchanitDB - Matchmaking Database",
     shortName: "ShadchanitDB",
     logoNavbar: null,
-    icon192: "/icon-heart-192.png",
-    icon512: "/icon-heart-512.png",
-    iconSvg: false,
+    icon192: "/icon-heart.svg",
+    icon512: "/icon-heart.svg",
+    iconSvg: true,
   },
   lirit: {
     themeColor: "#7ccd7c",
@@ -37,8 +37,8 @@ export const brands: Record<BrandId, BrandConfig> = {
     appName: "LiritDB - Matchmaking Database",
     shortName: "LiritDB",
     logoNavbar: "/lirit-logo-192.png",
-    icon192: "/lirit-logo-192.png",
-    icon512: "/lirit-logo-512.png",
+    icon192: "/lirit-logo-192-maskable.png",
+    icon512: "/lirit-logo-512-maskable.png",
   },
 };
 
