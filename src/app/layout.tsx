@@ -1,35 +1,40 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { getBrand, currentBrandId } from "@/config/branding";
 import { AuthProvider } from "@/context/AuthContext";
 import { ClientProvider } from "@/context/ClientContext";
 import { AuthGuard } from "@/components/AuthGuard";
 import { Navbar } from "@/components/ui/Navbar";
 import { BottomNav } from "@/components/ui/BottomNav";
+import { PWARegister } from "@/components/PWARegister";
 import { KeyboardScrollHandler } from "@/components/KeyboardScrollHandler";
 import { cn } from "@/lib/utils";
 import { Suspense } from "react";
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ["latin"],
-  display: "swap", // Optimize font loading - shows fallback font until custom font loads
-  preload: false, // Disable preload to avoid the warning (font will still load, just not preloaded)
-  adjustFontFallback: true, // Better fallback font matching
+  display: "swap",
+  preload: false,
+  adjustFontFallback: true,
 });
 
+const brand = getBrand();
+
 export const metadata: Metadata = {
-  title: "ShadchanitDB - Matchmaking Database",
+  title: brand.appName,
   description: "Client management and matchmaking system",
+  manifest: "/manifest.webmanifest",
+  themeColor: brand.themeColor,
 };
 
-// Responsive viewport - scales to device width
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1, // Prevent zoom on iOS when focusing inputs
-  userScalable: false, // Disable zoom to prevent iOS auto-zoom bug
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
-  // Prevent keyboard from causing layout issues
+  themeColor: brand.themeColor,
   interactiveWidget: "resizes-visual",
 };
 
@@ -39,8 +44,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-brand={currentBrandId}>
       <body className={cn(inter.className, "min-h-screen bg-gray-50 dark:bg-gray-900")}>
+        <PWARegister />
         <AuthProvider>
           <ClientProvider>
             <AuthGuard>

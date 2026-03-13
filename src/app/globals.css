@@ -10,6 +10,22 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /* Default: red (ShadchanitDB). Override for data-brand="lirit" below. */
+}
+
+/* Lirit brand: apple green theme */
+[data-brand="lirit"] {
+  --color-red-50: #f0fdf0;
+  --color-red-100: #dcfadc;
+  --color-red-200: #b8f5b8;
+  --color-red-300: #8eea8e;
+  --color-red-400: #6ed96e;
+  --color-red-500: #7ccd7c;
+  --color-red-600: #5fb85f;
+  --color-red-700: #4a9a4a;
+  --color-red-800: #3a7a3a;
+  --color-red-900: #2d5f2d;
+  --color-red-950: #1a381a;
 }
 
 @media (prefers-color-scheme: dark) {

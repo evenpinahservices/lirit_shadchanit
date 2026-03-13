@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import { getBrand } from "@/config/branding";
 import { LayoutDashboard, Users, Heart, Search, LogOut, Maximize2, Minimize2, StickyNote, Hourglass } from "lucide-react";
 import { BugReportButton } from "@/components/ui/BugReportButton";
 
@@ -43,13 +45,19 @@ export function Navbar() {
         return null;
     }
 
+    const brand = getBrand();
+
     return (
         <nav className="bg-gray-50 dark:bg-gray-900 px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 md:py-4 sticky top-0 z-10 shadow-sm shrink-0">
             <div className="flex items-center justify-between gap-2 sm:gap-4 min-w-0">
                 <div className="flex items-center gap-4 sm:gap-6 md:gap-8 min-w-0 flex-shrink">
-                    <Link href="/" className="text-lg sm:text-xl font-bold text-primary flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                        <Heart className="h-5 w-5 sm:h-6 sm:w-6 text-red-500 fill-red-500" />
-                        <span className="hidden sm:inline">ShadchanitDB</span>
+                    <Link href="/" className="text-lg sm:text-xl font-bold text-primary flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+                        {brand.logoNavbar ? (
+                            <Image src={brand.logoNavbar} alt={brand.shortName} width={36} height={36} className="h-7 w-7 sm:h-8 sm:w-8 object-contain flex-shrink-0 -mt-0.5" />
+                        ) : (
+                            <Heart className="h-5 w-5 sm:h-6 sm:w-6 text-red-500 fill-red-500" />
+                        )}
+                        <span className="hidden sm:inline">{brand.shortName}</span>
                         <span className="sm:hidden">SDB</span>
                     </Link>
                     {user && (

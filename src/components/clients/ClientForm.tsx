@@ -538,7 +538,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         let color: string;
         // Red: < 0.3
         if (clamped < 0.3) {
-            color = "#ef4444"; // red-500
+            color = "#7ccd7c"; // apple green (theme primary)
         }
         // Orange: 0.3 to 0.7
         else if (clamped >= 0.3 && clamped < 0.7) {
