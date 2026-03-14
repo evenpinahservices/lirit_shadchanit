@@ -10,10 +10,32 @@ import { getBrand } from "@/config/branding";
 import { LayoutDashboard, Users, Heart, Search, LogOut, Maximize2, Minimize2, StickyNote, Hourglass } from "lucide-react";
 import { BugReportButton } from "@/components/ui/BugReportButton";
 
+/** True when running as installed PWA (standalone/fullscreen/minimal-ui), not in browser tab */
+function useIsPwa() {
+    const [isPwa, setIsPwa] = useState(false);
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const check = () => {
+            const mqStandalone = window.matchMedia("(display-mode: standalone)");
+            const mqFullscreen = window.matchMedia("(display-mode: fullscreen)");
+            const mqMinimal = window.matchMedia("(display-mode: minimal-ui)");
+            const iosStandalone = (navigator as any).standalone === true;
+            const isStandalone = mqStandalone.matches || mqFullscreen.matches || mqMinimal.matches || iosStandalone;
+            setIsPwa(!!isStandalone);
+        };
+        check();
+        const mq = window.matchMedia("(display-mode: standalone)");
+        mq.addEventListener?.("change", check);
+        return () => mq.removeEventListener?.("change", check);
+    }, []);
+    return isPwa;
+}
+
 export function Navbar() {
     const pathname = usePathname();
     const { user, logout } = useAuth();
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const isPwa = useIsPwa();
 
     const toggleFullscreen = useCallback(() => {
         if (typeof document === "undefined") return;
@@ -30,6 +52,28 @@ export function Navbar() {
         document.addEventListener("fullscreenchange", onFullscreenChange);
         return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
     }, []);
+
+    // In PWA: auto-enter fullscreen once (and on first user gesture if blocked)
+    useEffect(() => {
+        if (!isPwa || typeof document === "undefined") return;
+        const el = document.documentElement;
+        const tryFullscreen = () => {
+            if (!el.requestFullscreen || document.fullscreenElement) return;
+            el.requestFullscreen().catch(() => {});
+        };
+        tryFullscreen();
+        const onFirstInteraction = () => {
+            tryFullscreen();
+            document.removeEventListener("click", onFirstInteraction);
+            document.removeEventListener("touchstart", onFirstInteraction);
+        };
+        document.addEventListener("click", onFirstInteraction, { once: true });
+        document.addEventListener("touchstart", onFirstInteraction, { once: true, passive: true });
+        return () => {
+            document.removeEventListener("click", onFirstInteraction);
+            document.removeEventListener("touchstart", onFirstInteraction);
+        };
+    }, [isPwa]);
 
     const links = [
         { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -85,7 +129,7 @@ export function Navbar() {
 
                 {/* User Menu - Visible on all screens now */}
                 <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-shrink-0">
-                    {user && (
+                    {user && !isPwa && (
                         <button
                             onClick={toggleFullscreen}
                             className="p-1.5 sm:p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors flex-shrink-0"

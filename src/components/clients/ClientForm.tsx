@@ -929,20 +929,17 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                 >
                     {/* Wizard Header - Sticky on Mobile */}
                     <div className="shrink-0 bg-white dark:bg-gray-950 p-4 z-30">
-                        <div className="flex items-center justify-between mb-2 md:mb-4">
-                            <div className="flex items-center gap-2">
-                                <h2 className="text-lg font-semibold">
-                                    {showSummary 
-                                        ? (lang === "he" ? "סיכום המידע" : "Summary")
-                                        : (isExternalForm && currentStep === 6 
-                                            ? t(lang, "labels.references")
-                                            : STEPS[currentStep].title
-                                          )
-                                    }
-                                </h2>
-                                {/* AutoFill and JSON Fill buttons removed - no longer available on any forms */}
-                            </div>
-                            <span className="text-sm text-gray-500">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2 md:mb-4 min-w-0">
+                            <h2 className="text-base sm:text-lg font-semibold truncate min-w-0">
+                                {showSummary 
+                                    ? (lang === "he" ? "סיכום המידע" : "Summary")
+                                    : (isExternalForm && currentStep === 6 
+                                        ? t(lang, "labels.references")
+                                        : STEPS[currentStep].title
+                                      )
+                                }
+                            </h2>
+                            <span className="text-xs sm:text-sm text-gray-500 shrink-0">
                                 {showSummary 
                                     ? (lang === "he" ? "סקירה סופית" : "Final Review")
                                     : `${t(lang, "messages.step")} ${currentStep + 1} ${t(lang, "messages.of")} ${STEPS.length}`

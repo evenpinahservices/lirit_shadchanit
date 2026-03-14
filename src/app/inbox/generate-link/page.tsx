@@ -71,26 +71,26 @@ export default function GenerateLinkPage() {
     };
 
     return (
-        <div className="flex flex-col h-full min-h-0 gap-4">
+        <div className="flex flex-col h-full min-h-0 gap-4 overflow-y-auto">
             <div className="flex items-center gap-4 shrink-0 px-1 pt-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Generate Form Link</h1>
-                    <p className="text-muted-foreground">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Generate Form Link</h1>
+                    <p className="text-sm sm:text-base text-muted-foreground">
                         Create a shareable link for clients to fill out the registration form.
                     </p>
                 </div>
             </div>
 
             {isVerifying ? (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="flex-1 flex items-center justify-center min-h-[200px]">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
                         <p className="text-muted-foreground">Verifying session...</p>
                     </div>
                 </div>
             ) : (
-            <div className="flex-1 flex items-center justify-center">
-                <div className="max-w-2xl w-full space-y-6 p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 rounded-2xl shadow-xl backdrop-blur-sm">
+            <div className="flex-1 flex items-center justify-center min-h-0 py-4 pb-24 md:pb-8">
+                <div className="max-w-2xl w-full space-y-6 p-4 sm:p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 rounded-2xl shadow-xl backdrop-blur-sm">
                     {!token ? (
                         <div className="text-center space-y-4">
                             <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto">
@@ -137,16 +137,16 @@ export default function GenerateLinkPage() {
                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Form Link
                                 </label>
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                     <input
                                         type="text"
                                         value={formUrl || ""}
                                         readOnly
-                                        className="flex-1 rounded-md border border-gray-300 px-4 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="flex-1 min-w-0 rounded-md border border-gray-300 px-4 py-2 text-sm bg-gray-50 dark:bg-gray-900 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                                     />
                                     <button
                                         onClick={handleCopy}
-                                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                                        className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
                                     >
                                         {copied ? (
                                             <>
@@ -167,16 +167,16 @@ export default function GenerateLinkPage() {
                                 <p className="text-sm text-muted-foreground mb-4">
                                     <strong>Note:</strong> This link can be shared with multiple people. Each person who submits the form will create a separate pending entry in your inbox. The profiles will not overlap - each submission is independent.
                                 </p>
-                                <div className="flex gap-2">
+                                <div className="flex flex-col sm:flex-row gap-2">
                                     <button
                                         onClick={handleGenerate}
-                                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 transition-colors"
+                                        className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 transition-colors"
                                     >
                                         Generate New Link
                                     </button>
                                     <Link
                                         href="/inbox"
-                                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                                        className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
                                     >
                                         Go to Inbox
                                     </Link>

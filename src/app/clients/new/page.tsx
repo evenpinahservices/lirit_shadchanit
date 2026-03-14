@@ -126,12 +126,12 @@ export default function NewClientPage() {
             {/* Regular form */}
             {selectedMode && selectedMode !== "ai" && (
                 <div className={`w-full h-full flex flex-col flex-1 min-h-0 overflow-hidden ${selectedLanguage === "he" ? "rtl" : "ltr"}`} dir={selectedLanguage === "he" ? "rtl" : "ltr"}>
-                    <div className="flex items-center justify-between shrink-0 mb-2 pt-4">
-                        <div>
-                            <h1 className="text-3xl font-bold tracking-tight">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0 mb-2 pt-4">
+                        <div className="min-w-0">
+                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight break-words">
                                 {selectedLanguage === "he" ? "הוספת לקוח חדש" : "Add New Client"}
                             </h1>
-                            <p className="text-muted-foreground">
+                            <p className="text-sm text-muted-foreground mt-0.5 break-words">
                                 {selectedLanguage === "he" 
                                     ? "הזן את הפרטים עבור פרופיל הלקוח החדש."
                                     : "Enter the details for the new client profile."}
@@ -144,7 +144,7 @@ export default function NewClientPage() {
                                 setGalleryUrls([]);
                                 setProfilePhotoUrl("");
                             }}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            className="shrink-0 flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors w-full sm:w-auto"
                         >
                             <Languages className="w-4 h-4" />
                             {selectedLanguage === "he" ? "Change / שנה שפה" : "Change Language"}

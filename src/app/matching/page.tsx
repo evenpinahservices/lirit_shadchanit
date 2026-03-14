@@ -305,7 +305,7 @@ export default function MatchingPage() {
                             )}
 
                             {matches.length === 0 ? (
-                                <div id="tour-matching-results" className="flex-1 flex flex-col items-center justify-center text-center bg-gray-50 dark:bg-gray-900/50 p-8 rounded-lg">
+                                <div id="tour-matching-results" className="flex-1 min-h-[40vh] flex flex-col items-center justify-center text-center bg-gray-50 dark:bg-gray-900/50 p-8 rounded-lg">
                                     <Search className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" />
                                     <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
                                         No matches found
