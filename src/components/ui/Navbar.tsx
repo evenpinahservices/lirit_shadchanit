@@ -53,7 +53,7 @@ export function Navbar() {
         return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
     }, []);
 
-    // In PWA: auto-enter fullscreen once (and on first user gesture if blocked)
+    // In PWA: try fullscreen on load (delay for standalone), then on first tap (capture so any tap counts)
     useEffect(() => {
         if (!isPwa || typeof document === "undefined") return;
         const el = document.documentElement;
@@ -61,17 +61,18 @@ export function Navbar() {
             if (!el.requestFullscreen || document.fullscreenElement) return;
             el.requestFullscreen().catch(() => {});
         };
-        tryFullscreen();
-        const onFirstInteraction = () => {
+        const t = setTimeout(tryFullscreen, 300);
+        const onFirstTap = () => {
             tryFullscreen();
-            document.removeEventListener("click", onFirstInteraction);
-            document.removeEventListener("touchstart", onFirstInteraction);
+            document.removeEventListener("click", onFirstTap, true);
+            document.removeEventListener("touchstart", onFirstTap, true);
         };
-        document.addEventListener("click", onFirstInteraction, { once: true });
-        document.addEventListener("touchstart", onFirstInteraction, { once: true, passive: true });
+        document.addEventListener("click", onFirstTap, { once: true, capture: true });
+        document.addEventListener("touchstart", onFirstTap, { once: true, capture: true, passive: true });
         return () => {
-            document.removeEventListener("click", onFirstInteraction);
-            document.removeEventListener("touchstart", onFirstInteraction);
+            clearTimeout(t);
+            document.removeEventListener("click", onFirstTap, true);
+            document.removeEventListener("touchstart", onFirstTap, true);
         };
     }, [isPwa]);
 

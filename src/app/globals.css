@@ -35,14 +35,6 @@
   }
 }
 
-/* PWA standalone: force white background so Android doesn't show black when opening */
-@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
-  :root {
-    --background: #ffffff;
-    --foreground: #171717;
-  }
-}
-
 html {
   /* Use dynamic viewport height - adjusts when keyboard appears */
   height: 100dvh;

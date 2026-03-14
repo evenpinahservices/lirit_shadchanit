@@ -23,7 +23,7 @@ export interface BrandConfig {
 export const brands: Record<BrandId, BrandConfig> = {
   default: {
     themeColor: "#ef4444",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f9fafb",
     appName: "ShadchanitDB - Matchmaking Database",
     shortName: "ShadchanitDB",
     logoNavbar: null,
@@ -33,7 +33,7 @@ export const brands: Record<BrandId, BrandConfig> = {
   },
   lirit: {
     themeColor: "#7ccd7c",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f9fafb",
     appName: "LiritDB - Matchmaking Database",
     shortName: "LiritDB",
     logoNavbar: "/lirit-logo-192.png",
