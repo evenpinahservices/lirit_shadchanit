@@ -53,29 +53,6 @@ export function Navbar() {
         return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
     }, []);
 
-    // In PWA: try fullscreen on load (delay for standalone), then on first tap (capture so any tap counts)
-    useEffect(() => {
-        if (!isPwa || typeof document === "undefined") return;
-        const el = document.documentElement;
-        const tryFullscreen = () => {
-            if (!el.requestFullscreen || document.fullscreenElement) return;
-            el.requestFullscreen().catch(() => {});
-        };
-        const t = setTimeout(tryFullscreen, 300);
-        const onFirstTap = () => {
-            tryFullscreen();
-            document.removeEventListener("click", onFirstTap, true);
-            document.removeEventListener("touchstart", onFirstTap, true);
-        };
-        document.addEventListener("click", onFirstTap, { once: true, capture: true });
-        document.addEventListener("touchstart", onFirstTap, { once: true, capture: true, passive: true });
-        return () => {
-            clearTimeout(t);
-            document.removeEventListener("click", onFirstTap, true);
-            document.removeEventListener("touchstart", onFirstTap, true);
-        };
-    }, [isPwa]);
-
     const links = [
         { href: "/", label: "Dashboard", icon: LayoutDashboard },
         { href: "/clients", label: "Clients", icon: Users },

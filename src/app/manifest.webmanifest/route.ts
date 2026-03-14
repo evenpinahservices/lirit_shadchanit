@@ -9,7 +9,7 @@ export function GET() {
     short_name: brand.shortName,
     description: "Client management and matchmaking system",
     start_url: "/",
-    display: "standalone",
+    display: "fullscreen",
     orientation: "portrait",
     theme_color: brand.themeColor,
     background_color: brand.backgroundColor,

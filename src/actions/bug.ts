@@ -1,6 +1,8 @@
 "use server";
 
 import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
+import path from "path";
 import dbConnect from "@/lib/db";
 import BugReport, { IBugReport } from "@/models/BugReport";
 
@@ -50,7 +52,45 @@ export async function submitBugReport(data: BugReportData): Promise<{ success: b
             status: "new",
         });
 
-        return { success: true, id: bugReport._id.toString() };
+        const id = bugReport._id.toString();
+
+        // Write to local bug directory (skipped in serverless if not writable)
+        try {
+            const bugDir = path.join(process.cwd(), "bug", id);
+            fs.mkdirSync(bugDir, { recursive: true });
+
+            if (data.screenshotBase64) {
+                const base64Data = data.screenshotBase64.includes(",")
+                    ? data.screenshotBase64.split(",")[1]
+                    : data.screenshotBase64;
+                fs.writeFileSync(
+                    path.join(bugDir, "screenshot.png"),
+                    Buffer.from(base64Data!, "base64")
+                );
+            }
+
+            const meta = bugReport.metadata as any;
+            const reportJson = {
+                id,
+                description: bugReport.description,
+                metadata: {
+                    ...meta,
+                    timestamp: meta?.timestamp instanceof Date ? meta.timestamp.toISOString() : meta?.timestamp,
+                },
+                status: bugReport.status,
+                screenshotUrl: bugReport.screenshotUrl || undefined,
+                createdAt: (bugReport as any).createdAt instanceof Date ? (bugReport as any).createdAt.toISOString() : (bugReport as any).createdAt,
+            };
+            fs.writeFileSync(
+                path.join(bugDir, "report.json"),
+                JSON.stringify(reportJson, null, 2),
+                "utf-8"
+            );
+        } catch (dirErr) {
+            console.warn("Could not write bug to local directory:", dirErr);
+        }
+
+        return { success: true, id };
     } catch (error: any) {
         console.error("Error submitting bug report:", error);
         return { success: false, error: error.message || "Failed to submit bug report" };

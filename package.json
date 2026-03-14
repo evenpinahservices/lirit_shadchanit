@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "sync-bugs": "node scripts/sync-bug-directory.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
