@@ -19,7 +19,7 @@ Each field should have: { "value": <extracted_value>, "confidence": 0.0-1.0, "so
     }
 }
 
-// Convert image to base64
+// Convert image to base64 (from File)
 async function imageToBase64(file: File): Promise<{ mimeType: string; data: string }> {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -28,6 +28,23 @@ async function imageToBase64(file: File): Promise<{ mimeType: string; data: stri
         mimeType: file.type || "image/jpeg",
         data: base64,
     };
+}
+
+// Fetch image from URL and convert to base64 (avoids 413 by not sending body from client)
+async function imageUrlToBase64(imageUrl: string): Promise<{ mimeType: string; data: string }> {
+    if (!imageUrl.startsWith("https://")) {
+        throw new Error("Image URL must be HTTPS");
+    }
+    const res = await fetch(imageUrl, { cache: "no-store" });
+    if (!res.ok) {
+        throw new Error(`Failed to fetch image: ${res.status}`);
+    }
+    const arrayBuffer = await res.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString("base64");
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    const mimeType = contentType.split(";")[0].trim();
+    return { mimeType, data: base64 };
 }
 
 // Extract JSON from Gemini response
@@ -142,30 +159,42 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const formData = await request.formData();
-        const resumeImages = formData.getAll("resume_images") as File[];
-        const profileImage = formData.get("profile_image") as File | null;
+        const contentType = request.headers.get("content-type") || "";
+        let imageParts: Array<{ mimeType: string; data: string }> = [];
 
-        if (!resumeImages || resumeImages.length === 0) {
-            return NextResponse.json(
-                { success: false, error: "At least one resume image is required" },
-                { status: 400 }
-            );
-        }
+        if (contentType.includes("application/json")) {
+            // URL flow: client sends one image URL (avoids 413 from large request body)
+            const body = await request.json();
+            const imageUrl = body?.imageUrl;
+            if (!imageUrl || typeof imageUrl !== "string") {
+                return NextResponse.json(
+                    { success: false, error: "imageUrl (string) is required" },
+                    { status: 400 }
+                );
+            }
+            const base64Image = await imageUrlToBase64(imageUrl);
+            imageParts = [base64Image];
+        } else {
+            // FormData flow (legacy)
+            const formData = await request.formData();
+            const resumeImages = formData.getAll("resume_images") as File[];
+            const profileImage = formData.get("profile_image") as File | null;
 
-        // Prepare images for Gemini
-        const imageParts: Array<{ mimeType: string; data: string }> = [];
+            if (!resumeImages || resumeImages.length === 0) {
+                return NextResponse.json(
+                    { success: false, error: "At least one resume image is required" },
+                    { status: 400 }
+                );
+            }
 
-        // Convert resume images
-        for (const img of resumeImages) {
-            const base64Image = await imageToBase64(img);
-            imageParts.push(base64Image);
-        }
-
-        // Convert profile image if provided
-        if (profileImage) {
-            const base64Image = await imageToBase64(profileImage);
-            imageParts.push(base64Image);
+            for (const img of resumeImages) {
+                const base64Image = await imageToBase64(img);
+                imageParts.push(base64Image);
+            }
+            if (profileImage) {
+                const base64Image = await imageToBase64(profileImage);
+                imageParts.push(base64Image);
+            }
         }
 
         // Get extraction prompt

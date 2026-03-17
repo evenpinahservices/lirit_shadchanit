@@ -6,9 +6,8 @@ import { extractTextFromImage, containsHebrew } from "@/lib/ocr";
 import { translateHebrewToEnglish } from "@/actions/translate";
 import { parseTextToClientData } from "@/lib/textParser";
 import { useUploadWithProgress } from "@/hooks/useUploadWithProgress";
-import { CircularProgress } from "@/components/ui/CircularProgress";
-import { ProgressOverlay } from "./ProgressOverlay";
 import { ErrorAlertModal } from "@/components/ui/ErrorAlertModal";
+import { useBackgroundAiProgress } from "@/context/BackgroundAiProgressContext";
 import { getFriendlyError } from "@/lib/errorMessages";
 import type { FriendlyError } from "@/lib/errorMessages";
 import Image from "next/image";
@@ -49,9 +48,24 @@ export function AutoFillModal({
     const [selectedProfileIndex, setSelectedProfileIndex] = useState<number | null>(null);
     const [isDraggingImages, setIsDraggingImages] = useState(false);
     const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
-    
+
+    const aiProgress = useBackgroundAiProgress();
     const imageInputRef = useRef<HTMLInputElement>(null);
     const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const abortedRef = useRef(false);
+
+    const updateProgress = (n: number) => {
+        setProcessingProgress(n);
+        aiProgress?.setProgress(n);
+    };
+    const updateStatus = (s: string) => {
+        setProcessingStatus(s);
+        aiProgress?.setStatus(s);
+    };
+    const updateSubStatus = (s: string) => {
+        setProcessingSubStatus(s);
+        aiProgress?.setSubStatus(s);
+    };
     const startTimeRef = useRef<number | null>(null);
     
     const imageUpload = useUploadWithProgress();
@@ -105,7 +119,15 @@ export function AutoFillModal({
         }
 
         setIsProcessing(true);
-        setProcessingProgress(0);
+        aiProgress?.setProcessing(true);
+        abortedRef.current = false;
+        const abortController = new AbortController();
+        aiProgress?.setCancelCallback?.(() => {
+            abortedRef.current = true;
+            abortController.abort();
+        });
+        updateProgress(0);
+        aiProgress?.setProgress(0);
         startTimeRef.current = Date.now();
         
         // Clear any existing interval
@@ -119,17 +141,18 @@ export function AutoFillModal({
             let profilePhotoUrl: string | null = null;
 
             // Step 1: Upload all images to gallery first (for storage) - 0-15%
-            setProcessingStatus("Uploading images");
-            setProcessingSubStatus("Preparing images for upload...");
-            setProcessingProgress(2);
+            updateStatus("Uploading images");
+            updateSubStatus("Preparing images for upload...");
+            updateProgress(2);
             
             const totalImages = allImages.length;
             const uploadProgressPerImage = 13 / totalImages; // 13% total for uploads (2% to 15%)
             
             // Upload all images
             for (let i = 0; i < allImages.length; i++) {
+                if (abortedRef.current) break;
                 const file = allImages[i];
-                setProcessingSubStatus(`Uploading image ${i + 1} of ${allImages.length}...`);
+                updateSubStatus(`Uploading image ${i + 1} of ${allImages.length}...`);
                 
                 const uploadResult = await imageUpload.uploadWithProgress(file);
                 if (uploadResult.url) {
@@ -142,68 +165,57 @@ export function AutoFillModal({
                 }
                 
                 // Update progress based on upload completion
-                setProcessingProgress(2 + (i + 1) * uploadProgressPerImage);
+                updateProgress(2 + (i + 1) * uploadProgressPerImage);
             }
 
-            // Step 2: Prepare images for AI processing - 15-20%
-            setProcessingStatus("Processing with AI");
-            setProcessingSubStatus("Compressing and preparing images for AI analysis...");
-            setProcessingProgress(15);
-            await new Promise(resolve => setTimeout(resolve, 300));
-            setProcessingProgress(18);
-            
-            const formData = new FormData();
-            
-            // Add all images as resume_images (for AI processing)
-            for (const img of allImages) {
-                formData.append("resume_images", img);
+            if (abortedRef.current) {
+                throw new DOMException("Cancelled", "AbortError");
             }
-            
-            // Add selected profile image (only one - the main one)
-            const mainProfileImage = selectedProfileIndex !== null 
-                ? allImages[selectedProfileIndex]
-                : allImages[0];
-            formData.append("profile_image", mainProfileImage);
-            
-            setProcessingProgress(20);
-            
-            // Step 3: Query AI - 20-90% (time-based estimation)
-            setProcessingSubStatus("Sending images to AI model...");
+
+            // Step 2: Prepare for AI - use single image URL (avoids 413; API fetches server-side)
+            updateStatus("Processing with AI");
+            updateSubStatus("Preparing image for AI analysis...");
+            updateProgress(15);
+            await new Promise(resolve => setTimeout(resolve, 300));
+            updateProgress(18);
+
+            // One image for AI: the selected main/profile image (already uploaded to Cloudinary)
+            const imageUrlForAi = profilePhotoUrl || allGalleryUrls[0];
+            if (!imageUrlForAi) {
+                throw new Error("No image URL available for extraction. Upload may have failed.");
+            }
+
+            updateProgress(20);
+            updateSubStatus("Sending image to AI model...");
             await new Promise(resolve => setTimeout(resolve, 200));
-            
-            setProcessingSubStatus("Querying Gemini AI...");
+            updateSubStatus("Querying Gemini AI...");
             await new Promise(resolve => setTimeout(resolve, 200));
-            
-            // Start time-based progress tracking for AI processing
+
             const aiStartTime = Date.now();
-            const estimatedAiDuration = 60000; // 60 seconds average
+            const estimatedAiDuration = 60000;
             let aiProgressInterval: NodeJS.Timeout | null = null;
-            
-            // Update progress every 100ms during AI processing
             aiProgressInterval = setInterval(() => {
                 const elapsed = Date.now() - aiStartTime;
-                // Use exponential easing - slower at start, faster as we approach completion
-                const progressRatio = Math.min(elapsed / estimatedAiDuration, 0.95); // Cap at 95% until response received
-                // Exponential easing: faster progress as time goes on
+                const progressRatio = Math.min(elapsed / estimatedAiDuration, 0.95);
                 const easedProgress = 1 - Math.pow(1 - progressRatio, 2);
-                const progress = 20 + easedProgress * 70; // 20% to 90%
-                setProcessingProgress(progress);
+                const progress = 20 + easedProgress * 70;
+                updateProgress(progress);
             }, 100);
-            
             progressIntervalRef.current = aiProgressInterval;
-            
+
             let response: Response;
             try {
-                setProcessingSubStatus("AI is analyzing images...");
-                
-                const fetchPromise = fetch("/api/extract-data", {
+                updateSubStatus("AI is analyzing images...");
+
+                response = await fetch("/api/extract-data", {
                     method: "POST",
-                    body: formData,
-                    credentials: "include", // Include cookies for authentication
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ imageUrl: imageUrlForAi }),
+                    credentials: "include",
+                    signal: abortController.signal,
                 });
-                
-                response = await fetchPromise;
             } catch (fetchError: any) {
+                if (fetchError?.name === "AbortError") throw fetchError;
                 console.error("Fetch error:", fetchError);
                 if (aiProgressInterval) clearInterval(aiProgressInterval);
                 throw new Error(`Network error: ${fetchError.message || "Failed to connect to server"}`);
@@ -215,8 +227,8 @@ export function AutoFillModal({
                 aiProgressInterval = null;
             }
             
-            setProcessingProgress(90);
-            setProcessingSubStatus("Received AI response, processing...");
+            updateProgress(90);
+            updateSubStatus("Received AI response, processing...");
             await new Promise(resolve => setTimeout(resolve, 200));
             
             if (!response.ok) {
@@ -251,23 +263,23 @@ export function AutoFillModal({
             }
             
             // Step 4: Process AI response - 90-100%
-            setProcessingSubStatus("Extracting details from images...");
-            setProcessingProgress(92);
+            updateSubStatus("Extracting details from images...");
+            updateProgress(92);
             
             const extractedData = result.data;
             
             // Step 5: Verify and validate
-            setProcessingSubStatus("Verifying and confirming information...");
-            setProcessingProgress(94);
+            updateSubStatus("Verifying and confirming information...");
+            updateProgress(94);
             await new Promise(resolve => setTimeout(resolve, 200));
             
-            setProcessingSubStatus("Measuring confidence levels...");
-            setProcessingProgress(96);
+            updateSubStatus("Measuring confidence levels...");
+            updateProgress(96);
             await new Promise(resolve => setTimeout(resolve, 200));
             
             // Step 6: Format data for form
-            setProcessingSubStatus("Formatting extracted data...");
-            setProcessingProgress(97);
+            updateSubStatus("Formatting extracted data...");
+            updateProgress(97);
             
             // The extracted data should preserve the nested structure {value, confidence, sourceQuote}
             // This allows the form to extract confidence for color coding
@@ -353,8 +365,8 @@ export function AutoFillModal({
             }
             
             // Step 7: Populate form
-            setProcessingSubStatus("Populating form fields...");
-            setProcessingProgress(99);
+            updateSubStatus("Populating form fields...");
+            updateProgress(99);
             // DEBUG: What we're sending to the form (check Console, filter "Age/DOB")
             const fdAge = finalFormData?.age?.value ?? finalFormData?.age;
             const fdDob = finalFormData?.dob?.value ?? finalFormData?.dob;
@@ -376,33 +388,39 @@ export function AutoFillModal({
                 }
             }
 
-            setProcessingStatus("Complete!");
-            setProcessingSubStatus(onComplete ? "Creating draft..." : "Form has been populated successfully!");
-            setProcessingProgress(100);
+            updateStatus("Complete!");
+            updateSubStatus(onComplete ? "Creating draft..." : "Form has been populated successfully!");
+            updateProgress(100);
             
             setTimeout(() => {
                 setAllImages([]);
                 setExtractedText("");
                 setTranslatedText("");
                 setSelectedProfileIndex(null);
-                setProcessingSubStatus("");
-                setProcessingProgress(0);
+                updateSubStatus("");
+                updateProgress(0);
                 startTimeRef.current = null;
                 if (!onComplete) {
                     // Legacy: modal closes when parent switches to form
                 }
             }, onComplete ? 500 : 1500);
         } catch (error: any) {
-            console.error("Processing error:", error);
+            if (error?.name === "AbortError") {
+                // User cancelled - no error message
+            } else {
+                console.error("Processing error:", error);
+                setFriendlyError(getFriendlyError(error, "process-images"));
+            }
             // Clear interval on error
             if (progressIntervalRef.current) {
                 clearInterval(progressIntervalRef.current);
                 progressIntervalRef.current = null;
             }
-            setFriendlyError(getFriendlyError(error, "process-images"));
         } finally {
+            aiProgress?.setCancelCallback?.(null);
             setIsProcessing(false);
-            setProcessingStatus("");
+            aiProgress?.setProcessing(false);
+            updateStatus("");
             // Clear interval
             if (progressIntervalRef.current) {
                 clearInterval(progressIntervalRef.current);
@@ -424,12 +442,6 @@ export function AutoFillModal({
     if (fullScreen) {
         return (
             <>
-                <ProgressOverlay 
-                    isVisible={isProcessing} 
-                    status={processingStatus}
-                    subStatus={processingSubStatus}
-                    progress={processingProgress}
-                />
                 <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col" dir="ltr">
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
@@ -455,11 +467,11 @@ export function AutoFillModal({
                                 Upload all images (resumes, forms, profile pictures, etc.). Select one image to use as the main profile photo. All images will be added to the gallery and processed by AI.
                             </p>
                             
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-3 gap-3 max-w-[min(56rem,100%)] max-h-[min(60vh,600px)] overflow-y-auto">
                                 {allImages.map((file, index) => (
                                     <div
                                         key={index}
-                                        className={`relative aspect-square rounded-md overflow-hidden border-2 ${
+                                        className={`relative aspect-square rounded-md overflow-hidden border-2 min-w-0 ${
                                             selectedProfileIndex === index
                                                 ? 'border-blue-500'
                                                 : 'border-gray-300'
@@ -575,12 +587,6 @@ export function AutoFillModal({
 
     return (
         <>
-            <ProgressOverlay 
-                isVisible={isProcessing} 
-                status={processingStatus}
-                subStatus={processingSubStatus}
-                progress={processingProgress}
-            />
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" dir="ltr">
                 <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" dir="ltr">
                 {/* Header */}
@@ -607,11 +613,11 @@ export function AutoFillModal({
                             Upload all images (resumes, forms, profile pictures, etc.). Select one image to use as the main profile photo. All images will be added to the gallery and processed by AI.
                         </p>
                         
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-3 gap-3 max-w-[min(56rem,100%)] max-h-[min(60vh,600px)] overflow-y-auto">
                             {allImages.map((file, index) => (
                                 <div
                                     key={index}
-                                    className={`relative aspect-square rounded-md overflow-hidden border-2 ${
+                                    className={`relative aspect-square rounded-md overflow-hidden border-2 min-w-0 ${
                                         selectedProfileIndex === index
                                             ? 'border-blue-500'
                                             : 'border-gray-300'

@@ -9,11 +9,14 @@ import { Globe, Languages, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { createPendingClient } from "@/actions/pendingClient";
 import { flattenAiFormDataForPending } from "@/lib/flattenAiFormData";
+import { useBackgroundAiProgress } from "@/context/BackgroundAiProgressContext";
 
 type FormMode = FormLanguage | "ai";
 
 export default function NewClientPage() {
     const router = useRouter();
+    const aiProgress = useBackgroundAiProgress();
+    const isUploadInProgress = aiProgress?.isProcessing ?? false;
     const [selectedMode, setSelectedMode] = useState<FormMode | null>(null);
     const [showAutoFillModal, setShowAutoFillModal] = useState(false);
     const [autoFillData, setAutoFillData] = useState<any>(null);
@@ -52,8 +55,9 @@ export default function NewClientPage() {
                                     {/* Auto-Generate Option - Only for admin users (first) */}
                                     {isAdmin && (
                                         <button
-                                            onClick={() => setSelectedMode("ai")}
-                                            className="group relative flex flex-col items-center justify-center border-2 border-gray-200 rounded-xl sm:rounded-2xl hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 cursor-pointer w-full flex-1 min-h-0 p-3 sm:p-6 md:p-8"
+                                            onClick={() => !isUploadInProgress && setSelectedMode("ai")}
+                                            disabled={isUploadInProgress}
+                                            className="group relative flex flex-col items-center justify-center border-2 border-gray-200 rounded-xl sm:rounded-2xl hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 cursor-pointer w-full flex-1 min-h-0 p-3 sm:p-6 md:p-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:bg-transparent"
                                         >
                                             <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-1 sm:mb-2 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors shrink-0">
                                                 <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7 text-purple-600 dark:text-purple-400" />
@@ -65,8 +69,9 @@ export default function NewClientPage() {
 
                                     {/* English Option */}
                                     <button
-                                        onClick={() => setSelectedMode("en")}
-                                        className="group relative flex flex-col items-center justify-center border-2 border-gray-200 rounded-xl sm:rounded-2xl hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 cursor-pointer w-full flex-1 min-h-0 p-3 sm:p-6 md:p-8"
+                                        onClick={() => !isUploadInProgress && setSelectedMode("en")}
+                                        disabled={isUploadInProgress}
+                                        className="group relative flex flex-col items-center justify-center border-2 border-gray-200 rounded-xl sm:rounded-2xl hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 cursor-pointer w-full flex-1 min-h-0 p-3 sm:p-6 md:p-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:bg-transparent"
                                     >
                                         <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-1 sm:mb-2 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors shrink-0">
                                             <Globe className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7 text-blue-600 dark:text-blue-400" />
@@ -77,8 +82,9 @@ export default function NewClientPage() {
 
                                     {/* Hebrew Option */}
                                     <button
-                                        onClick={() => setSelectedMode("he")}
-                                        className="group relative flex flex-col items-center justify-center border-2 border-gray-200 rounded-xl sm:rounded-2xl hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 cursor-pointer w-full flex-1 min-h-0 p-3 sm:p-6 md:p-8"
+                                        onClick={() => !isUploadInProgress && setSelectedMode("he")}
+                                        disabled={isUploadInProgress}
+                                        className="group relative flex flex-col items-center justify-center border-2 border-gray-200 rounded-xl sm:rounded-2xl hover:border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all duration-200 cursor-pointer w-full flex-1 min-h-0 p-3 sm:p-6 md:p-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:bg-transparent"
                                     >
                                         <div className="w-8 h-8 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-1 sm:mb-2 group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors shrink-0">
                                             <Languages className="w-4 h-4 sm:w-6 sm:h-6 md:w-7 md:h-7 text-green-600 dark:text-green-400" />

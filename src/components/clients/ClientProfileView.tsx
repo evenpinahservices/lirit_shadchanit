@@ -452,7 +452,7 @@ export function ClientProfileView({ client, onEdit, onDelete, onMatch }: ClientP
                                         onClick={onMatch}
                                         className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none"
                                     >
-                                        {lang === "he" ? "שידוך" : "Match"}
+                                        {isRtl ? "שידוך" : "Match"}
                                     </button>
                                 )}
                             </>

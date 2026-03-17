@@ -9,6 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 import { getBrand } from "@/config/branding";
 import { LayoutDashboard, Users, Heart, Search, LogOut, Maximize2, Minimize2, StickyNote, Hourglass } from "lucide-react";
 import { BugReportButton } from "@/components/ui/BugReportButton";
+import { useBackgroundAiProgress } from "@/context/BackgroundAiProgressContext";
+import { CircularProgress } from "@/components/ui/CircularProgress";
 
 /** True when running as installed PWA (standalone/fullscreen/minimal-ui), not in browser tab */
 function useIsPwa() {
@@ -34,6 +36,7 @@ function useIsPwa() {
 export function Navbar() {
     const pathname = usePathname();
     const { user, logout } = useAuth();
+    const aiProgress = useBackgroundAiProgress();
     const [isFullscreen, setIsFullscreen] = useState(false);
     const isPwa = useIsPwa();
 
@@ -107,6 +110,21 @@ export function Navbar() {
 
                 {/* User Menu - Visible on all screens now */}
                 <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-shrink-0">
+                    {user && aiProgress?.isProcessing && (
+                        <button
+                            type="button"
+                            onClick={aiProgress.restoreOverlay}
+                            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            aria-label="Show AI upload progress"
+                        >
+                            <CircularProgress
+                                progress={Math.max(0, Math.min(100, aiProgress.progress))}
+                                size={30}
+                                strokeWidth={2.5}
+                                showPercentage={true}
+                            />
+                        </button>
+                    )}
                     {user && !isPwa && (
                         <button
                             onClick={toggleFullscreen}

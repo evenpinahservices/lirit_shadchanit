@@ -17,13 +17,16 @@ export function CircularProgress({
     showPercentage = false,
     className,
 }: CircularProgressProps) {
-    // If showing percentage, use a larger size to fit the text
-    const effectiveSize = showPercentage ? Math.max(size, 40) : size;
-    const effectiveStrokeWidth = showPercentage ? Math.max(strokeWidth, 4) : strokeWidth;
-    
+    // If showing percentage, use a larger size to fit the text (unless size is small for compact display)
+    const isCompact = showPercentage && size < 40;
+    const effectiveSize = isCompact ? size : (showPercentage ? Math.max(size, 40) : size);
+    const effectiveStrokeWidth = showPercentage && !isCompact ? Math.max(strokeWidth, 4) : strokeWidth;
+
     const radius = (effectiveSize - effectiveStrokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
     const offset = circumference - (progress / 100) * circumference;
+
+    const percentageFontSize = isCompact ? '0.6rem' : effectiveSize >= 60 ? '1.25rem' : effectiveSize >= 40 ? '1rem' : '0.75rem';
 
     return (
         <div className={cn("relative inline-flex items-center justify-center", className)}>
@@ -59,9 +62,7 @@ export function CircularProgress({
             {showPercentage && (
                 <span 
                     className="absolute font-semibold text-gray-700 dark:text-gray-300"
-                    style={{ 
-                        fontSize: effectiveSize >= 60 ? '1.25rem' : effectiveSize >= 40 ? '1rem' : '0.75rem'
-                    }}
+                    style={{ fontSize: percentageFontSize }}
                 >
                     {Math.round(progress)}%
                 </span>

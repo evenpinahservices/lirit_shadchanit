@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useClients } from "@/context/ClientContext";
+import { useBackgroundAiProgress } from "@/context/BackgroundAiProgressContext";
 import { Plus, Pencil, Trash2, Heart, MapPin, Briefcase, Search, ChevronLeft, ChevronRight, User as UserIcon, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
@@ -11,6 +12,8 @@ import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
 
 export default function ClientsPage() {
     const { clients, deleteClient, error, clearError, isLoading } = useClients();
+    const aiProgress = useBackgroundAiProgress();
+    const isUploadInProgress = aiProgress?.isProcessing ?? false;
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState<number | "all">(() => {
@@ -118,13 +121,23 @@ export default function ClientsPage() {
                     <p className="text-muted-foreground hidden md:block">Manage your client database.</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Link
-                        href="/clients/new"
-                        className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors"
-                    >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Client
-                    </Link>
+                    {isUploadInProgress ? (
+                        <span
+                            className="inline-flex items-center justify-center rounded-md bg-red-600/50 px-4 py-2 text-sm font-medium text-white shadow cursor-not-allowed"
+                            title="An AI upload is in progress. Wait for it to finish."
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Client
+                        </span>
+                    ) : (
+                        <Link
+                            href="/clients/new"
+                            className="inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors"
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Client
+                        </Link>
+                    )}
                 </div>
             </div>
 

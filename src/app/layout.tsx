@@ -5,6 +5,7 @@ import { getBrand, currentBrandId } from "@/config/branding";
 import { AuthProvider } from "@/context/AuthContext";
 import { ClientProvider } from "@/context/ClientContext";
 import { AuthGuard } from "@/components/AuthGuard";
+import { BackgroundAiProgressProvider } from "@/context/BackgroundAiProgressContext";
 import { Navbar } from "@/components/ui/Navbar";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { PWARegister } from "@/components/PWARegister";
@@ -50,16 +51,18 @@ export default function RootLayout({
         <AuthProvider>
           <ClientProvider>
             <AuthGuard>
-              <KeyboardScrollHandler />
-              <div className="flex flex-col h-dvh min-h-0 overflow-hidden">
-                <Suspense fallback={null}>
-                  <Navbar />
-                </Suspense>
-                <main className="flex-1 min-h-0 overflow-hidden flex flex-col w-full pt-2 px-4 pb-16 md:pb-2">
-                  {children}
-                </main>
-                <BottomNav />
-              </div>
+              <BackgroundAiProgressProvider>
+                <KeyboardScrollHandler />
+                <div className="flex flex-col h-dvh min-h-0 overflow-hidden">
+                  <Suspense fallback={null}>
+                    <Navbar />
+                  </Suspense>
+                  <main className="flex-1 min-h-0 overflow-hidden flex flex-col w-full pt-2 px-4 pb-16 md:pb-2">
+                    {children}
+                  </main>
+                  <BottomNav />
+                </div>
+              </BackgroundAiProgressProvider>
             </AuthGuard>
           </ClientProvider>
         </AuthProvider>
