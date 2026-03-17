@@ -10,6 +10,7 @@ interface ClientProfileViewProps {
     client: Client;
     onEdit: () => void;
     onDelete: () => void;
+    onMatch?: () => void;
 }
 
 type OptionKey = keyof typeof import("@/lib/translations").translations.en.options;
@@ -85,7 +86,7 @@ const Field = ({ label, value, lang, optionKey, isRtl }: {
     );
 };
 
-export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileViewProps) {
+export function ClientProfileView({ client, onEdit, onDelete, onMatch }: ClientProfileViewProps) {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
 
@@ -411,9 +412,17 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                     <div className={cn("flex gap-2 w-full sm:w-auto pt-0.5", isRtl && "flex-row-reverse")} dir={isRtl ? "rtl" : "ltr"}>
                         {isRtl ? (
                             <>
+                                {onMatch && (
+                                    <button
+                                        onClick={onMatch}
+                                        className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none"
+                                    >
+                                        {lang === "he" ? "שידוך" : "Match"}
+                                    </button>
+                                )}
                                 <button
                                     onClick={onDelete}
-                                    className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none"
+                                    className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-danger-600 rounded-md shadow-sm hover:bg-danger-700 focus:outline-none"
                                 >
                                     {lang === "he" ? "מחיקה" : "Delete"}
                                 </button>
@@ -434,10 +443,18 @@ export function ClientProfileView({ client, onEdit, onDelete }: ClientProfileVie
                                 </button>
                                 <button
                                     onClick={onDelete}
-                                    className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none"
+                                    className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-danger-600 rounded-md shadow-sm hover:bg-danger-700 focus:outline-none"
                                 >
                                     {isRtl ? "מחיקה" : "Delete"}
                                 </button>
+                                {onMatch && (
+                                    <button
+                                        onClick={onMatch}
+                                        className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none"
+                                    >
+                                        {lang === "he" ? "שידוך" : "Match"}
+                                    </button>
+                                )}
                             </>
                         )}
                     </div>

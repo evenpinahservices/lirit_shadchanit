@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ClientForm } from "@/components/clients/ClientForm";
 import { AutoFillModal } from "@/components/clients/AutoFillModal";
 import { FormLanguage } from "@/lib/translations";
 import { Globe, Languages, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { createPendingClient } from "@/actions/pendingClient";
+import { flattenAiFormDataForPending } from "@/lib/flattenAiFormData";
 
 type FormMode = FormLanguage | "ai";
 
 export default function NewClientPage() {
+    const router = useRouter();
     const [selectedMode, setSelectedMode] = useState<FormMode | null>(null);
     const [showAutoFillModal, setShowAutoFillModal] = useState(false);
     const [autoFillData, setAutoFillData] = useState<any>(null);
@@ -88,11 +92,29 @@ export default function NewClientPage() {
         );
     }
 
-    // Handle AutoFill callbacks
+    // Handle AutoFill: create pending draft and redirect to inbox so uploads/form are never lost
+    const handleAiComplete = async (payload: { formData: any; galleryUrls: string[]; profilePhotoUrl: string | null }) => {
+        try {
+            const flat = flattenAiFormDataForPending({
+                formData: payload.formData,
+                galleryUrls: payload.galleryUrls,
+                profilePhotoUrl: payload.profilePhotoUrl,
+            });
+            const pending = await createPendingClient({
+                ...flat,
+                source: "admin_ai_draft",
+                sourceDescription: "AI-generated form by admin",
+            } as any);
+            router.push(`/inbox/${pending.id}`);
+        } catch (err: any) {
+            console.error("Failed to create AI draft:", err);
+            alert("Failed to save draft: " + (err?.message || "Please try again."));
+        }
+    };
+
+    // Legacy callbacks when not using onComplete (e.g. if modal used elsewhere)
     const handleAutoFill = (data: any) => {
         setAutoFillData(data);
-        // Switch to English form with filled data - this will automatically close the AI modal
-        // because the modal only renders when selectedMode === "ai"
         setSelectedMode("en");
     };
 
@@ -105,9 +127,6 @@ export default function NewClientPage() {
     };
 
     const handleCloseAutoFill = () => {
-        // Only reset mode if user manually closes (cancels) without filling form
-        // If form was filled, onFillForm already changed selectedMode to "en"
-        // and the modal will close automatically because selectedMode !== "ai"
         if (selectedMode === "ai") {
             setSelectedMode(null);
         }
@@ -126,11 +145,12 @@ export default function NewClientPage() {
                     onFillForm={handleAutoFill}
                     onAddToGallery={handleAddToGallery}
                     onSetProfilePhoto={handleSetProfilePhoto}
+                    onComplete={handleAiComplete}
                     fullScreen={true}
                 />
             )}
             
-            {/* Regular form */}
+            {/* Regular form (manual English/Hebrew only; AI flow redirects to inbox) */}
             {selectedMode && selectedMode !== "ai" && (
                 <div className={`w-full h-full flex flex-col flex-1 min-h-0 overflow-hidden ${selectedLanguage === "he" ? "rtl" : "ltr"}`} dir={selectedLanguage === "he" ? "rtl" : "ltr"}>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0 mb-2 pt-4">

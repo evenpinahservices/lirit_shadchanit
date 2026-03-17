@@ -25,12 +25,15 @@ export default function MatchingPage() {
 
     const searchParams = useSearchParams();
     const initialClientId = searchParams.get("clientId");
+    const viewParam = searchParams.get("view");
+    const isDeepLinkToResults = !!(initialClientId && viewParam === "results");
 
     const [selectedClientId, setSelectedClientId] = useState<string>(initialClientId || "");
     const [matches, setMatches] = useState<Client[]>([]);
 
-    // View State
-    const [isResultsView, setIsResultsView] = useState(false);
+    // View State: start in results view when landing with ?clientId=...&view=results to avoid flash of "Select Client"
+    const [isResultsView, setIsResultsView] = useState(isDeepLinkToResults);
+    const [hasProcessedUrlParams, setHasProcessedUrlParams] = useState(!isDeepLinkToResults);
 
     // Pagination State
     const [currentPage, setCurrentPage] = useState(1);
@@ -57,6 +60,7 @@ export default function MatchingPage() {
                 setMatches(suggestions);
                 setIsResultsView(true);
             }
+            setHasProcessedUrlParams(true);
         }
     }, [initialClientId, clients]);
 
@@ -306,13 +310,22 @@ export default function MatchingPage() {
 
                             {matches.length === 0 ? (
                                 <div id="tour-matching-results" className="flex-1 min-h-[40vh] flex flex-col items-center justify-center text-center bg-gray-50 dark:bg-gray-900/50 p-8 rounded-lg">
-                                    <Search className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" />
-                                    <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                        No matches found
-                                    </p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-500">
-                                        No matches found matching the strict criteria. Try another client.
-                                    </p>
+                                    {selectedClientId && !hasProcessedUrlParams ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-10 w-10 border-2 border-red-600 border-t-transparent mx-auto mb-4" />
+                                            <p className="text-sm text-muted-foreground">Loading matches...</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Search className="h-12 w-12 text-gray-400 dark:text-gray-600 mb-4" />
+                                            <p className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                                No matches found
+                                            </p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-500">
+                                                No matches found matching the strict criteria. Try another client.
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
                             ) : (
                                 <div 

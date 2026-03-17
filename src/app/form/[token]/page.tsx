@@ -8,6 +8,9 @@ import { ClientForm } from "@/components/clients/ClientForm";
 import { FormLanguage } from "@/lib/translations";
 import { Globe, Languages, AlertCircle, Edit, Mail, Phone, CheckCircle2 } from "lucide-react";
 import { Client } from "@/lib/mockData";
+import { ErrorAlertModal } from "@/components/ui/ErrorAlertModal";
+import { getFriendlyError } from "@/lib/errorMessages";
+import type { FriendlyError } from "@/lib/errorMessages";
 
 export default function ExternalFormPage() {
     const params = useParams();
@@ -25,6 +28,7 @@ export default function ExternalFormPage() {
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
     const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
+    const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
 
     useEffect(() => {
         const validateToken = async () => {
@@ -114,7 +118,7 @@ export default function ExternalFormPage() {
     // Handle identifier submission
     const handleIdentifierSubmit = async () => {
         if (!email.trim() && !phone.trim()) {
-            alert("Please provide either an email or phone number");
+            setFriendlyError(getFriendlyError("Please provide either an email or phone number", "submit-form"));
             return;
         }
         
@@ -210,6 +214,7 @@ export default function ExternalFormPage() {
     // Identifier entry screen (before language selection)
     if (isValidToken && !identifierEntered) {
         return (
+            <>
             <div className="min-h-screen flex items-center justify-center p-4">
                 <div className="max-w-md w-full space-y-6">
                     <div className="text-center">
@@ -284,6 +289,12 @@ export default function ExternalFormPage() {
                     </div>
                 </div>
             </div>
+            <ErrorAlertModal
+                isOpen={!!friendlyError}
+                onClose={() => setFriendlyError(null)}
+                error={friendlyError}
+            />
+            </>
         );
     }
 
@@ -477,8 +488,7 @@ function ExternalClientForm({
             }
         } catch (error: any) {
             console.error("Failed to submit form:", error);
-            alert("Failed to submit form: " + (error.message || error));
-            throw error; // Re-throw to let ClientForm handle the error state
+            throw error; // Re-throw so ClientForm's catch shows the friendly error modal
         }
     };
     

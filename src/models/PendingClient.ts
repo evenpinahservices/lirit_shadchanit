@@ -6,7 +6,7 @@ export interface PendingClient extends Client {
     submittedAt: string;
     submittedBy?: string; // Email or identifier of who submitted
     token?: string; // Token used for external form submission
-    source?: "client_form" | "whatsapp" | "admin_manual"; // Source of the submission
+    source?: "client_form" | "whatsapp" | "admin_manual" | "admin_ai_draft"; // Source of the submission
     sourceDescription?: string; // Human-readable description of the source
     existingApprovedClientId?: string; // ID of approved client that will be overwritten
 }
@@ -69,7 +69,7 @@ const PendingClientSchema = new Schema<PendingClient>(
     submittedAt: { type: String, required: true },
     submittedBy: { type: String },
     token: { type: String },
-    source: { type: String, enum: ["client_form", "whatsapp", "admin_manual"], default: "admin_manual" },
+    source: { type: String, enum: ["client_form", "whatsapp", "admin_manual", "admin_ai_draft"], default: "admin_manual" },
     sourceDescription: { type: String },
     existingApprovedClientId: { type: String }, // ID of approved client that will be overwritten
     },

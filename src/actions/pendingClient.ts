@@ -16,7 +16,7 @@ type PendingClientInput = Omit<Client, "id" | "createdAt"> & {
     submittedAt?: string;
     submittedBy?: string;
     token?: string;
-    source?: "client_form" | "whatsapp" | "admin_manual";
+    source?: "client_form" | "whatsapp" | "admin_manual" | "admin_ai_draft";
     sourceDescription?: string;
     existingApprovedClientId?: string; // ID of approved client that will be overwritten
 };
@@ -110,6 +110,9 @@ export async function createPendingClient(data: PendingClientInput): Promise<Pen
                 break;
             case "whatsapp":
                 sourceDescription = "Extracted from WhatsApp images";
+                break;
+            case "admin_ai_draft":
+                sourceDescription = "AI-generated form by admin";
                 break;
             case "admin_manual":
             default:

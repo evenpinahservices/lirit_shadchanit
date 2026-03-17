@@ -2,25 +2,29 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getPendingClients, approvePendingClient, rejectPendingClient, willOverwriteApprovedClient } from "@/actions/pendingClient";
+import { getPendingClients, approvePendingClient, rejectPendingClient, willOverwriteApprovedClient, updatePendingClient } from "@/actions/pendingClient";
 import { ClientForm } from "@/components/clients/ClientForm";
 import { Client } from "@/lib/mockData";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import { ErrorAlertModal } from "@/components/ui/ErrorAlertModal";
+import { getFriendlyError } from "@/lib/errorMessages";
+import type { FriendlyError } from "@/lib/errorMessages";
 
 export default function InboxApprovalPage() {
     const params = useParams();
     const router = useRouter();
     const pendingClientId = params.id as string;
     
-    const [pendingClient, setPendingClient] = useState<Client | null>(null);
+    const [pendingClient, setPendingClient] = useState<(Client & { source?: string }) | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isApproving, setIsApproving] = useState(false);
     const [isRejecting, setIsRejecting] = useState(false);
     const [approveModalOpen, setApproveModalOpen] = useState(false);
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [willOverwrite, setWillOverwrite] = useState(false);
+    const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
 
     useEffect(() => {
         const loadPendingClient = async () => {
@@ -29,9 +33,9 @@ export default function InboxApprovalPage() {
                 const clients = await getPendingClients();
                 const client = clients.find(c => c.id === pendingClientId);
                 if (client) {
-                    // Convert pending client to regular client format
+                    // Convert pending client to regular client format (keep source for AI-draft detection)
                     const { submittedAt, submittedBy, token, ...clientData } = client as any;
-                    setPendingClient(clientData as Client);
+                    setPendingClient({ ...clientData } as Client);
                     
                     // Check if this will overwrite an existing approved client
                     const overwriteCheck = await willOverwriteApprovedClient(pendingClientId);
@@ -64,7 +68,7 @@ export default function InboxApprovalPage() {
             router.push(`/matching?clientId=${approvedClient.id}&view=results`);
         } catch (error: any) {
             console.error("Failed to approve client:", error);
-            alert("Failed to approve client: " + (error.message || error));
+            setFriendlyError(getFriendlyError(error, "approve-client"));
         } finally {
             setIsApproving(false);
             setApproveModalOpen(false);
@@ -80,7 +84,7 @@ export default function InboxApprovalPage() {
             router.push("/inbox");
         } catch (error: any) {
             console.error("Failed to reject client:", error);
-            alert("Failed to reject client: " + (error.message || error));
+            setFriendlyError(getFriendlyError(error, "reject-client"));
         } finally {
             setIsRejecting(false);
             setRejectModalOpen(false);
@@ -127,11 +131,14 @@ export default function InboxApprovalPage() {
             <div className="flex-1 min-h-0 overflow-hidden">
                 <ClientForm 
                     client={pendingClient} 
-                    isEditing={false} 
+                    isEditing={pendingClient.source === "admin_ai_draft"} 
                     language={pendingClient.formLanguage || "en"}
                     onCancel={() => router.push("/inbox")}
                     onApprove={() => setApproveModalOpen(true)}
                     onReject={() => setRejectModalOpen(true)}
+                    onSubmitToPending={pendingClient.source === "admin_ai_draft" ? async (values) => {
+                        await updatePendingClient(pendingClientId, values as any);
+                    } : undefined}
                     isApproving={isApproving}
                     isRejecting={isRejecting}
                     hideAutoFillOptions={true}
@@ -157,6 +164,11 @@ export default function InboxApprovalPage() {
                 message="Are you sure you want to reject this client submission? This action cannot be undone."
                 confirmText="Reject"
                 isDangerous={true}
+            />
+            <ErrorAlertModal
+                isOpen={!!friendlyError}
+                onClose={() => setFriendlyError(null)}
+                error={friendlyError}
             />
         </div>
     );

@@ -3,8 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getPendingClients, rejectPendingClient } from "@/actions/pendingClient";
-import { Hourglass, MapPin, Briefcase, Search, User as UserIcon, Trash2, Clock, CheckCircle2, Link as LinkIcon, MessageSquare, FileText, Inbox } from "lucide-react";
+import { Hourglass, MapPin, Briefcase, Search, User as UserIcon, Trash2, Clock, CheckCircle2, Link as LinkIcon, MessageSquare, FileText, Inbox, Sparkles } from "lucide-react";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import { ErrorAlertModal } from "@/components/ui/ErrorAlertModal";
+import { getFriendlyError } from "@/lib/errorMessages";
+import type { FriendlyError } from "@/lib/errorMessages";
 
 interface PendingClient {
     id: string;
@@ -18,7 +21,7 @@ interface PendingClient {
     photoUrl?: string;
     submittedAt: string;
     submittedBy?: string;
-    source?: "client_form" | "whatsapp" | "admin_manual";
+    source?: "client_form" | "whatsapp" | "admin_manual" | "admin_ai_draft";
     sourceDescription?: string;
 }
 
@@ -28,6 +31,7 @@ export default function InboxPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [clientToReject, setClientToReject] = useState<string | null>(null);
+    const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
 
     const loadPendingClients = async () => {
         try {
@@ -58,7 +62,7 @@ export default function InboxPage() {
                 setClientToReject(null);
             } catch (error: any) {
                 console.error("Failed to reject client:", error);
-                alert("Failed to reject client: " + (error.message || error));
+                setFriendlyError(getFriendlyError(error, "reject-client"));
             }
         }
     };
@@ -195,6 +199,8 @@ export default function InboxPage() {
                                                     <MessageSquare className="h-4 w-4 text-blue-600" />
                                                 ) : client.source === "client_form" ? (
                                                     <FileText className="h-4 w-4 text-green-600" />
+                                                ) : client.source === "admin_ai_draft" ? (
+                                                    <Sparkles className="h-4 w-4 text-purple-600" />
                                                 ) : (
                                                     <FileText className="h-4 w-4 text-gray-400" />
                                                 )}
@@ -202,7 +208,7 @@ export default function InboxPage() {
                                                     {client.sourceDescription || 
                                                      (client.source === "whatsapp" ? "WhatsApp" : 
                                                       client.source === "client_form" ? "Client Form" : 
-                                                      "Manual")}
+                                                      client.source === "admin_ai_draft" ? "AI-generated form by admin" : "Manual")}
                                                 </span>
                                             </div>
                                         </td>
@@ -223,7 +229,7 @@ export default function InboxPage() {
                                                 </Link>
                                                 <button
                                                     onClick={() => handleRejectClick(client.id)}
-                                                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                                    className="p-2 text-gray-400 hover:text-danger-600 transition-colors"
                                                     title="Reject"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -273,6 +279,8 @@ export default function InboxPage() {
                                                 <MessageSquare className="h-3 w-3 text-blue-600" />
                                             ) : client.source === "client_form" ? (
                                                 <FileText className="h-3 w-3 text-green-600" />
+                                            ) : client.source === "admin_ai_draft" ? (
+                                                <Sparkles className="h-3 w-3 text-purple-600" />
                                             ) : (
                                                 <FileText className="h-3 w-3 text-gray-400" />
                                             )}
@@ -280,7 +288,7 @@ export default function InboxPage() {
                                                 {client.sourceDescription || 
                                                  (client.source === "whatsapp" ? "WhatsApp" : 
                                                   client.source === "client_form" ? "Client Form" : 
-                                                  "Manual")}
+                                                  client.source === "admin_ai_draft" ? "AI-generated form by admin" : "Manual")}
                                             </span>
                                         </p>
                                         <p className="flex items-center gap-1">
@@ -300,7 +308,7 @@ export default function InboxPage() {
                                 </Link>
                                 <button
                                     onClick={() => handleRejectClick(client.id)}
-                                    className="p-2 text-red-400 hover:text-red-600 bg-red-50 dark:bg-red-900/20 rounded-md"
+                                    className="p-2 text-danger-600 hover:text-danger-700 bg-danger-50 dark:bg-danger-900/20 rounded-md"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
@@ -318,6 +326,11 @@ export default function InboxPage() {
                 message="Are you sure you want to reject this client submission? This action cannot be undone."
                 confirmText="Reject"
                 isDangerous={true}
+            />
+            <ErrorAlertModal
+                isOpen={!!friendlyError}
+                onClose={() => setFriendlyError(null)}
+                error={friendlyError}
             />
         </div>
     );

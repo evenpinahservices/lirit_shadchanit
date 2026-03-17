@@ -19,6 +19,9 @@ import { findMatches } from "@/lib/matchingUtils";
 import { MultiSelect } from "@/components/ui/MultiSelect";
 import { DateCarousel } from "@/components/ui/DateCarousel";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
+import { ErrorAlertModal } from "@/components/ui/ErrorAlertModal";
+import { getFriendlyError } from "@/lib/errorMessages";
+import type { FriendlyError } from "@/lib/errorMessages";
 import { FormLanguage, translations, t, getOptions, isRTL } from "@/lib/translations";
 import { createPendingClient } from "@/actions/pendingClient";
 import { FieldWithTooltip } from "./FieldWithTooltip";
@@ -121,6 +124,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         setValue,
         trigger,
         reset,
+        getValues,
     } = useForm<z.input<typeof formSchema>, any, z.output<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues,
@@ -160,6 +164,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isSubmitReady, setIsSubmitReady] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
     const [fieldConfidences, setFieldConfidences] = useState<Record<string, number>>({});
     const [sourceQuotes, setSourceQuotes] = useState<Record<string, string | null>>({});
     
@@ -266,7 +271,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
             }
         } catch (error: any) {
             console.error("Failed to submit client:", error);
-            alert("Failed to save client: " + (error.message || error));
+            setFriendlyError(getFriendlyError(error, "save-client"));
         } finally {
             setIsSubmitting(false);
         }
@@ -1110,7 +1115,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                     <button
                                                         type="button"
                                                         onClick={handleDeletePhoto}
-                                                        className={cn("absolute -top-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors shadow-lg z-10 flex items-center justify-center", rtl ? "-left-1" : "-right-1")}
+                                                        className={cn("absolute -top-1 bg-danger-500 text-white rounded-full p-0.5 hover:bg-danger-600 transition-colors shadow-lg z-10 flex items-center justify-center", rtl ? "-left-1" : "-right-1")}
                                                         title={t(lang, "buttons.delete")}
                                                     >
                                                         <X className="h-2.5 w-2.5" />
@@ -1221,7 +1226,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                         setDeleteTarget({ type: "gallery", index: idx });
                                                         setDeleteConfirmOpen(true);
                                                     }}
-                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors"
+                                                    className="absolute top-1 right-1 bg-danger-500 text-white rounded-full p-0.5 hover:bg-danger-600 transition-colors"
                                                 >
                                                     <X className="h-3 w-3" />
                                                 </button>
@@ -1802,14 +1807,23 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                 {lang === "he" ? "חזור לעריכה" : "Back to Edit"}
                                             </button>
                                         )}
-                                        {/* Show approve/reject buttons if handlers provided (inbox review), otherwise show submit button */}
+                                        {/* Show approve/reject (and optional Save draft) if handlers provided (inbox review) */}
                                         {onApprove && onReject ? (
                                             <>
+                                                {onSubmitToPending && (
+                                                    <button
+                                                        type="submit"
+                                                        disabled={!isSubmitReady || isSubmitting}
+                                                        className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                    >
+                                                        {isSubmitting ? (lang === "he" ? "שומר..." : "Saving...") : (lang === "he" ? "שמור טיוטה" : "Save draft")}
+                                                    </button>
+                                                )}
                                                 <button
                                                     type="button"
                                                     onClick={onReject}
                                                     disabled={isRejecting || isApproving}
-                                                    className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                    className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-danger-600 rounded-md shadow-sm hover:bg-danger-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-danger-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                     {isRejecting 
@@ -1819,8 +1833,22 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={onApprove}
-                                                    disabled={isApproving || isRejecting}
+                                                    onClick={async () => {
+                                                        if (onSubmitToPending) {
+                                                            setIsSubmitting(true);
+                                                            try {
+                                                                const valuesWithLang = { ...getValues(), formLanguage: lang };
+                                                                await onSubmitToPending(valuesWithLang);
+                                                            } catch (e) {
+                                                                console.error("Save before approve failed:", e);
+                                                                return;
+                                                            } finally {
+                                                                setIsSubmitting(false);
+                                                            }
+                                                        }
+                                                        onApprove();
+                                                    }}
+                                                    disabled={isApproving || isRejecting || isSubmitting}
                                                     className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                                 >
                                                     <CheckCircle2 className="h-4 w-4" />
@@ -1892,6 +1920,12 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                 isOpen={showJsonFillModal}
                 onClose={() => setShowJsonFillModal(false)}
                 onFillForm={handleAutoFill}
+            />
+
+            <ErrorAlertModal
+                isOpen={!!friendlyError}
+                onClose={() => setFriendlyError(null)}
+                error={friendlyError}
             />
         </>
     );

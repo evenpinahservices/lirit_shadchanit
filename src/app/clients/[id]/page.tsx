@@ -123,6 +123,7 @@ function ClientDetailsContent() {
                         client={client}
                         onEdit={() => setIsViewMode(false)}
                         onDelete={handleDelete}
+                        onMatch={() => router.push(`/matching?clientId=${client.id}&view=results`)}
                     />
                 </div>
                 <ConfirmationModal

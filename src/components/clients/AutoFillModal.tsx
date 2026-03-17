@@ -8,7 +8,16 @@ import { parseTextToClientData } from "@/lib/textParser";
 import { useUploadWithProgress } from "@/hooks/useUploadWithProgress";
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { ProgressOverlay } from "./ProgressOverlay";
+import { ErrorAlertModal } from "@/components/ui/ErrorAlertModal";
+import { getFriendlyError } from "@/lib/errorMessages";
+import type { FriendlyError } from "@/lib/errorMessages";
 import Image from "next/image";
+
+export interface AutoFillCompletePayload {
+    formData: any;
+    galleryUrls: string[];
+    profilePhotoUrl: string | null;
+}
 
 interface AutoFillModalProps {
     isOpen: boolean;
@@ -16,6 +25,8 @@ interface AutoFillModalProps {
     onFillForm: (data: any) => void;
     onAddToGallery: (urls: string[]) => void;
     onSetProfilePhoto: (url: string) => void;
+    /** When provided, called with full payload after AI success; then parent can create pending draft and redirect. Omits separate onFillForm/onAddToGallery/onSetProfilePhoto calls. */
+    onComplete?: (payload: AutoFillCompletePayload) => void;
     fullScreen?: boolean;
 }
 
@@ -25,6 +36,7 @@ export function AutoFillModal({
     onFillForm,
     onAddToGallery,
     onSetProfilePhoto,
+    onComplete,
     fullScreen = false,
 }: AutoFillModalProps) {
     const [allImages, setAllImages] = useState<File[]>([]);
@@ -36,6 +48,7 @@ export function AutoFillModal({
     const [translatedText, setTranslatedText] = useState<string>("");
     const [selectedProfileIndex, setSelectedProfileIndex] = useState<number | null>(null);
     const [isDraggingImages, setIsDraggingImages] = useState(false);
+    const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
     
     const imageInputRef = useRef<HTMLInputElement>(null);
     const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -87,7 +100,7 @@ export function AutoFillModal({
 
     const processImages = async () => {
         if (allImages.length === 0) {
-            alert("Please upload at least one image");
+            setFriendlyError(getFriendlyError("Please upload at least one image", "process-images"));
             return;
         }
 
@@ -346,26 +359,28 @@ export function AutoFillModal({
             const fdAge = finalFormData?.age?.value ?? finalFormData?.age;
             const fdDob = finalFormData?.dob?.value ?? finalFormData?.dob;
             console.log("[Age/DOB debug] AutoFillModal passing to form:", { age: fdAge, dob: fdDob });
-            // Update form with extracted data
-            // This will set selectedMode to "en" and autoFillData, which will cause the modal to close automatically
-            onFillForm(finalFormData);
-            
-            // Add to gallery
-            if (allGalleryUrls.length > 0) {
-                onAddToGallery(allGalleryUrls);
-            }
-
-            // Set profile photo
-            if (profilePhotoUrl) {
-                onSetProfilePhoto(profilePhotoUrl);
+            // When onComplete is provided (AI → draft flow), call it with full payload; otherwise call legacy callbacks
+            if (onComplete) {
+                onComplete({
+                    formData: finalFormData,
+                    galleryUrls: allGalleryUrls,
+                    profilePhotoUrl,
+                });
+            } else {
+                onFillForm(finalFormData);
+                if (allGalleryUrls.length > 0) {
+                    onAddToGallery(allGalleryUrls);
+                }
+                if (profilePhotoUrl) {
+                    onSetProfilePhoto(profilePhotoUrl);
+                }
             }
 
             setProcessingStatus("Complete!");
-            setProcessingSubStatus("Form has been populated successfully!");
+            setProcessingSubStatus(onComplete ? "Creating draft..." : "Form has been populated successfully!");
             setProcessingProgress(100);
             
             setTimeout(() => {
-                // Reset state
                 setAllImages([]);
                 setExtractedText("");
                 setTranslatedText("");
@@ -373,9 +388,10 @@ export function AutoFillModal({
                 setProcessingSubStatus("");
                 setProcessingProgress(0);
                 startTimeRef.current = null;
-                // Don't call onClose() here - the modal will close automatically when selectedMode changes
-                // Calling onClose() would reset selectedMode to null, undoing the form fill
-            }, 1500);
+                if (!onComplete) {
+                    // Legacy: modal closes when parent switches to form
+                }
+            }, onComplete ? 500 : 1500);
         } catch (error: any) {
             console.error("Processing error:", error);
             // Clear interval on error
@@ -383,7 +399,7 @@ export function AutoFillModal({
                 clearInterval(progressIntervalRef.current);
                 progressIntervalRef.current = null;
             }
-            alert(`Failed to process images: ${error?.message || "Please try again."}`);
+            setFriendlyError(getFriendlyError(error, "process-images"));
         } finally {
             setIsProcessing(false);
             setProcessingStatus("");
@@ -472,7 +488,7 @@ export function AutoFillModal({
                                             <button
                                                 onClick={() => removeImage(index)}
                                                 disabled={isProcessing}
-                                                className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 disabled:opacity-50"
+                                                className="bg-danger-500 text-white rounded-full p-1 hover:bg-danger-600 disabled:opacity-50"
                                             >
                                                 <X className="h-3 w-3" />
                                             </button>
@@ -548,6 +564,11 @@ export function AutoFillModal({
                         </div>
                     </div>
                 </div>
+                <ErrorAlertModal
+                    isOpen={!!friendlyError}
+                    onClose={() => setFriendlyError(null)}
+                    error={friendlyError}
+                />
             </>
         );
     }
@@ -619,7 +640,7 @@ export function AutoFillModal({
                                         <button
                                             onClick={() => removeImage(index)}
                                             disabled={isProcessing}
-                                            className="bg-red-500 text-white rounded-full p-1 hover:bg-red-600 disabled:opacity-50"
+                                            className="bg-danger-500 text-white rounded-full p-1 hover:bg-danger-600 disabled:opacity-50"
                                         >
                                             <X className="h-3 w-3" />
                                         </button>
@@ -694,8 +715,13 @@ export function AutoFillModal({
                         </button>
                     </div>
                 </div>
+                </div>
             </div>
-            </div>
+            <ErrorAlertModal
+                isOpen={!!friendlyError}
+                onClose={() => setFriendlyError(null)}
+                error={friendlyError}
+            />
         </>
     );
 }

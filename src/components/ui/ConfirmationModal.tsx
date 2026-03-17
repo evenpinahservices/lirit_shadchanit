@@ -31,7 +31,7 @@ export function ConfirmationModal({
             <div className={cn(
                 "bg-white dark:bg-gray-950 rounded-lg shadow-xl max-w-md w-full border animate-in zoom-in-95 duration-200 overflow-hidden",
                 isDangerous 
-                    ? "border-red-300 dark:border-red-800 shadow-red-500/20" 
+                    ? "border-danger-300 dark:border-danger-800 shadow-danger-500/20" 
                     : "border-gray-200 dark:border-gray-800"
             )}>
                 <div className="p-6">
@@ -39,7 +39,7 @@ export function ConfirmationModal({
                         <div className={cn(
                             "flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center",
                             isDangerous 
-                                ? "bg-red-200 text-red-700 dark:bg-red-900/50 dark:text-red-300" 
+                                ? "bg-danger-200 text-danger-700 dark:bg-danger-900/50 dark:text-danger-300" 
                                 : "bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
                         )}>
                             {isDangerous ? (
@@ -52,7 +52,7 @@ export function ConfirmationModal({
                             <h3 className={cn(
                                 "text-lg font-semibold",
                                 isDangerous 
-                                    ? "text-red-900 dark:text-red-100" 
+                                    ? "text-danger-900 dark:text-danger-100" 
                                     : "text-gray-900 dark:text-gray-100"
                             )}>
                                 {title}
@@ -60,7 +60,7 @@ export function ConfirmationModal({
                             <p className={cn(
                                 "mt-2 text-sm",
                                 isDangerous 
-                                    ? "text-red-700 dark:text-red-300 font-medium" 
+                                    ? "text-danger-700 dark:text-danger-300 font-medium" 
                                     : "text-gray-500 dark:text-gray-400"
                             )}>
                                 {message}
@@ -89,7 +89,7 @@ export function ConfirmationModal({
                         className={cn(
                             "px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none transition-colors",
                             isDangerous
-                                ? "bg-red-600 hover:bg-red-700 active:bg-red-800"
+                                ? "bg-danger-600 hover:bg-danger-700 active:bg-danger-800"
                                 : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
                         )}
                     >

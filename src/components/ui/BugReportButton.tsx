@@ -6,6 +6,9 @@ import { toPng } from "html-to-image";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { submitBugReport } from "@/actions/bug";
+import { ErrorAlertModal } from "@/components/ui/ErrorAlertModal";
+import { getFriendlyError } from "@/lib/errorMessages";
+import type { FriendlyError } from "@/lib/errorMessages";
 
 export function BugReportButton() {
     const [isOpen, setIsOpen] = useState(false);
@@ -14,6 +17,7 @@ export function BugReportButton() {
     const [isCapturing, setIsCapturing] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
     const pathname = usePathname();
     const { user } = useAuth();
 
@@ -32,7 +36,7 @@ export function BugReportButton() {
             setIsOpen(true);
         } catch (error) {
             console.error("Failed to capture screenshot:", error);
-            alert("Failed to capture screenshot. Please try again or check console for details.");
+            setFriendlyError(getFriendlyError(error, "bug-report"));
             setIsOpen(false);
         } finally {
             // Restore bug button
@@ -43,7 +47,7 @@ export function BugReportButton() {
 
     const handleSubmit = async () => {
         if (!screenshot || !description.trim()) {
-            alert("Please provide a description of the issue.");
+            setFriendlyError({ title: "Missing information", message: "Please provide a description of the issue." });
             return;
         }
 
@@ -75,11 +79,11 @@ export function BugReportButton() {
                     handleClose();
                 }, 2000);
             } else {
-                alert("Failed to submit bug report: " + result.error);
+                setFriendlyError(getFriendlyError(new Error(result.error), "bug-report"));
             }
         } catch (error) {
             console.error("Error submitting bug report:", error);
-            alert("Failed to submit bug report. Please try again.");
+            setFriendlyError(getFriendlyError(error, "bug-report"));
         } finally {
             setIsSubmitting(false);
         }
@@ -212,6 +216,11 @@ export function BugReportButton() {
                     </div>
                 </div>
             )}
+            <ErrorAlertModal
+                isOpen={!!friendlyError}
+                onClose={() => setFriendlyError(null)}
+                error={friendlyError}
+            />
         </>
     );
 }

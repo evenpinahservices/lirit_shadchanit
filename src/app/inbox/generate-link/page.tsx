@@ -7,6 +7,9 @@ import { Copy, Check, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { ErrorAlertModal } from "@/components/ui/ErrorAlertModal";
+import { getFriendlyError } from "@/lib/errorMessages";
+import type { FriendlyError } from "@/lib/errorMessages";
 
 export default function GenerateLinkPage() {
     const router = useRouter();
@@ -15,6 +18,7 @@ export default function GenerateLinkPage() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [copied, setCopied] = useState(false);
     const [isVerifying, setIsVerifying] = useState(true);
+    const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
 
     // Verify server session on mount
     useEffect(() => {
@@ -45,13 +49,12 @@ export default function GenerateLinkPage() {
             
             // If authentication error, redirect to login
             if (errorMessage.includes("Unauthorized") || errorMessage.includes("Authentication required")) {
-                alert("Your session has expired. Please log in again.");
-                // Clear localStorage and redirect to login
+                setFriendlyError(getFriendlyError(error, "generic"));
                 logout();
                 return;
             }
             
-            alert("Failed to generate link: " + errorMessage);
+            setFriendlyError(getFriendlyError(error, "generate-link"));
         } finally {
             setIsGenerating(false);
         }
@@ -187,6 +190,11 @@ export default function GenerateLinkPage() {
                 </div>
             </div>
             )}
+            <ErrorAlertModal
+                isOpen={!!friendlyError}
+                onClose={() => setFriendlyError(null)}
+                error={friendlyError}
+            />
         </div>
     );
 }

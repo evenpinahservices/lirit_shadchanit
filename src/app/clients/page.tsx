@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useClients } from "@/context/ClientContext";
-import { Plus, Pencil, Trash2, MapPin, Briefcase, Search, ChevronLeft, ChevronRight, User as UserIcon, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Heart, MapPin, Briefcase, Search, ChevronLeft, ChevronRight, User as UserIcon, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { ItemsPerPageSelector } from "@/components/ui/ItemsPerPageSelector";
@@ -202,10 +202,17 @@ export default function ClientsPage() {
                                                 >
                                                     <Pencil className="h-4 w-4" />
                                                 </Link>
+                                                <Link
+                                                    href={`/matching?clientId=${client.id}&view=results`}
+                                                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                                    title="Match"
+                                                >
+                                                    <Heart className="h-4 w-4" />
+                                                </Link>
                                                 <button
                                                     onClick={() => handleDeleteClick(client.id)}
                                                     id={index === 0 ? "tour-client-delete-btn" : undefined}
-                                                    className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                                    className="p-2 text-gray-400 hover:text-danger-600 transition-colors"
                                                     title="Delete"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -256,10 +263,17 @@ export default function ClientsPage() {
                                 >
                                     <Pencil className="h-4 w-4" />
                                 </Link>
+                                <Link
+                                    href={`/matching?clientId=${client.id}&view=results`}
+                                    className="p-2 text-red-600 hover:text-red-700 bg-red-50 dark:bg-red-900/20 rounded-full"
+                                    title="Match"
+                                >
+                                    <Heart className="h-4 w-4" />
+                                </Link>
                                 <button
                                     onClick={() => handleDeleteClick(client.id)}
                                     id={index === 0 ? "tour-client-delete-btn-mobile" : undefined}
-                                    className="p-2 text-red-400 hover:text-red-600 bg-red-50 dark:bg-red-900/20 rounded-full"
+                                    className="p-2 text-danger-600 hover:text-danger-700 bg-danger-50 dark:bg-danger-900/20 rounded-full"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
