@@ -18,6 +18,7 @@ interface ClientContextType {
     addClient: (client: Omit<Client, "id" | "createdAt">) => Promise<Client>;
     updateClient: (id: string, client: Partial<Client>) => Promise<void>;
     deleteClient: (id: string) => Promise<void>;
+    refetchClients: () => Promise<void>;
     uploadImage: (file: File) => Promise<{ url: string | null; error: string | null }>;
     getClient: (id: string) => Client | undefined;
     clearError: () => void;
@@ -31,56 +32,60 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        // Fetch from DB on mount
-        const fetchClients = async () => {
-            try {
-                setError(null);
-                console.log("Attempting to fetch clients...");
-                const data = await getClients();
-                console.log("Clients fetched successfully:", data.length);
-                setClients(data);
-            } catch (err: any) {
-                console.error("Failed to fetch clients - Full error:", err);
-                console.error("Error type:", typeof err);
-                console.error("Error keys:", Object.keys(err || {}));
-                
-                // Extract error message from various error formats
-                let errorMessage = "Failed to fetch clients";
-                
-                // Check for network errors first
-                if (err?.name === "TypeError" && err?.message?.includes("fetch")) {
-                    errorMessage = "Network error: Cannot reach server. Please check if the development server is running.";
-                } else if (err?.message) {
-                    errorMessage = err.message;
-                } else if (typeof err === 'string') {
-                    errorMessage = err;
-                } else if (err?.error?.message) {
-                    errorMessage = err.error.message;
-                } else if (err?.toString) {
-                    errorMessage = err.toString();
-                } else if (err?.stack) {
-                    errorMessage = `Server error: ${err.stack.split('\n')[0]}`;
-                }
-                
-                // Add helpful context
-                if (errorMessage.includes("MONGODB_URI")) {
-                    errorMessage = "Database connection not configured. Please set MONGODB_URI in .env.local";
-                } else if (errorMessage.includes("connect") || errorMessage.includes("connection")) {
-                    errorMessage = "Cannot connect to database. Please check your MongoDB connection string.";
-                } else if (errorMessage.includes("fetch") || errorMessage.includes("Network")) {
-                    errorMessage = "Network error: Make sure the Next.js development server is running on port 3000.";
-                }
-                
-                setError(errorMessage);
-                // Set empty array on error to prevent crashes
-                setClients([]);
-            } finally {
-                setIsLoading(false);
+    const fetchClients = async () => {
+        try {
+            setError(null);
+            console.log("Attempting to fetch clients...");
+            const data = await getClients();
+            console.log("Clients fetched successfully:", data.length);
+            setClients(data);
+        } catch (err: any) {
+            console.error("Failed to fetch clients - Full error:", err);
+            console.error("Error type:", typeof err);
+            console.error("Error keys:", Object.keys(err || {}));
+
+            // Extract error message from various error formats
+            let errorMessage = "Failed to fetch clients";
+
+            // Check for network errors first
+            if (err?.name === "TypeError" && err?.message?.includes("fetch")) {
+                errorMessage = "Network error: Cannot reach server. Please check if the development server is running.";
+            } else if (err?.message) {
+                errorMessage = err.message;
+            } else if (typeof err === 'string') {
+                errorMessage = err;
+            } else if (err?.error?.message) {
+                errorMessage = err.error.message;
+            } else if (err?.toString) {
+                errorMessage = err.toString();
+            } else if (err?.stack) {
+                errorMessage = `Server error: ${err.stack.split('\n')[0]}`;
             }
-        };
+
+            // Add helpful context
+            if (errorMessage.includes("MONGODB_URI")) {
+                errorMessage = "Database connection not configured. Please set MONGODB_URI in .env.local";
+            } else if (errorMessage.includes("connect") || errorMessage.includes("connection")) {
+                errorMessage = "Cannot connect to database. Please check your MongoDB connection string.";
+            } else if (errorMessage.includes("fetch") || errorMessage.includes("Network")) {
+                errorMessage = "Network error: Make sure the Next.js development server is running on port 3000.";
+            }
+
+            setError(errorMessage);
+            // Set empty array on error to prevent crashes
+            setClients([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchClients();
     }, []);
+
+    const refetchClients = async () => {
+        await fetchClients();
+    };
 
     const clearError = () => {
         setError(null);
@@ -145,7 +150,7 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <ClientContext.Provider value={{ clients, isLoading, isUploading, error, addClient, updateClient, deleteClient, uploadImage, getClient, clearError }}>
+        <ClientContext.Provider value={{ clients, isLoading, isUploading, error, addClient, updateClient, deleteClient, refetchClients, uploadImage, getClient, clearError }}>
             {children}
         </ClientContext.Provider>
     );

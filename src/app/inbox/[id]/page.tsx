@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getPendingClients, approvePendingClient, rejectPendingClient, willOverwriteApprovedClient, updatePendingClient } from "@/actions/pendingClient";
 import { ClientForm } from "@/components/clients/ClientForm";
+import { useClients } from "@/context/ClientContext";
 import { Client } from "@/lib/mockData";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -15,6 +16,7 @@ import type { FriendlyError } from "@/lib/errorMessages";
 export default function InboxApprovalPage() {
     const params = useParams();
     const router = useRouter();
+    const { refetchClients } = useClients();
     const pendingClientId = params.id as string;
     
     const [pendingClient, setPendingClient] = useState<(Client & { source?: string }) | null>(null);
@@ -64,6 +66,8 @@ export default function InboxApprovalPage() {
         setIsApproving(true);
         try {
             const approvedClient = await approvePendingClient(pendingClientId, shouldOverwrite);
+            // Refresh client list so /clients shows the new client without a full page reload
+            await refetchClients();
             // Navigate to matching page to show matches for the newly approved client
             router.push(`/matching?clientId=${approvedClient.id}&view=results`);
         } catch (error: any) {
