@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Client, ClientSchema } from "@/lib/mockData";
 import { useClients } from "@/context/ClientContext";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { ChevronLeft, ChevronRight, Check, UploadCloud, X, FileJson, CheckCircle2, Trash2 } from "lucide-react";
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { useUploadWithProgress } from "@/hooks/useUploadWithProgress";
@@ -36,17 +36,19 @@ interface ClientFormProps {
     isEditing?: boolean;
     onCancel?: () => void;
     language?: FormLanguage;
-    onSubmitToPending?: (values: any) => Promise<void>; // Custom handler for pending submissions
-    isExternalForm?: boolean; // If true, this is an external form (client submission)
-    onApprove?: () => void; // Handler for approving (used in inbox review)
-    onReject?: () => void; // Handler for rejecting (used in inbox review)
-    isApproving?: boolean; // Loading state for approval
-    isRejecting?: boolean; // Loading state for rejection
-    token?: string; // Form token for external form links (used for image uploads)
-    hideAutoFillOptions?: boolean; // If true, hide Auto Fill and JSON Fill buttons
-    initialAutoFillData?: any; // Data from AI extraction
-    initialGalleryUrls?: string[]; // Gallery images from AI
-    initialProfilePhotoUrl?: string; // Profile photo from AI
+    onSubmitToPending?: (values: any) => Promise<void>;
+    isExternalForm?: boolean;
+    onApprove?: () => void;
+    onReject?: () => void;
+    isApproving?: boolean;
+    isRejecting?: boolean;
+    token?: string;
+    hideAutoFillOptions?: boolean;
+    initialAutoFillData?: any;
+    initialGalleryUrls?: string[];
+    initialProfilePhotoUrl?: string;
+    onAutoSave?: (data: Record<string, any>, step: number) => Promise<void>;
+    initialStep?: number;
 }
 
 // Step definitions for the wizard (keys for translation lookup)
@@ -60,7 +62,7 @@ const STEP_KEYS = [
     { titleKey: "admin", fields: ["references", "notes"] },
 ];
 
-export function ClientForm({ client, isEditing = false, onCancel, language = "en", onSubmitToPending, isExternalForm = false, onApprove, onReject, isApproving = false, isRejecting = false, token, hideAutoFillOptions = false, initialAutoFillData, initialGalleryUrls, initialProfilePhotoUrl }: ClientFormProps) {
+export function ClientForm({ client, isEditing = false, onCancel, language = "en", onSubmitToPending, isExternalForm = false, onApprove, onReject, isApproving = false, isRejecting = false, token, hideAutoFillOptions = false, initialAutoFillData, initialGalleryUrls, initialProfilePhotoUrl, onAutoSave, initialStep }: ClientFormProps) {
     // Detect language from client data or use provided language
     const detectedLang = client ? detectClientLanguage(client) : language;
     
@@ -160,7 +162,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
 
     const { addClient, updateClient, clients } = useClients();
     const router = useRouter();
-    const [currentStep, setCurrentStep] = useState(0);
+    const [currentStep, setCurrentStep] = useState(initialStep ?? 0);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isSubmitReady, setIsSubmitReady] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -205,8 +207,43 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     
     const currentDob = watch("dob");
 
+    // --- Auto-save for external forms ---
+    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const triggerAutoSave = useCallback((step: number) => {
+        if (!onAutoSave || !isExternalForm) return;
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(() => {
+            const data = getValues();
+            onAutoSave(data as Record<string, any>, step).catch(() => {});
+        }, 1500);
+    }, [onAutoSave, isExternalForm, getValues]);
 
+    // Auto-save when the user changes steps
+    useEffect(() => {
+        if (isExternalForm && onAutoSave) {
+            triggerAutoSave(currentStep);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentStep]);
+
+    // Auto-save periodically (every 30 seconds) while on external form
+    useEffect(() => {
+        if (!isExternalForm || !onAutoSave) return;
+        const interval = setInterval(() => {
+            const data = getValues();
+            onAutoSave(data as Record<string, any>, currentStep).catch(() => {});
+        }, 30_000);
+        return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isExternalForm, onAutoSave, currentStep]);
+
+    // Cleanup timer on unmount
+    useEffect(() => {
+        return () => {
+            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        };
+    }, []);
 
 
     // Reset submit ready state when stepping back or forward, but trigger it for the last step
@@ -922,6 +959,27 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                             return;
                         }
                         onSubmit(data);
+                    }, (validationErrors) => {
+                        // Find the first step that has an error and navigate to it
+                        const errorFields = Object.keys(validationErrors);
+                        if (errorFields.length > 0) {
+                            for (let i = 0; i < STEPS.length; i++) {
+                                const stepFields = STEPS[i].fields;
+                                if (errorFields.some(f => stepFields.includes(f))) {
+                                    setShowSummary(false);
+                                    setCurrentStep(i);
+                                    break;
+                                }
+                            }
+                            const firstField = errorFields[0];
+                            const firstError = validationErrors[firstField as keyof typeof validationErrors];
+                            const errorMsg = firstError?.message || (lang === "he" ? "יש שדות שלא מולאו כראוי" : "Some fields are not filled out correctly");
+                            setFriendlyError({
+                                title: lang === "he" ? "שגיאת אימות" : "Validation Error",
+                                message: typeof errorMsg === "string" ? errorMsg : (lang === "he" ? "אנא בדוק את השדות המסומנים" : "Please check the highlighted fields"),
+                                suggestion: lang === "he" ? "אנא תקן את השדות המסומנים ונסה שוב" : "Please fix the highlighted fields and try again",
+                            });
+                        }
                     })}
                     onKeyDown={(e) => {
                         // Prevent implicit submission on Enter, allow inside textareas

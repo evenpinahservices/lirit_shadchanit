@@ -51,11 +51,12 @@ export async function getPendingClients(): Promise<(PendingClientInput & { id: s
 export async function createPendingClient(data: PendingClientInput): Promise<PendingClientInput & { id: string }> {
     await dbConnect();
 
-    // Rate limiting: Check if too many submissions from this token/IP
-    // Allow 5 submissions per 30 minutes to give users time to fill out the form
+    // Rate limiting: per-client identifier (email or phone) to avoid
+    // blocking different clients who share the same form link.
     if (data.token) {
         const { checkRateLimit } = await import("@/lib/rateLimit");
-        const rateLimitKey = `form_submission:${data.token}`;
+        const identifier = data.email?.trim().toLowerCase() || data.phone?.trim() || data.token;
+        const rateLimitKey = `form_submission:${identifier}`;
         const rateLimitResult = await checkRateLimit(rateLimitKey, 5, 30 * 60 * 1000); // 5 per 30 minutes
         
         if (!rateLimitResult.allowed) {
@@ -412,6 +413,28 @@ export async function generateFormToken(): Promise<string> {
     });
     
     return token;
+}
+
+/**
+ * Validate a form token WITHOUT incrementing usage count.
+ * Used when the client already validated in this browser session (e.g. page refresh).
+ */
+export async function validateTokenOnly(token: string): Promise<boolean> {
+    await dbConnect();
+
+    const tokenDoc = await FormTokenModel.findOne({ token, isActive: true });
+    if (!tokenDoc) return false;
+    if (new Date() > tokenDoc.expiresAt) {
+        tokenDoc.isActive = false;
+        await tokenDoc.save();
+        return false;
+    }
+    if (tokenDoc.usageCount >= tokenDoc.maxUsage) {
+        tokenDoc.isActive = false;
+        await tokenDoc.save();
+        return false;
+    }
+    return true;
 }
 
 /**

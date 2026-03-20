@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
-import { createPendingClient, getPendingClientByIdentifier, updatePendingClient, validateAndIncrementToken } from "@/actions/pendingClient";
+import { createPendingClient, getPendingClientByIdentifier, updatePendingClient, validateAndIncrementToken, validateTokenOnly } from "@/actions/pendingClient";
 import { getApprovedClientByIdentifier } from "@/actions/client";
+import { saveFormDraft, getFormDraft, deleteFormDraft } from "@/actions/formDraft";
 import { ClientForm } from "@/components/clients/ClientForm";
 import { FormLanguage } from "@/lib/translations";
-import { Globe, Languages, AlertCircle, Edit, Mail, Phone, CheckCircle2 } from "lucide-react";
+import { Globe, Languages, AlertCircle, Edit, Mail, Phone, CheckCircle2, RotateCcw } from "lucide-react";
 import { Client } from "@/lib/mockData";
 import { ErrorAlertModal } from "@/components/ui/ErrorAlertModal";
 import { getFriendlyError } from "@/lib/errorMessages";
@@ -23,6 +24,14 @@ export default function ExternalFormPage() {
     const [existingSubmission, setExistingSubmission] = useState<Client | null>(null);
     const [existingPendingId, setExistingPendingId] = useState<string | null>(null);
     
+    // Draft state
+    const [existingDraft, setExistingDraft] = useState<{
+        formLanguage: "en" | "he";
+        currentStep: number;
+        data: Record<string, any>;
+        lastSavedAt: string;
+    } | null>(null);
+    
     // Identifier state
     const [identifierEntered, setIdentifierEntered] = useState(false);
     const [email, setEmail] = useState("");
@@ -38,8 +47,20 @@ export default function ExternalFormPage() {
                 return;
             }
             
-            // Validate token (this increments usage count)
-            const isValid = await validateAndIncrementToken(token);
+            const sessionKey = `token_validated_${token}`;
+            const alreadyValidated = sessionStorage.getItem(sessionKey);
+
+            let isValid: boolean;
+            if (alreadyValidated) {
+                // Already counted this session -- just check validity without incrementing
+                isValid = await validateTokenOnly(token);
+            } else {
+                isValid = await validateAndIncrementToken(token);
+                if (isValid) {
+                    sessionStorage.setItem(sessionKey, "1");
+                }
+            }
+
             setIsValidToken(isValid);
             setIsLoading(false);
         };
@@ -134,7 +155,7 @@ export default function ExternalFormPage() {
                 // Convert to Client format (remove pending-specific fields)
                 const { submittedAt, submittedBy, token: _, id, ...clientData } = existingPending as any;
                 setExistingSubmission(clientData as Client);
-                setExistingPendingId(id); // Store the pending client ID for updating
+                setExistingPendingId(id);
             } else {
                 // No pending submission, check if there's an approved client
                 const approvedClient = await getApprovedClientByIdentifier(
@@ -143,18 +164,23 @@ export default function ExternalFormPage() {
                 );
                 
                 if (approvedClient) {
-                    // Use approved client data to pre-fill the form
-                    // This allows them to edit their approved profile
-                    // Don't set existingPendingId - approved clients create new pending entries
                     setExistingSubmission(approvedClient);
                     setExistingPendingId(null);
+                } else {
+                    // No pending or approved -- check for an in-progress draft
+                    const draft = await getFormDraft(
+                        email.trim() || undefined,
+                        phone.trim() || undefined
+                    );
+                    if (draft) {
+                        setExistingDraft(draft);
+                    }
                 }
             }
             
             setIdentifierEntered(true);
         } catch (error) {
             console.error("Error looking up submission:", error);
-            // Continue anyway - might be a new submission
             setIdentifierEntered(true);
         } finally {
             setIsLoadingSubmission(false);
@@ -180,7 +206,11 @@ export default function ExternalFormPage() {
                     <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
                     <h1 className="text-2xl font-bold mb-2">Invalid Form Link</h1>
                     <p className="text-muted-foreground mb-4">
-                        This form link is invalid or has expired. Please contact the administrator for a new link.
+                        This form link is invalid or has expired. Please contact the matchmaker (shadchanit) for a new link.
+                    </p>
+                    <h1 className="text-2xl font-bold mb-2 mt-6" dir="rtl">קישור לא תקין</h1>
+                    <p className="text-muted-foreground" dir="rtl">
+                        קישור זה אינו תקין או שפג תוקפו. אנא צרו קשר עם השדכנית לקבלת קישור חדש.
                     </p>
                 </div>
             </div>
@@ -328,6 +358,48 @@ export default function ExternalFormPage() {
             );
         }
 
+        // If there's a saved draft, offer to resume
+        if (existingDraft) {
+            const draftDate = new Date(existingDraft.lastSavedAt);
+            const formattedDate = draftDate.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-4 gap-4">
+                    <div className="text-center max-w-md">
+                        <div className="flex items-center justify-center gap-2 mb-3">
+                            <RotateCcw className="h-5 w-5 text-blue-600" />
+                            <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
+                                Draft Found
+                            </p>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                            We found a form you started filling out on {formattedDate}. Would you like to continue where you left off?
+                        </p>
+                        <p className="text-sm text-muted-foreground" dir="rtl">
+                            מצאנו טופס שהתחלת למלא ב-{formattedDate}. האם תרצה להמשיך מהמקום שהפסקת?
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => {
+                                setExistingDraft(null);
+                                // Start fresh - fall through to language selection
+                            }}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 transition-colors"
+                        >
+                            Start Fresh / התחל מחדש
+                        </button>
+                        <button
+                            onClick={() => setSelectedLanguage(existingDraft.formLanguage)}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
+                        >
+                            <RotateCcw className="h-4 w-4" />
+                            Resume / המשך
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         // New submission - show language selection
         return (
             <div className="min-h-screen flex items-center justify-center p-4">
@@ -409,8 +481,8 @@ export default function ExternalFormPage() {
                 existingPendingId={existingPendingId}
                 identifierEmail={email.trim() || undefined}
                 identifierPhone={phone.trim() || undefined}
+                draftData={existingDraft}
                 onSuccess={(newPendingId) => {
-                    // Update the pending ID if a new one was created
                     if (newPendingId && !existingPendingId) {
                         setExistingPendingId(newPendingId);
                     }
@@ -421,7 +493,7 @@ export default function ExternalFormPage() {
     );
 }
 
-// Custom wrapper component that handles pending submission
+// Custom wrapper component that handles pending submission + auto-save
 function ExternalClientForm({ 
     language, 
     token,
@@ -429,6 +501,7 @@ function ExternalClientForm({
     existingPendingId,
     identifierEmail,
     identifierPhone,
+    draftData,
     onSuccess 
 }: { 
     language: FormLanguage; 
@@ -437,14 +510,35 @@ function ExternalClientForm({
     existingPendingId?: string | null;
     identifierEmail?: string;
     identifierPhone?: string;
+    draftData?: { formLanguage: "en" | "he"; currentStep: number; data: Record<string, any>; lastSavedAt: string } | null;
     onSuccess: (newPendingId?: string) => void;
 }) {
+    const savingRef = useRef(false);
+
+    // Auto-save callback passed to ClientForm
+    const handleAutoSave = useCallback(async (formData: Record<string, any>, step: number) => {
+        if (savingRef.current) return;
+        savingRef.current = true;
+        try {
+            await saveFormDraft({
+                token,
+                email: identifierEmail,
+                phone: identifierPhone,
+                formLanguage: language,
+                currentStep: step,
+                data: formData,
+            });
+        } catch (err) {
+            console.error("Auto-save failed:", err);
+        } finally {
+            savingRef.current = false;
+        }
+    }, [token, identifierEmail, identifierPhone, language]);
+
     const handleSubmitToPending = async (values: any) => {
         try {
-            // Remove internal/admin-only fields for external forms (keep references)
             const { notes, resumeRawText, ...clientValues } = values;
             
-            // If there's an existing pending entry (not approved), update it instead of creating new
             if (existingPendingId) {
                 await updatePendingClient(existingPendingId, {
                     ...clientValues,
@@ -452,14 +546,12 @@ function ExternalClientForm({
                     source: "client_form",
                     sourceDescription: "Resubmitted by client via form link (edited)",
                 });
-                onSuccess(existingPendingId); // Pass back the same ID
+                // Clean up draft on successful submit
+                await deleteFormDraft(identifierEmail, identifierPhone).catch(() => {});
+                onSuccess(existingPendingId);
             } else {
-                // Check if client is already approved (will create new pending entry)
                 const isApproved = existingClient && existingClient.id && !existingPendingId;
                 
-                // Create a NEW pending client entry
-                // If editing an approved client, explicitly pass the approved client ID
-                // This ensures createPendingClient can set existingApprovedClientId correctly
                 const pendingData: any = {
                     ...clientValues,
                     token,
@@ -470,41 +562,82 @@ function ExternalClientForm({
                         : "Submitted by client via form link",
                 };
                 
-                // Explicitly set existingApprovedClientId if editing an approved client
                 if (isApproved && existingClient.id) {
                     pendingData.existingApprovedClientId = existingClient.id;
-                    console.log("Form submission - Setting existingApprovedClientId:", existingClient.id);
                 }
                 
-                console.log("Form submission - Creating pending client with data:", {
-                    email: pendingData.email,
-                    phone: pendingData.phone,
-                    existingApprovedClientId: pendingData.existingApprovedClientId,
-                    isApproved
-                });
-                
                 const newPending = await createPendingClient(pendingData);
-                onSuccess(newPending.id); // Pass back the new pending ID
+                // Clean up draft on successful submit
+                await deleteFormDraft(identifierEmail, identifierPhone).catch(() => {});
+                onSuccess(newPending.id);
             }
         } catch (error: any) {
             console.error("Failed to submit form:", error);
-            throw error; // Re-throw so ClientForm's catch shows the friendly error modal
+            throw error;
         }
     };
     
-    // Merge identifier values with existing client data
-    // Always use identifier values to pre-fill email/phone fields if provided
-    // This ensures the information entered in the first step appears in the form
+    // Build the initial client object: prefer draft data > existing submission > identifier-only
+    const buildClientFromDraft = (): Client | undefined => {
+        if (draftData?.data && Object.keys(draftData.data).length > 0) {
+            return {
+                id: "",
+                fullName: "",
+                email: identifierEmail || "",
+                phone: identifierPhone || "",
+                dob: "",
+                gender: "Male" as const,
+                location: "",
+                height: 0,
+                eyeColor: "",
+                hairColor: "",
+                tribalStatus: "",
+                maritalStatus: "",
+                children: 0,
+                religiousAffiliation: [],
+                learningStatus: "",
+                headCovering: "",
+                religiousDetailsFreeText: "",
+                ethnicity: "",
+                familyBackground: "",
+                education: "",
+                occupationTitle: "",
+                occupationDescription: "",
+                languages: [],
+                hobbies: "",
+                personality: "",
+                ageGapPreference: [],
+                willingToRelocate: "",
+                medicalHistory: false,
+                smoking: "",
+                references: "",
+                notes: "",
+                resumeRawText: "",
+                active: true,
+                photoUrl: "",
+                preferredEthnicities: [],
+                preferredHashkafos: [],
+                preferredLearningStatus: [],
+                preferredHeadCovering: [],
+                formLanguage: language,
+                createdAt: "",
+                ...draftData.data,
+                // Always override email/phone from identifier
+                ...(identifierEmail ? { email: identifierEmail } : {}),
+                ...(identifierPhone ? { phone: identifierPhone } : {}),
+            } as Client;
+        }
+        return undefined;
+    };
+
     const clientWithIdentifier: Client | undefined = existingClient 
         ? {
             ...existingClient,
-            // Pre-fill with identifier values if provided, otherwise use existing client values
             email: identifierEmail || existingClient.email || "",
             phone: identifierPhone || existingClient.phone || "",
         }
-        : identifierEmail || identifierPhone
+        : buildClientFromDraft() || (identifierEmail || identifierPhone
             ? {
-                // Create a minimal client object with identifier info for pre-filling
                 id: "",
                 fullName: "",
                 email: identifierEmail || "",
@@ -546,7 +679,7 @@ function ExternalClientForm({
                 formLanguage: language,
                 createdAt: "",
             } as Client
-            : undefined;
+            : undefined);
 
     return (
         <ClientForm 
@@ -556,6 +689,8 @@ function ExternalClientForm({
             isExternalForm={true}
             token={token}
             hideAutoFillOptions={true}
+            onAutoSave={handleAutoSave}
+            initialStep={draftData?.currentStep}
         />
     );
 }
