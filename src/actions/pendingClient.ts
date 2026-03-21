@@ -49,6 +49,7 @@ export async function getPendingClients(): Promise<(PendingClientInput & { id: s
 }
 
 export async function createPendingClient(data: PendingClientInput): Promise<PendingClientInput & { id: string }> {
+  try {
     await dbConnect();
 
     // Rate limiting: per-client identifier (email or phone) to avoid
@@ -151,6 +152,19 @@ export async function createPendingClient(data: PendingClientInput): Promise<Pen
         ...rest,
         id: saved.id,
     } as PendingClientInput & { id: string };
+  } catch (error: any) {
+    console.error("createPendingClient FAILED:", error?.message, error?.stack);
+    console.error("Input data keys:", Object.keys(data));
+    console.error("Input data snapshot:", JSON.stringify({
+        fullName: data.fullName,
+        email: data.email,
+        phone: data.phone,
+        dob: data.dob,
+        gender: data.gender,
+        source: data.source,
+    }));
+    throw error;
+  }
 }
 
 export async function approvePendingClient(pendingClientId: string, overwriteExisting: boolean = false): Promise<Client> {

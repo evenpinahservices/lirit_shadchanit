@@ -114,7 +114,10 @@ export default function NewClientPage() {
             router.push(`/inbox/${pending.id}`);
         } catch (err: any) {
             console.error("Failed to create AI draft:", err);
-            alert("Failed to save draft: " + (err?.message || "Please try again."));
+            const msg = err?.message?.includes("Server Components render")
+                ? "A server error occurred. Please try again or check the Vercel logs for details."
+                : (err?.message || "Unknown error");
+            alert("Failed to save draft: " + msg);
         }
     };
 
