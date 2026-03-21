@@ -190,3 +190,15 @@ export async function verifySession(): Promise<User | null> {
         return null;
     }
 }
+
+/**
+ * Clear the server-side session cookie
+ */
+export async function logoutSession(): Promise<void> {
+    try {
+        const cookieStore = await cookies();
+        cookieStore.delete("auth_session");
+    } catch (error) {
+        console.error("Error clearing session cookie:", error);
+    }
+}

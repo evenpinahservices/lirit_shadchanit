@@ -20,7 +20,7 @@ const FormDraftSchema = new Schema<FormDraft>(
         currentStep: { type: Number, default: 0 },
         data: { type: Schema.Types.Mixed, default: {} },
         lastSavedAt: { type: Date, default: Date.now },
-        expiresAt: { type: Date, required: true, index: true },
+        expiresAt: { type: Date, required: true },
     },
     { timestamps: true }
 );

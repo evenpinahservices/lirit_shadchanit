@@ -163,17 +163,27 @@ export async function POST(request: NextRequest) {
         let imageParts: Array<{ mimeType: string; data: string }> = [];
 
         if (contentType.includes("application/json")) {
-            // URL flow: client sends one image URL (avoids 413 from large request body)
             const body = await request.json();
-            const imageUrl = body?.imageUrl;
-            if (!imageUrl || typeof imageUrl !== "string") {
+
+            // Support both single imageUrl and multiple imageUrls
+            const urls: string[] = [];
+            if (Array.isArray(body?.imageUrls)) {
+                urls.push(...body.imageUrls.filter((u: unknown) => typeof u === "string"));
+            } else if (typeof body?.imageUrl === "string") {
+                urls.push(body.imageUrl);
+            }
+
+            if (urls.length === 0) {
                 return NextResponse.json(
-                    { success: false, error: "imageUrl (string) is required" },
+                    { success: false, error: "imageUrl (string) or imageUrls (string[]) is required" },
                     { status: 400 }
                 );
             }
-            const base64Image = await imageUrlToBase64(imageUrl);
-            imageParts = [base64Image];
+
+            for (const url of urls) {
+                const base64Image = await imageUrlToBase64(url);
+                imageParts.push(base64Image);
+            }
         } else {
             // FormData flow (legacy)
             const formData = await request.formData();

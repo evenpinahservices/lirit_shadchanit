@@ -172,21 +172,19 @@ export function AutoFillModal({
                 throw new DOMException("Cancelled", "AbortError");
             }
 
-            // Step 2: Prepare for AI - use single image URL (avoids 413; API fetches server-side)
+            // Step 2: Prepare for AI - send all uploaded image URLs (API fetches server-side to avoid 413)
             updateStatus("Processing with AI");
-            updateSubStatus("Preparing image for AI analysis...");
+            updateSubStatus("Preparing images for AI analysis...");
             updateProgress(15);
             await new Promise(resolve => setTimeout(resolve, 300));
             updateProgress(18);
 
-            // One image for AI: the selected main/profile image (already uploaded to Cloudinary)
-            const imageUrlForAi = profilePhotoUrl || allGalleryUrls[0];
-            if (!imageUrlForAi) {
-                throw new Error("No image URL available for extraction. Upload may have failed.");
+            if (allGalleryUrls.length === 0) {
+                throw new Error("No image URLs available for extraction. Upload may have failed.");
             }
 
             updateProgress(20);
-            updateSubStatus("Sending image to AI model...");
+            updateSubStatus(`Sending ${allGalleryUrls.length} image${allGalleryUrls.length > 1 ? "s" : ""} to AI model...`);
             await new Promise(resolve => setTimeout(resolve, 200));
             updateSubStatus("Querying Gemini AI...");
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -205,12 +203,12 @@ export function AutoFillModal({
 
             let response: Response;
             try {
-                updateSubStatus("AI is analyzing images...");
+                updateSubStatus(`AI is analyzing ${allGalleryUrls.length} image${allGalleryUrls.length > 1 ? "s" : ""}...`);
 
                 response = await fetch("/api/extract-data", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ imageUrl: imageUrlForAi }),
+                    body: JSON.stringify({ imageUrls: allGalleryUrls }),
                     credentials: "include",
                     signal: abortController.signal,
                 });
@@ -240,7 +238,8 @@ export function AutoFillModal({
                     
                     // Provide more helpful message for authentication errors
                     if (response.status === 401 || errorMessage.includes("Unauthorized") || errorMessage.includes("Authentication required")) {
-                        errorMessage = "Your session has expired. Please refresh the page and try again.";
+                        errorMessage = "Your session has expired. Redirecting to login...";
+                        window.dispatchEvent(new CustomEvent("session-expired"));
                     }
                     
                     if (errorData.details) {
@@ -248,7 +247,8 @@ export function AutoFillModal({
                     }
                 } catch {
                     if (response.status === 401) {
-                        errorMessage = "Your session has expired. Please refresh the page and try again.";
+                        errorMessage = "Your session has expired. Redirecting to login...";
+                        window.dispatchEvent(new CustomEvent("session-expired"));
                     } else {
                         errorMessage = `Server error (${response.status}): ${text.substring(0, 200)}`;
                     }

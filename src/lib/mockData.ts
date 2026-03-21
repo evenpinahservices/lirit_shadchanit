@@ -71,8 +71,14 @@ export interface Client {
 // Zod Schema for Client Form
 export const ClientSchema = z.object({
     fullName: z.string().min(2, "Name is required"),
-    email: z.string().email("Invalid email").or(z.literal("")),
-    phone: z.union([z.string().min(9, "Invalid phone number"), z.literal("")]),
+    email: z.preprocess(
+        (val) => typeof val === "string" ? val.trim().replace(/[\u200e\u200f\u200b\u200c\u200d\ufeff]/g, "") : val,
+        z.string().email("Invalid email").or(z.literal(""))
+    ),
+    phone: z.preprocess(
+        (val) => typeof val === "string" ? val.trim().replace(/[\u200e\u200f\u200b\u200c\u200d\ufeff]/g, "") : val,
+        z.union([z.string().min(9, "Invalid phone number"), z.literal("")])
+    ),
     dob: z.string().min(1, "Date of birth is required"),
     gender: z.enum(["Male", "Female"]),
     location: z.string().optional().default(""),

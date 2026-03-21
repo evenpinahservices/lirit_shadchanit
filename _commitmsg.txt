@@ -1,0 +1,8 @@
+Fix AI extraction sending only one image, auto-logout on expired session, email unicode sanitization
+
+- Send all uploaded images to Gemini AI (was only sending profile photo, ignoring resume pages)
+- API accepts imageUrls array alongside legacy single imageUrl
+- Auto-logout when server session expires (periodic check + instant on 401)
+- Add logoutSession server action to clear auth cookie
+- Strip invisible Unicode chars (RTL/LTR marks) from email/phone before Zod validation
+- Fix duplicate Mongoose index warning on FormDraft.expiresAt

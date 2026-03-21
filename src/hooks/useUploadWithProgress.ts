@@ -61,9 +61,9 @@ export function useUploadWithProgress() {
                 const errorData = await sigResponse.json().catch(() => ({}));
                 let errorMessage = errorData.error || "Failed to get upload signature";
                 
-                // Provide more helpful message for authentication errors
                 if (sigResponse.status === 401 || errorMessage.includes("Unauthorized") || errorMessage.includes("Authentication required")) {
-                    errorMessage = "Your session has expired. Please refresh the page and try again.";
+                    errorMessage = "Your session has expired. Redirecting to login...";
+                    window.dispatchEvent(new CustomEvent("session-expired"));
                 }
                 
                 throw new Error(errorMessage);

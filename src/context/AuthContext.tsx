@@ -1,9 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { User } from "@/lib/mockData";
-import { useRouter } from "next/navigation";
-import { loginUser } from "@/actions/auth";
+import { useRouter, usePathname } from "next/navigation";
+import { loginUser, verifySession, logoutSession } from "@/actions/auth";
+
+const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 interface AuthContextType {
     user: User | null;
@@ -17,14 +19,67 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const router = useRouter();
+    const pathname = usePathname();
+    const sessionCheckRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Load user from localStorage on mount (simple persistence)
+    const logout = useCallback(() => {
+        setUser(null);
+        localStorage.removeItem("mock_user");
+        logoutSession().catch(() => {});
+        router.push("/login");
+    }, [router]);
+
+    // Verify the server-side session is still valid
+    const checkSession = useCallback(async () => {
+        const storedUser = localStorage.getItem("mock_user");
+        if (!storedUser) return;
+
+        // Skip session checks on public pages (login, external forms)
+        if (pathname.startsWith("/form/") || pathname === "/login") return;
+
+        try {
+            const serverUser = await verifySession();
+            if (!serverUser) {
+                console.warn("Server session expired — logging out");
+                logout();
+            }
+        } catch {
+            // Network error — don't logout, just skip this check
+        }
+    }, [pathname, logout]);
+
+    // Load user from localStorage on mount, then verify with server
     useEffect(() => {
         const storedUser = localStorage.getItem("mock_user");
         if (storedUser) {
             setUser(JSON.parse(storedUser));
         }
-    }, []);
+        checkSession();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Periodic session health check
+    useEffect(() => {
+        if (!user) {
+            if (sessionCheckRef.current) clearInterval(sessionCheckRef.current);
+            return;
+        }
+        sessionCheckRef.current = setInterval(checkSession, SESSION_CHECK_INTERVAL);
+        return () => {
+            if (sessionCheckRef.current) clearInterval(sessionCheckRef.current);
+        };
+    }, [user, checkSession]);
+
+    // Instant logout on 401 from any API call
+    useEffect(() => {
+        const handler = () => {
+            if (user) {
+                console.warn("Session expired event received — logging out");
+                logout();
+            }
+        };
+        window.addEventListener("session-expired", handler);
+        return () => window.removeEventListener("session-expired", handler);
+    }, [user, logout]);
 
     const login = async (username: string, password?: string) => {
         try {
@@ -32,9 +87,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (foundUser) {
                 setUser(foundUser);
-                // Keep local storage for simple persistence/caching if desired, 
-                // but real auth should use cookies/session. 
-                // We'll keep it simple as per request.
                 localStorage.setItem("mock_user", JSON.stringify(foundUser));
                 router.push("/");
                 return true;
@@ -43,12 +95,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error("Login failed", error);
         }
         return false;
-    };
-
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem("mock_user");
-        router.push("/login");
     };
 
     return (
