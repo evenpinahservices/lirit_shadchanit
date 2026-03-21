@@ -66,6 +66,16 @@ export function flattenAiFormDataForPending(payload: FlattenAiPayload): Record<s
         flat.photoUrl = profilePhotoUrl;
     }
 
+    // Coerce boolean fields (AI may return "No"/"Yes" strings)
+    if (flat.medicalHistory !== undefined) {
+        const v = String(flat.medicalHistory).toLowerCase();
+        flat.medicalHistory = v === "true" || v === "yes" || v === "1";
+    }
+    if (flat.active !== undefined) {
+        const v = String(flat.active).toLowerCase();
+        flat.active = v !== "false" && v !== "no" && v !== "0" && v !== "inactive";
+    }
+
     // Required fields with fallbacks for draft
     if (!flat.fullName || String(flat.fullName).trim() === "") {
         flat.fullName = "Draft";
