@@ -88,6 +88,49 @@ export function flattenAiFormDataForPending(payload: FlattenAiPayload): Record<s
         }
     }
 
+    // Preserve AI-extracted extended fields that have no dedicated schema column
+    const appendToField = (key: string, extra: string) => {
+        const existing = flat[key] ? String(flat[key]).trim() : "";
+        flat[key] = existing ? `${existing}\n${extra}` : extra;
+    };
+
+    const extract = (field: unknown): string | null => {
+        if (field == null) return null;
+        if (typeof field === "object" && "value" in (field as object)) {
+            const v = (field as { value: unknown }).value;
+            return v != null ? String(v).trim() : null;
+        }
+        return String(field).trim() || null;
+    };
+
+    const father = formData.fatherDetails;
+    const mother = formData.motherDetails;
+    const siblings = extract(formData.siblingsCount);
+    const shadchan = extract(formData.shadchanName);
+
+    if (father && typeof father === "object") {
+        const fVal = "value" in (father as object) ? (father as any).value : father;
+        const fName = fVal?.name ? extract(fVal.name) : null;
+        const fOcc = fVal?.occupation ? extract(fVal.occupation) : null;
+        if (fName || fOcc) {
+            appendToField("familyBackground", `Father: ${[fName, fOcc].filter(Boolean).join(" – ")}`);
+        }
+    }
+    if (mother && typeof mother === "object") {
+        const mVal = "value" in (mother as object) ? (mother as any).value : mother;
+        const mName = mVal?.name ? extract(mVal.name) : null;
+        const mOcc = mVal?.occupation ? extract(mVal.occupation) : null;
+        if (mName || mOcc) {
+            appendToField("familyBackground", `Mother: ${[mName, mOcc].filter(Boolean).join(" – ")}`);
+        }
+    }
+    if (siblings) {
+        appendToField("familyBackground", `Siblings: ${siblings}`);
+    }
+    if (shadchan) {
+        appendToField("references", `Shadchan: ${shadchan}`);
+    }
+
     // Required fields with fallbacks for draft
     if (!flat.fullName || String(flat.fullName).trim() === "") {
         flat.fullName = "Draft";
