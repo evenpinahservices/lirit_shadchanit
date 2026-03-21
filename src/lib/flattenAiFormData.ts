@@ -76,6 +76,18 @@ export function flattenAiFormDataForPending(payload: FlattenAiPayload): Record<s
         flat.active = v !== "false" && v !== "no" && v !== "0" && v !== "inactive";
     }
 
+    // If dob is missing but AI extracted an age, derive birth year from age
+    if (!flat.dob || String(flat.dob).trim() === "") {
+        const rawAge = formData.age;
+        const ageValue = rawAge != null && typeof rawAge === "object" && "value" in (rawAge as object)
+            ? (rawAge as { value: unknown }).value
+            : rawAge;
+        const ageNum = Number(ageValue);
+        if (ageNum && ageNum >= 16 && ageNum <= 120) {
+            flat.dob = String(new Date().getFullYear() - Math.floor(ageNum));
+        }
+    }
+
     // Required fields with fallbacks for draft
     if (!flat.fullName || String(flat.fullName).trim() === "") {
         flat.fullName = "Draft";

@@ -13,7 +13,7 @@ const FormTokenSchema = new Schema<FormToken>(
     {
         token: { type: String, required: true, unique: true, index: true },
         createdAt: { type: Date, default: Date.now },
-        expiresAt: { type: Date, required: true, index: true },
+        expiresAt: { type: Date, required: true },
         usageCount: { type: Number, default: 0 },
         maxUsage: { type: Number, default: 30 },
         isActive: { type: Boolean, default: true },
