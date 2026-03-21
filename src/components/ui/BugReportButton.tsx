@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Bug, X, Send, Loader2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { usePathname } from "next/navigation";
@@ -113,9 +114,9 @@ export function BugReportButton() {
                 )}
             </button>
 
-            {/* Modal */}
-            {isOpen && (
-                <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 p-4">
+            {/* Modal — portalled to body to escape any stacking context */}
+            {isOpen && typeof document !== "undefined" && createPortal(
+                <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 p-4">
                     <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
                         {/* Header */}
                         <div className="flex items-center justify-between p-4 border-b">
@@ -172,13 +173,14 @@ export function BugReportButton() {
                                             placeholder="Describe the issue you encountered..."
                                             className="w-full p-3 border rounded-lg resize-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-800 dark:border-gray-700"
                                             rows={4}
+                                            autoFocus
                                         />
                                     </div>
 
                                     {/* Metadata Preview */}
                                     <div className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg space-y-1">
                                         <p><strong>Page:</strong> {pathname}</p>
-                                        <p><strong>Viewport:</strong> {window.innerWidth}x{window.innerHeight}</p>
+                                        <p><strong>Viewport:</strong> {typeof window !== "undefined" ? `${window.innerWidth}x${window.innerHeight}` : "N/A"}</p>
                                         <p><strong>User:</strong> {user?.name || "Unknown"}</p>
                                     </div>
                                 </>
@@ -214,13 +216,17 @@ export function BugReportButton() {
                             </div>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
-            <ErrorAlertModal
-                isOpen={!!friendlyError}
-                onClose={() => setFriendlyError(null)}
-                error={friendlyError}
-            />
+            {typeof document !== "undefined" && createPortal(
+                <ErrorAlertModal
+                    isOpen={!!friendlyError}
+                    onClose={() => setFriendlyError(null)}
+                    error={friendlyError}
+                />,
+                document.body
+            )}
         </>
     );
 }
