@@ -1,3 +1,5 @@
+import { ageToYear } from "./utils";
+
 /**
  * Flattens AI-extracted form data (with optional { value, confidence, sourceQuote }) into
  * a flat object suitable for PendingClient/Client (e.g. createPendingClient).
@@ -83,8 +85,8 @@ export function flattenAiFormDataForPending(payload: FlattenAiPayload): Record<s
             ? (rawAge as { value: unknown }).value
             : rawAge;
         const ageNum = Number(ageValue);
-        if (ageNum && ageNum >= 16 && ageNum <= 120) {
-            flat.dob = String(new Date().getFullYear() - Math.floor(ageNum));
+        if (ageNum && ageNum >= 18 && ageNum <= 60) {
+            flat.dob = String(ageToYear(ageNum));
         }
     }
 

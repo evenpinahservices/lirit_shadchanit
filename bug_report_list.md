@@ -372,3 +372,100 @@ Content doesn't scroll down enough so bottom of text is hedden
 
 ---
 
+## 38. weird background visible
+- **ID**: 69b5cf7316355429e3fc23a2
+- **Page**: /inbox/generate-link
+- **User**: Lirit Adam (admin)
+- **Date**: 3/14/2026, 9:13:23 PM
+- **Status**: new
+- **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1773522803/bug-reports/qczy3n72nvtimoctp3wq.png)
+
+---
+
+## 39. Button on the left isn't visible, not submitting profile
+- **ID**: 69c0e3a29563b4374ea3ea32
+- **Page**: /inbox/69bfeaee3085699570ed08c3
+- **User**: Lirit Adam (admin)
+- **Date**: 3/23/2026, 6:54:26 AM
+- **Status**: new
+- **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1774248865/bug-reports/vhy48eqh7msmpr6jj0gd.png)
+
+---
+
+## 40. Age and Jewish DOB not automatically included from resume
+- **ID**: 69c16911ca565150b1d5801e
+- **Page**: /inbox/69c1685c0f6c15a0bd78eb28
+- **User**: Lirit Adam (admin)
+- **Date**: 3/23/2026, 4:23:45 PM
+- **Status**: new
+- **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1774283024/bug-reports/sv8zjhrqc58jqhsdfftq.png)
+
+---
+
+## 41. מוצא דתי: Need "חצי חצי" option
+- **ID**: 69c19fa6709b5b27c81c7d25
+- **Page**: /inbox/69c19db0296a215010058202
+- **User**: Lirit Adam (admin)
+- **Date**: 3/23/2026, 8:16:38 PM
+- **Status**: new
+- **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1774296997/bug-reports/xfsolpz79dh5kv3fzqbi.png)
+
+---
+
+## 42. Choice for husband should include "learn in beginning then shiluv work"
+- **ID**: 69c1a04a709b5b27c81c7d27
+- **Page**: /inbox/69c19db0296a215010058202
+- **User**: Lirit Adam (admin)
+- **Date**: 3/23/2026, 8:19:22 PM
+- **Status**: new
+- **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1774297162/bug-reports/ojcpj9issmvspaooeaw5.png)
+
+---
+
+## 43. Keeps getting birthday wrong
+- **ID**: 69c1a249923376e52b48b635
+- **Page**: /clients/698daaff125270829e61c3b8
+- **User**: Lirit Adam (admin)
+- **Date**: 3/23/2026, 8:27:53 PM
+- **Status**: new
+- **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1774297673/bug-reports/zevgket7wh86efmbrrqb.png)
+
+---
+
+## 44. DOBBBBBB issues
+- **ID**: 69c1a8b52764e6126585d255
+- **Page**: /inbox/69c1a87e9cb26b7c049de84d
+- **User**: Lirit Adam (admin)
+- **Date**: 3/23/2026, 8:55:17 PM
+- **Status**: new
+- **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1774299317/bug-reports/xfzohudwu3zjdqlgmzwi.png)
+
+---
+
+## 45. זרם דתי: Add "חזור בתשובה"
+- **ID**: 69c235aeca95fb9d619df330
+- **Page**: /inbox/69c23518c6ebfdb4801f631c
+- **User**: Lirit Adam (admin)
+- **Date**: 3/24/2026, 6:56:46 AM
+- **Status**: new
+- **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1774335406/bug-reports/req2l8fkcoq665hnmuxh.png)
+
+---
+
+## 46. Age and dob was not saved
+- **ID**: 69c239f0b717b9416dbdc6ee
+- **Page**: /inbox/69c2379c50ad54b9960a272f
+- **User**: Lirit Adam (admin)
+- **Date**: 3/24/2026, 7:14:56 AM
+- **Status**: new
+- **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1774336496/bug-reports/th41sgvjeubpceoayret.png)
+
+---
+
+## 47. Changes not saved despite "sooo many changes"
+- **ID**: 69c23a20b717b9416dbdc6f0
+- **Page**: /inbox/69c2379c50ad54b9960a272f
+- **User**: Lirit Adam (admin)
+- **Date**: 3/24/2026, 7:15:44 AM
+- **Status**: new
+- **Screenshot**: ![Screenshot](https://res.cloudinary.com/ddk38gj1w/image/upload/v1774336544/bug-reports/gbxggpso9mbrtltbmdsm.png)

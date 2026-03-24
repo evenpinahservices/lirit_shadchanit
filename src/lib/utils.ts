@@ -79,6 +79,15 @@ export function detectClientLanguage(client: {
 }
 
 /**
+ * Converts an age in years to the most likely Gregorian birth year.
+ * Single source of truth used across AI fill, form sync, and DB flattening.
+ * Accepts ±1 year approximation (we don't know if birthday has passed).
+ */
+export function ageToYear(age: number): number {
+    return new Date().getFullYear() - Math.floor(age);
+}
+
+/**
  * Converts a Hebrew year number to Hebrew letters (e.g., 5775 -> ה'תשע"ה)
  */
 export function convertHebrewYearToLetters(year: number): string {

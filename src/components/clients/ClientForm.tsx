@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, Check, UploadCloud, X, FileJson, CheckCircle
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { useUploadWithProgress } from "@/hooks/useUploadWithProgress";
 import Image from "next/image";
-import { cn, detectClientLanguage, convertHebrewYearToLetters } from "@/lib/utils";
+import { cn, detectClientLanguage, convertHebrewYearToLetters, ageToYear } from "@/lib/utils";
 import { AutomaticMatchingModal } from "./AutomaticMatchingModal";
 import { AutoFillModal } from "./AutoFillModal";
 import { JsonFillModal } from "./JsonFillModal";
@@ -68,11 +68,12 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     
     const defaultValues: any = client ? {
         ...client,
-        religiousAffiliation: Array.isArray(client.religiousAffiliation) ? client.religiousAffiliation[0] : client.religiousAffiliation,
+        religiousAffiliation: client.religiousAffiliation,
         ethnicity: client.ethnicity,
         learningStatus: client.learningStatus,
         maritalStatus: client.maritalStatus,
         languages: client.languages,
+        medicalHistory: client.medicalHistory === true || client.medicalHistory === "Yes" ? "Yes" : "No",
         hobbies: Array.isArray(client.hobbies) ? client.hobbies.join(", ") : (client.hobbies || ""),
         formLanguage: detectedLang,
         // Ensure other array fields that map to single inputs are handled if necessary
@@ -139,6 +140,13 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const lang = formLanguageFromForm || detectedLang;
     const rtl = isRTL(lang);
     
+    // Log validation errors for debugging
+    useEffect(() => {
+        if (Object.keys(errors).length > 0) {
+            console.warn("Form validation errors:", errors);
+        }
+    }, [errors]);
+
     // Force formLanguage sync when client changes (e.g., when editing)
     useEffect(() => {
         if (client && formLanguageFromForm !== detectedLang) {
@@ -163,6 +171,13 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
     const { addClient, updateClient, clients } = useClients();
     const router = useRouter();
     const [currentStep, setCurrentStep] = useState(initialStep ?? 0);
+    const [isMobile, setIsMobile] = useState(false);
+    useEffect(() => {
+        const check = () => setIsMobile(window.innerWidth < 768);
+        check();
+        window.addEventListener("resize", check);
+        return () => window.removeEventListener("resize", check);
+    }, []);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [isSubmitReady, setIsSubmitReady] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -747,89 +762,70 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                     newSourceQuotes[key] = sourceQuote;
                 }
                 
-                // When age is in the payload, we always derive DOB from it (year-only, correct calendar).
-                // The AI often sends both age and a calculated DOB (e.g. 2001-01-01 for age 23); that calculated DOB is wrong
-                // and would make the synced age wrong (24/25). So: age wins → we set year-only; Hebrew year if Hebrew form, Gregorian year if English. Decimal ages rounded down.
+                // Age field: when present, derive a year-only DOB from it.
+                // Age wins over AI's dob (AI sometimes calculates a wrong full date from age).
                 if (key === "age") {
                     if (value !== null && value !== undefined && value !== "") {
-                        const ageRaw = typeof value === "number" ? value : parseFloat(String(value).replace(",", "."));
-                        const ageNum = Number.isInteger(ageRaw) ? ageRaw : Math.floor(ageRaw);
+                        const ageNum = Math.floor(typeof value === "number" ? value : parseFloat(String(value).replace(",", ".")));
                         if (!isNaN(ageNum) && ageNum >= 18 && ageNum <= 60) {
-                            const currentYear = new Date().getFullYear();
-                            const birthYear = currentYear - ageNum;
-                            const setDob = lang === "he"
+                            const birthYear = ageToYear(ageNum);
+                            const newMode = lang === "he" ? "Hebrew" : "Year";
+                            const newDob = lang === "he"
                                 ? `Hebrew: א תשרי ${convertHebrewYearToLetters(birthYear + 3760)}`
                                 : birthYear.toString();
-                            if (lang === "he") {
-                                setDateMode("Hebrew");
-                                setValue("dob", setDob);
-                            } else {
-                                setDateMode("Year");
-                                setValue("dob", setDob);
-                            }
-                            console.log("[Age/DOB debug] Set from age (ignore AI dob):", { ageRaw, ageNum, birthYear, setDob, lang });
+                            setDateMode(newMode);
+                            setValue("dob", newDob);
                             confidences["dob"] = confidence !== undefined ? confidence : 0.8;
-                            if (sourceQuote) {
-                                newSourceQuotes["dob"] = sourceQuote;
-                            }
+                            if (sourceQuote) newSourceQuotes["dob"] = sourceQuote;
                             trigger("dob");
                             fieldsSet++;
-                        } else {
-                            console.log("[Age/DOB debug] Age skipped (invalid):", { ageRaw, ageNum });
                         }
                     }
                     return;
                 }
 
-                // Use AI's DOB only when age is NOT in the payload (real DOB from resume). When age is present we already set DOB from age above.
+                // DOB field: only used when no age is in the payload.
                 if (key === "dob") {
-                    const hasAgeInPayload = data.age != null && data.age !== "" && extractValueAndConfidence(data.age).value != null && String(extractValueAndConfidence(data.age).value).trim() !== "";
-                    if (hasAgeInPayload) {
-                        console.log("[Age/DOB debug] Skipping AI dob (age present, we use age-derived year)");
-                        return;
-                    }
+                    const hasAge = data.age != null && data.age !== "" &&
+                        extractValueAndConfidence(data.age).value != null &&
+                        String(extractValueAndConfidence(data.age).value).trim() !== "";
+                    if (hasAge) return; // age already set DOB above
+
                     if (value !== null && value !== undefined && value !== "") {
                         const dobValue = String(value).trim();
-                        // Validate DOB format
-                        const isValidFormat = 
-                            /^\d{4}$/.test(dobValue) || // Year only
-                            dobValue.includes("Hebrew:") || // Hebrew date
-                            /^\d{4}-\d{2}-\d{2}$/.test(dobValue); // YYYY-MM-DD format
-                        
-                        if (isValidFormat) {
-                            // Set DOB
-                            setValue("dob", dobValue);
-                            // Update dateMode based on the format
-                            const mode = /^\d{4}$/.test(dobValue) ? "Year" : dobValue.includes("Hebrew:") ? "Hebrew" : "Gregorian";
+
+                        const isYearOnly = /^\d{4}$/.test(dobValue);
+                        const isHebrewDate = dobValue.startsWith("Hebrew:");
+                        const isFullDate = /^\d{4}-\d{2}-\d{2}$/.test(dobValue);
+
+                        // Guard: reject a 4-digit Hebrew year mistakenly put in the dob field
+                        if (isYearOnly && parseInt(dobValue) > 2100) return;
+
+                        if (isYearOnly || isHebrewDate || isFullDate) {
+                            const mode = isHebrewDate ? "Hebrew" : isYearOnly ? "Year" : "Gregorian";
                             setDateMode(mode);
-                            console.log("[Age/DOB debug] Set from AI DOB (prioritized):", { dobValue, dateMode: mode });
+                            setValue("dob", dobValue);
                             confidences["dob"] = confidence !== undefined ? confidence : 0.8;
-                            if (sourceQuote) {
-                                newSourceQuotes["dob"] = sourceQuote;
-                            }
+                            if (sourceQuote) newSourceQuotes["dob"] = sourceQuote;
                             trigger("dob");
                             fieldsSet++;
                         } else {
-                            console.warn(`Invalid DOB format from AI: ${dobValue}`);
-                            // Try to parse and normalize the date
+                            // Last resort: try JS date parse and normalise to YYYY-MM-DD
                             const parsedDate = new Date(dobValue);
-                            if (!isNaN(parsedDate.getTime())) {
+                            if (!isNaN(parsedDate.getTime()) && parsedDate.getFullYear() <= 2100) {
                                 const year = parsedDate.getFullYear();
                                 const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
                                 const day = parsedDate.getDate().toString().padStart(2, '0');
-                                const normalizedDob = `${year}-${month}-${day}`;
-                                setValue("dob", normalizedDob);
                                 setDateMode("Gregorian");
-                                confidences["dob"] = (confidence !== undefined ? confidence : 0.8) * 0.9; // Slightly lower confidence due to normalization
-                                if (sourceQuote) {
-                                    newSourceQuotes["dob"] = sourceQuote;
-                                }
+                                setValue("dob", `${year}-${month}-${day}`);
+                                confidences["dob"] = (confidence !== undefined ? confidence : 0.8) * 0.9;
+                                if (sourceQuote) newSourceQuotes["dob"] = sourceQuote;
                                 trigger("dob");
                                 fieldsSet++;
                             }
                         }
                     }
-                    return; // Don't process dob as a regular field
+                    return;
                 }
                 
                 // Special handling for headCovering: default to "Flexible" if not mentioned
@@ -1785,7 +1781,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                             }}
                         />
                         <div className="flex gap-2 relative z-10">
-                            {isEditing && onCancel && (
+                            {isEditing && onCancel && !onApprove && !onReject && (
                                 <>
                                     <button
                                         type="button"
@@ -1804,6 +1800,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                     </button>
                                 </>
                             )}
+                            {!isMobile && (
                             <button
                                 type="button"
                                 onClick={() => {
@@ -1830,9 +1827,11 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 {rtl ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                                 {t(lang, "buttons.back")}
                             </button>
+                            )}
                         </div>
 
                         {currentStep < STEPS.length - 1 ? (
+                            !isMobile && (
                             <button
                                 type="button"
                                 onClick={nextStep}
@@ -1841,6 +1840,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                 {t(lang, "buttons.next")}
                                 {rtl ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             </button>
+                            )
                         ) : (
                             <>
                                 {isExternalForm && !showSummary ? (
@@ -1868,15 +1868,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         {/* Show approve/reject (and optional Save draft) if handlers provided (inbox review) */}
                                         {onApprove && onReject ? (
                                             <>
-                                                {onSubmitToPending && (
-                                                    <button
-                                                        type="submit"
-                                                        disabled={!isSubmitReady || isSubmitting}
-                                                        className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                                    >
-                                                        {isSubmitting ? (lang === "he" ? "שומר..." : "Saving...") : (lang === "he" ? "שמור טיוטה" : "Save draft")}
-                                                    </button>
-                                                )}
                                                 <button
                                                     type="button"
                                                     onClick={onReject}
@@ -1891,11 +1882,11 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={async () => {
+                                                    onClick={handleSubmit(async (values) => {
                                                         if (onSubmitToPending) {
                                                             setIsSubmitting(true);
                                                             try {
-                                                                const valuesWithLang = { ...getValues(), formLanguage: lang };
+                                                                const valuesWithLang = { ...values, formLanguage: lang };
                                                                 await onSubmitToPending(valuesWithLang);
                                                             } catch (e) {
                                                                 console.error("Save before approve failed:", e);
@@ -1905,32 +1896,55 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                             }
                                                         }
                                                         onApprove();
-                                                    }}
+                                                    }, (validationErrors) => {
+                                                        // Find the first step that has an error and navigate to it
+                                                        const errorFields = Object.keys(validationErrors);
+                                                        if (errorFields.length > 0) {
+                                                            for (let i = 0; i < STEPS.length; i++) {
+                                                                const stepFields = STEPS[i].fields;
+                                                                if (errorFields.some(f => stepFields.includes(f))) {
+                                                                    setShowSummary(false);
+                                                                    setCurrentStep(i);
+                                                                    break;
+                                                                }
+                                                            }
+                                                            const firstField = errorFields[0];
+                                                            const firstError = validationErrors[firstField as keyof typeof validationErrors];
+                                                            const errorMsg = firstError?.message || (lang === "he" ? "יש שדות שלא מולאו כראוי" : "Some fields are not filled out correctly");
+                                                            setFriendlyError({
+                                                                title: lang === "he" ? "שגיאת אימות" : "Validation Error",
+                                                                message: typeof errorMsg === "string" ? errorMsg : (lang === "he" ? "אנא בדוק את השדות המסומנים" : "Please check the highlighted fields"),
+                                                                suggestion: lang === "he" ? "אנא תקן את השדות המסומנים ונסה שוב" : "Please fix the highlighted fields and try again",
+                                                            });
+                                                        }
+                                                    })}
                                                     disabled={isApproving || isRejecting || isSubmitting}
                                                     className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                                 >
                                                     <CheckCircle2 className="h-4 w-4" />
-                                                    {isApproving 
+                                                    {isApproving
                                                         ? (lang === "he" ? "מאשר..." : "Approving...")
-                                                        : (lang === "he" ? "אשר והוסף למסד הנתונים" : "Approve & Add to Database")
+                                                        : (lang === "he" ? "אשר" : "Approve")
                                                     }
                                                 </button>
                                             </>
                                         ) : (
+                                            !isEditing && (
                                             <button
                                                 type="submit"
                                                 disabled={!isSubmitReady || isSubmitting}
                                                 className={`flex items-center gap-1 px-4 py-2 text-sm font-medium text-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSubmitReady && !isSubmitting ? 'bg-green-600 hover:bg-green-700' : 'bg-green-400 cursor-not-allowed'}`}
                                             >
-                                                {isSubmitting 
+                                                {isSubmitting
                                                     ? t(lang, "buttons.saving")
-                                                    : (showSummary 
+                                                    : (showSummary
                                                         ? (lang === "he" ? "אישור ושליחה" : "Confirm & Submit")
-                                                        : (isEditing ? t(lang, "buttons.update") : t(lang, "buttons.submit"))
+                                                        : t(lang, "buttons.submit")
                                                     )
                                                 }
                                                 {!isSubmitting && <Check className="h-4 w-4" />}
                                             </button>
+                                            )
                                         )}
                                     </>
                                 )}

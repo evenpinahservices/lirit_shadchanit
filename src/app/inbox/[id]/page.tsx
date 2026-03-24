@@ -133,16 +133,16 @@ export default function InboxApprovalPage() {
             </div>
 
             <div className="flex-1 min-h-0 overflow-hidden">
-                <ClientForm 
-                    client={pendingClient} 
-                    isEditing={pendingClient.source === "admin_ai_draft"} 
+                <ClientForm
+                    client={pendingClient}
+                    isEditing={pendingClient.source === "admin_ai_draft"}
                     language={pendingClient.formLanguage || "en"}
                     onCancel={() => router.push("/inbox")}
                     onApprove={() => setApproveModalOpen(true)}
                     onReject={() => setRejectModalOpen(true)}
-                    onSubmitToPending={pendingClient.source === "admin_ai_draft" ? async (values) => {
+                    onSubmitToPending={async (values) => {
                         await updatePendingClient(pendingClientId, values as any);
-                    } : undefined}
+                    }}
                     isApproving={isApproving}
                     isRejecting={isRejecting}
                     hideAutoFillOptions={true}

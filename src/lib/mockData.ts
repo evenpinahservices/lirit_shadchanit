@@ -91,7 +91,7 @@ export const ClientSchema = z.object({
 
     religiousAffiliation: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
         if (!val) return [];
-        return Array.isArray(val) ? val : [val];
+        return (Array.isArray(val) ? val : [val]).filter(Boolean);
     }),
     ethnicity: z.string().optional().default(""),
     tribalStatus: z.string().optional().default(""),
@@ -117,18 +117,22 @@ export const ClientSchema = z.object({
 
     ageGapPreference: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
         if (!val) return ["Any"];
-        return Array.isArray(val) ? val : [String(val)];
+        const arrayVal = Array.isArray(val) ? val : [String(val)];
+        return arrayVal.filter(Boolean);
     }),
     willingToRelocate: z.string().optional().default(""),
     preferredEthnicities: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
         if (!val) return [];
-        return Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean);
+        return (Array.isArray(val) ? val : String(val).split(",").map(s => s.trim())).filter(Boolean);
     }),
     preferredHashkafos: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
         if (!val) return [];
-        return Array.isArray(val) ? val : String(val).split(",").map(s => s.trim()).filter(Boolean);
+        return (Array.isArray(val) ? val : String(val).split(",").map(s => s.trim())).filter(Boolean);
     }),
-    preferredLearningStatus: z.union([z.string(), z.array(z.string())]).optional().transform(val => Array.isArray(val) ? val : typeof val === 'string' ? [val] : []),
+    preferredLearningStatus: z.union([z.string(), z.array(z.string())]).optional().transform(val => {
+        if (!val) return [];
+        return (Array.isArray(val) ? val : [val]).filter(Boolean);
+    }),
     preferredHeadCovering: z.array(z.string()).optional().default([]),
     preferencesFreeText: z.string().optional().default(""),
 
@@ -159,11 +163,11 @@ const FEMALE_NAMES = ["Sarah", "Rivka", "Rachel", "Leah", "Chana", "Miriam", "Es
 const LAST_NAMES = ["Cohen", "Levi", "Shapiro", "Friedman", "Katz", "Goldstein", "Stern", "Rosenberg", "Klein", "Weiss", "Mizrachi", "Azoulay", "Biton", "Peretz", "Hassan", "Abutbul", "Gabai", "Amar", "Ohana", "Edri", "Schwartz", "Feldman", "Epstein", "Gottlieb", "Levin", "Green", "Brown", "Silver", "Rubin", "Segal"];
 const LOCATIONS = ["Jerusalem, Israel", "Tel Aviv, Israel", "Bnei Brak, Israel", "Lakewood, NJ", "Brooklyn, NY", "London, UK", "Manchester, UK", "Monsey, NY", "Five Towns, NY", "Chicago, IL", "Los Angeles, CA", "Miami, FL", "Efrat, Israel", "Raanana, Israel", "Bet Shemesh, Israel", "Petach Tikva, Israel", "Haifa, Israel", "Be'er Sheva, Israel", "Ashdod, Israel", "Netanya, Israel"];
 
-const ETHNICITIES = ["Ashkenazi", "Sephardi", "Yemenite", "Ethiopian"];
-const HASHKAFOS = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"];
+const ETHNICITIES = ["Ashkenazi", "Sephardi", "Yemenite", "Ethiopian", "Half-Half"];
+const HASHKAFOS = ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Baal Teshuva", "Masorti", "Traditional", "Secular"];
 const PROFESSIONS = ["Accountant", "Lawyer", "Doctor", "Nurse", "Student", "Teacher", "Rebbi", "Programmer", "Engineer", "Architect", "Designer", "Social Worker", "Psychologist", "Business Owner", "Sales", "Real Estate", "Therapist", "Actuary", "Dentist", "Consultant"];
 const HOBBIES_LIST = ["Reading", "Hiking", "Music", "Cooking", "Traveling", "Learning Torah", "Sports", "Art", "Writing", "Volunteering", "Photography", "Gardening", "Chess", "History", "Swimming", "Running"];
-const LEARNING_STATUS = ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"];
+const LEARNING_STATUS = ["Full Time", "Half Time", "Koveah Itim", "Learn then Work", "Working - Not Learning", "N/A"];
 const HEAD_COVERING_FEMALE = ["Uncovered", "Wig", "Hat", "Scarf", "Flexible"];
 const PREFERRED_HEAD_COVERING_MALE = ["Uncovered", "Wig", "Hat", "Scarf", "I don't mind"];
 

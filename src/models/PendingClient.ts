@@ -32,6 +32,8 @@ const PendingClientSchema = new Schema<PendingClient>(
         tribalStatus: { type: String },
         religiousAffiliation: { type: [String], default: [] },
         learningStatus: { type: String },
+        headCovering: { type: String },
+        religiousDetailsFreeText: { type: String },
         maritalStatus: { type: String },
         children: { type: Number, default: 0 },
         languages: { type: [String], default: [] },
@@ -40,7 +42,6 @@ const PendingClientSchema = new Schema<PendingClient>(
         occupationTitle: { type: String },
         occupationDescription: { type: String },
         smoking: { type: String },
-        headCovering: { type: String },
 
         // Personal
         hobbies: { type: String },
@@ -55,6 +56,7 @@ const PendingClientSchema = new Schema<PendingClient>(
         preferredHashkafos: { type: [String], default: [] },
         preferredLearningStatus: { type: [String], default: [] },
         preferredHeadCovering: { type: [String], default: [] },
+        preferencesFreeText: { type: String },
 
         // Meta
         references: { type: String },

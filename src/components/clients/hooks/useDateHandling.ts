@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { UseFormSetValue, UseFormWatch, UseFormTrigger } from "react-hook-form";
-import { convertHebrewYearToLetters, parseHebrewYearToNumber } from "@/lib/utils";
+import { convertHebrewYearToLetters, parseHebrewYearToNumber, ageToYear } from "@/lib/utils";
 
 export function useDateHandling(
     initialDob: string | undefined,
@@ -12,9 +12,9 @@ export function useDateHandling(
     const [lastGregorianDate, setLastGregorianDate] = useState<string>("");
     const currentDob = watch("dob");
     const [age, setAge] = useState<number | "">("");
+    // Prevents the DOB→age sync from overwriting while the user is actively typing an age
     const isUpdatingFromAgeRef = useRef(false);
-    const isUpdatingFromDobRef = useRef(false);
-    
+
     // Initialize date mode based on existing dob
     useEffect(() => {
         if (initialDob) {
@@ -24,13 +24,11 @@ export function useDateHandling(
                 setDateMode("Hebrew");
             } else {
                 setDateMode("Gregorian");
-                if (!initialDob.includes("Hebrew:")) {
-                    setLastGregorianDate(initialDob);
-                }
+                setLastGregorianDate(initialDob);
             }
         }
     }, [initialDob]);
-    
+
     // Store Gregorian date when it changes (if in Gregorian mode)
     useEffect(() => {
         if (dateMode === "Gregorian" && currentDob && !currentDob.includes("Hebrew:") && !/^\d{4}$/.test(currentDob)) {
@@ -46,7 +44,7 @@ export function useDateHandling(
         if (fromMode === "Year") {
             const year = parseInt(currentDob);
             if (isNaN(year)) return "";
-            
+
             if (toMode === "Year") return currentDob;
             if (toMode === "Gregorian") {
                 if (lastGregorianDate) {
@@ -68,14 +66,14 @@ export function useDateHandling(
 
         if (fromMode === "Gregorian") {
             if (toMode === "Gregorian") return currentDob;
-            
+
             const date = new Date(currentDob);
             if (isNaN(date.getTime())) return "";
-            
+
             const year = date.getFullYear();
             const month = date.getMonth() + 1;
             const day = date.getDate();
-            
+
             if (toMode === "Year") {
                 return year.toString();
             }
@@ -85,54 +83,54 @@ export function useDateHandling(
                 const hebrewDays = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י",
                     "יא", "יב", "יג", "יד", "טו", "טז", "יז", "יח", "יט", "כ",
                     "כא", "כב", "כג", "כד", "כה", "כו", "כז", "כח", "כט", "ל"];
-                const hebrewMonths = ["תשרי", "חשון", "כסלו", "טבת", "שבט", "אדר", 
+                const hebrewMonths = ["תשרי", "חשון", "כסלו", "טבת", "שבט", "אדר",
                     "אדר א", "אדר ב", "ניסן", "אייר", "סיון", "תמוז", "אב", "אלול"];
-                
+
                 const hebrewDay = hebrewDays[Math.min(day - 1, 29)] || "א";
                 const monthIndex = month <= 12 ? (month + 5) % 12 : 0;
                 const hebrewMonth = hebrewMonths[monthIndex] || "תשרי";
-                
+
                 return `Hebrew: ${hebrewDay} ${hebrewMonth} ${hebrewYearLetters}`;
             }
         }
 
         if (fromMode === "Hebrew") {
             if (toMode === "Hebrew") return currentDob;
-            
+
             const parts = currentDob.replace("Hebrew: ", "").split(" ");
             if (parts.length < 3) return "";
-            
+
             const hebrewYearStr = parts[2];
             let numericYear = parseInt(hebrewYearStr);
-            
+
             if (isNaN(numericYear) || numericYear < 1000) {
                 numericYear = parseHebrewYearToNumber(hebrewYearStr);
             }
-            
+
             const gregorianYear = numericYear - 3760;
-            
+
             if (toMode === "Year") {
                 return gregorianYear.toString();
             }
             if (toMode === "Gregorian") {
                 const hebrewDay = parts[0];
                 const hebrewMonth = parts[1];
-                
+
                 const hebrewDays = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י",
                     "יא", "יב", "יג", "יד", "טו", "טז", "יז", "יח", "יט", "כ",
                     "כא", "כב", "כג", "כד", "כה", "כו", "כז", "כח", "כט", "ל"];
-                const hebrewMonths = ["תשרי", "חשון", "כסלו", "טבת", "שבט", "אדר", 
+                const hebrewMonths = ["תשרי", "חשון", "כסלו", "טבת", "שבט", "אדר",
                     "אדר א", "אדר ב", "ניסן", "אייר", "סיון", "תמוז", "אב", "אלול"];
-                
+
                 let dayNum = hebrewDays.indexOf(hebrewDay) + 1;
                 if (dayNum < 1 || dayNum > 31) dayNum = 1;
-                
+
                 let monthNum = hebrewMonths.indexOf(hebrewMonth);
                 monthNum = monthNum >= 0 ? ((monthNum + 7) % 12) + 1 : 1;
-                
+
                 const paddedMonth = monthNum.toString().padStart(2, '0');
                 const paddedDay = dayNum.toString().padStart(2, '0');
-                
+
                 return `${gregorianYear}-${paddedMonth}-${paddedDay}`;
             }
         }
@@ -142,39 +140,32 @@ export function useDateHandling(
 
     const calculateAgeFromDob = (dob: string): number | "" => {
         if (!dob || dob.trim() === "") return "";
-        
+
         if (/^\d{4}$/.test(dob)) {
-            // Year-only: calculate approximate age (can be off by 1 year)
             const year = parseInt(dob);
-            if (isNaN(year)) return "";
-            const currentYear = new Date().getFullYear();
-            // For year-only, assume birthday has passed (most conservative estimate)
-            // This gives the minimum possible age
-            return currentYear - year;
+            if (isNaN(year) || year > 2100) return ""; // guard against Hebrew years stored as 4-digit number
+            return new Date().getFullYear() - year;
         }
-        
+
         if (dob.includes("Hebrew:")) {
-            // Hebrew date: extract year and calculate approximate age
             const parts = dob.trim().split(" ");
             const hebrewYearStr = parts[parts.length - 1];
             let numericYear = parseInt(hebrewYearStr);
-            
+
             if (isNaN(numericYear) || numericYear < 1000) {
                 numericYear = parseHebrewYearToNumber(hebrewYearStr);
             }
-            
+
             if (isNaN(numericYear) || numericYear < 1000) return "";
-            
+
             const gregorianYear = numericYear - 3760;
-            const currentYear = new Date().getFullYear();
-            // For Hebrew dates without full conversion, assume birthday has passed
-            return currentYear - gregorianYear;
+            return new Date().getFullYear() - gregorianYear;
         }
-        
-        // Full date (YYYY-MM-DD): calculate exact age accounting for whether birthday has passed
+
+        // Full date (YYYY-MM-DD)
         const birthDate = new Date(dob);
         if (isNaN(birthDate.getTime())) return "";
-        
+
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -187,31 +178,9 @@ export function useDateHandling(
     const calculateDobFromAge = (age: number | "", currentDob: string): string => {
         if (age === "" || typeof age !== "number") return currentDob || "";
         if (isNaN(age) || age < 18 || age > 60) return currentDob || "";
-        
-        const today = new Date();
-        const currentYear = today.getFullYear();
-        // Calculate birth year: if birthday hasn't passed yet this year, subtract one more year
-        // We assume the person has already had their birthday this year (most common case)
-        // This gives the most recent possible birth year for the given age
-        let birthYear = currentYear - age;
-        
-        // If we have an existing full date, check if we should adjust based on whether birthday has passed
-        if (currentDob && !currentDob.includes("Hebrew:") && !/^\d{4}$/.test(currentDob)) {
-            const existingDate = new Date(currentDob);
-            if (!isNaN(existingDate.getTime())) {
-                const existingMonth = existingDate.getMonth();
-                const existingDay = existingDate.getDate();
-                const currentMonth = today.getMonth();
-                const currentDay = today.getDate();
-                
-                // If existing birthday hasn't passed yet this year, the person is actually age+1
-                // So we need to adjust birth year
-                if (existingMonth > currentMonth || (existingMonth === currentMonth && existingDay > currentDay)) {
-                    birthYear = currentYear - age - 1;
-                }
-            }
-        }
-        
+
+        const birthYear = ageToYear(age);
+
         if (dateMode === "Year") {
             return birthYear.toString();
         } else if (dateMode === "Hebrew") {
@@ -237,25 +206,19 @@ export function useDateHandling(
         }
     };
 
-    // Sync DOB -> Age
+    // Sync DOB → Age (single source of truth: DOB drives age display)
     useEffect(() => {
         if (isUpdatingFromAgeRef.current) return;
-        
         const calculatedAge = calculateAgeFromDob(currentDob || "");
         if (calculatedAge !== age) {
-            isUpdatingFromDobRef.current = true;
             setAge(calculatedAge);
-            setTimeout(() => {
-                isUpdatingFromDobRef.current = false;
-            }, 0);
         }
     }, [currentDob, dateMode]);
 
     // Initialize age from initial DOB
     useEffect(() => {
         if (initialDob) {
-            const calculatedAge = calculateAgeFromDob(initialDob);
-            setAge(calculatedAge);
+            setAge(calculateAgeFromDob(initialDob));
         }
     }, [initialDob]);
 
@@ -264,25 +227,21 @@ export function useDateHandling(
             setAge("");
             return;
         }
-        
+
         const parsedAge = parseInt(inputValue);
         if (!isNaN(parsedAge)) {
             setAge(parsedAge);
-            
-            const MIN_AGE = 18;
-            const MAX_AGE = 60;
-            if (parsedAge >= MIN_AGE && parsedAge <= MAX_AGE) {
-                if (!isUpdatingFromDobRef.current) {
-                    isUpdatingFromAgeRef.current = true;
-                    const newDob = calculateDobFromAge(parsedAge, currentDob || "");
-                    if (newDob) {
-                        setValue("dob", newDob);
-                        trigger("dob");
-                    }
-                    setTimeout(() => {
-                        isUpdatingFromAgeRef.current = false;
-                    }, 100);
+
+            if (parsedAge >= 18 && parsedAge <= 60) {
+                isUpdatingFromAgeRef.current = true;
+                const newDob = calculateDobFromAge(parsedAge, currentDob || "");
+                if (newDob) {
+                    setValue("dob", newDob);
+                    trigger("dob");
                 }
+                setTimeout(() => {
+                    isUpdatingFromAgeRef.current = false;
+                }, 100);
             }
         } else {
             setAge("");
@@ -291,35 +250,24 @@ export function useDateHandling(
 
     const handleAgeBlur = (inputValue: string) => {
         if (inputValue === "") return;
-        
+
         const parsedAge = parseInt(inputValue);
         if (isNaN(parsedAge)) return;
-        
-        const MIN_AGE = 18;
-        const MAX_AGE = 60;
-        let clampedAge = parsedAge;
-        
-        if (parsedAge < MIN_AGE) {
-            clampedAge = MIN_AGE;
-        } else if (parsedAge > MAX_AGE) {
-            clampedAge = MAX_AGE;
-        }
-        
+
+        const clampedAge = Math.min(Math.max(parsedAge, 18), 60);
         if (clampedAge !== parsedAge) {
             setAge(clampedAge);
         }
-        
-        if (!isUpdatingFromDobRef.current) {
-            isUpdatingFromAgeRef.current = true;
-            const newDob = calculateDobFromAge(clampedAge, currentDob || "");
-            if (newDob) {
-                setValue("dob", newDob);
-                trigger("dob");
-            }
-            setTimeout(() => {
-                isUpdatingFromAgeRef.current = false;
-            }, 100);
+
+        isUpdatingFromAgeRef.current = true;
+        const newDob = calculateDobFromAge(clampedAge, currentDob || "");
+        if (newDob) {
+            setValue("dob", newDob);
+            trigger("dob");
         }
+        setTimeout(() => {
+            isUpdatingFromAgeRef.current = false;
+        }, 100);
     };
 
     return {
@@ -333,6 +281,7 @@ export function useDateHandling(
         handleAgeChange,
         handleAgeBlur,
         isUpdatingFromAgeRef,
-        isUpdatingFromDobRef,
+        // kept for API compatibility — no longer used internally
+        isUpdatingFromDobRef: { current: false },
     };
 }

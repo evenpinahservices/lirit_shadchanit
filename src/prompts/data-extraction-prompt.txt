@@ -12,7 +12,8 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
             * *Example 1:* If "personality" field in the resume image shows "בחור טוב לב" (Hebrew), you MUST output "בחור טוב לב" (Hebrew) - NOT "good-hearted guy" or any translation.
             * *Example 2:* If "familyBackground" field in the resume image shows "Family from Jerusalem" (English), you MUST output "Family from Jerusalem" (English) - NOT translate to Hebrew.
             * *Example 3:* If "education" field shows mixed language "לומד ב-Yeshiva University", output exactly "לומד ב-Yeshiva University" - preserve the mixed format.
-            * **This applies to ALL open text fields:** fullName, email, phone, dob, location, familyBackground, education, occupationTitle, occupationDescription, personality, medicalHistoryDetails, religiousDetailsFreeText, references, notes, resumeRawText, shadchanName, fatherDetails.name, fatherDetails.occupation, motherDetails.name, motherDetails.occupation, etc.
+            * **This applies to ALL open text fields:** fullName, email, phone, location, familyBackground, education, occupationTitle, occupationDescription, personality, medicalHistoryDetails, religiousDetailsFreeText, references, notes, resumeRawText, shadchanName, fatherDetails.name, fatherDetails.occupation, motherDetails.name, motherDetails.occupation, etc.
+            * **NOTE: `dob` is NOT an open text field** — it has a strict format (see schema). Do NOT copy raw text into dob.
     * **SELECTION Fields:** (Fields with `_options` in the schema).
         * **Rule:** You must **MAP** the meaning from the resume to the **EXACT English string** provided in the option list.
         * *Example:* If the resume says "ספרדי" (Sephardi), and the options are `["Ashkenazi", "Sephardi"]`, you must output `"Sephardi"`.
@@ -102,16 +103,16 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "sourceQuote": "string or null"
   },
   "dob": {
-    "value": "string (YYYY-MM-DD or year only) - OPEN TEXT. Only from explicit date/year in the resume",
+    "value": "string - STRICT FORMAT ONLY. See allowed formats below.",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_note": "ONLY fill dob when the resume explicitly states a date of birth or birth year. Do NOT calculate or derive dob from age - if only age is stated, leave dob null and fill the age field instead; the form will derive the correct year from age."
+    "_note": "STRICT RULES FOR DOB — follow exactly:\n  1. Gregorian full date: output as 'YYYY-MM-DD' (e.g. '1998-03-15').\n  2. Gregorian year only: output as 4-digit year string (e.g. '1998').\n  3. Hebrew date: output EXACTLY as 'Hebrew: [day] [month] [hebrewYear]' where day is Hebrew letter(s) (e.g. כה), month is the Hebrew month name (e.g. אדר), and hebrewYear is Hebrew letters (e.g. תשנ\"ה). Example: 'Hebrew: כה אדר תשנ\"ה'. DO NOT output a raw Hebrew year number like 5755.\n  4. If only age is stated (no DOB), leave dob null and fill the age field instead.\n  5. NEVER copy raw unformatted text. NEVER output a Hebrew year as a plain 4-digit number (e.g. do NOT output '5785' — that would be mistaken for a Gregorian year)."
   },
   "age": {
-    "value": "number (integer or decimal years, e.g. 21 or 21.5) - Extract age exactly as stated in resume",
+    "value": "integer between 18 and 60, or null",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_note": "Extract age as a number when the resume states it (e.g. 'Age: 25', '23', '21.5', 'גיל 23'). Preserve decimals (21.5). When only age is stated (no DOB in resume), put it here and leave dob null - the form will derive year-only DOB. If only DOB is given in the resume, you may calculate age for this field and put the DOB in dob; if both are stated, include both."
+    "_note": "Extract age as a plain integer (e.g. 25). If the resume says 'גיל 23' or 'Age: 25' or '21.5', extract only the number (floor decimals: 21.5 → 21). NEVER output text like 'כג' or '23 שנה' — only the integer. If age is outside 18-60 or cannot be parsed as an integer, output null. When only age is stated (no DOB), put it here and leave dob null."
   },
   "gender": {
     "value": "Selection",
@@ -158,7 +159,7 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": "Selection",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_ethnicity_options": ["Ashkenazi", "Sephardi", "Yemenite", "Ethiopian", "Convert", "Other"],
+    "_ethnicity_options": ["Ashkenazi", "Sephardi", "Yemenite", "Ethiopian", "Half-Half", "Convert", "Other"],
     "_note": "If uncertain about ethnicity, leave empty (set to null). Do NOT guess or use 'Mixed'."
   },
   "tribalStatus": {
@@ -212,14 +213,14 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": ["Selection (Multiple Allowed)"],
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_religiousAffiliation_options": ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"],
-    "_note": "IMPORTANT: 'Modern Orthodox' may appear in Hebrew as 'חרדי מודרני' (charedi moderni) - map this to 'Modern Orthodox'. Also recognize 'דתי מודרני' (dati moderni) as 'Modern Orthodox' for backward compatibility."
+    "_religiousAffiliation_options": ["Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Baal Teshuva", "Masorti", "Traditional", "Secular"],
+    "_note": "IMPORTANT: 'Modern Orthodox' may appear in Hebrew as 'חרדי מודרני' (charedi moderni) - map this to 'Modern Orthodox'. Also recognize 'דתי מודרני' (dati moderni) as 'Modern Orthodox' for backward compatibility. Also Recognize 'חוזר בתשובה' (chozer betshuva) and map it to 'Baal Teshuva'."
   },
   "learningStatus": {
     "value": "Selection",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_learningStatus_options": ["Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"],
+    "_learningStatus_options": ["Full Time", "Half Time", "Koveah Itim", "Learn then Work", "Working - Not Learning", "N/A"],
     "_note": "Candidate's OWN current learning Torah status. For women use 'N/A' unless explicitly stated. For men, extract from yeshiva/kollel/work. Do not confuse with preferredLearningStatus (what they want in a spouse)."
   },
   "headCovering": {
@@ -289,14 +290,14 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": ["Selection (Multiple Allowed)"] | null,
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_preferredHashkafos_options": ["I don't mind", "Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Masorti", "Traditional", "Secular"],
-    "_note": "IMPORTANT: 'Modern Orthodox' may appear in Hebrew as 'חרדי מודרני' (charedi moderni) - map this to 'Modern Orthodox'. Also recognize 'דתי מודרני' (dati moderni) as 'Modern Orthodox' for backward compatibility."
+    "_preferredHashkafos_options": ["I don't mind", "Haredi", "Hardal", "Dati Leumi", "Modern Orthodox", "Yeshivish American", "Yeshivish Litvish", "Yeshivish Hasidish", "Chabad", "Baal Teshuva", "Masorti", "Traditional", "Secular"],
+    "_note": "IMPORTANT: 'Modern Orthodox' may appear in Hebrew as 'חרדי מודרני' (charedi moderni) - map this to 'Modern Orthodox'. Also recognize 'דתי מודרני' (dati moderni) as 'Modern Orthodox' for backward compatibility. Also Recognize 'חוזר בתשובה' (chozer betshuva) and map it to 'Baal Teshuva'."
   },
   "preferredLearningStatus": {
     "value": ["Selection (Multiple Allowed)"] | null,
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_preferredLearningStatus_options": ["I don't mind", "Full Time", "Half Time", "Koveah Itim", "Working - Not Learning", "N/A"],
+    "_preferredLearningStatus_options": ["I don't mind", "Full Time", "Half Time", "Koveah Itim", "Learn then Work", "Working - Not Learning", "N/A"],
     "_note": "CRITICAL: Only fill if confidence >= 0.9. Otherwise set to null or []"
   },
   "preferredHeadCovering": {
