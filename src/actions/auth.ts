@@ -68,6 +68,7 @@ export async function loginUser(username: string, password?: string): Promise<Us
                 username: obj.username,
                 name: obj.name,
                 role: obj.role as "admin" | "user",
+                dbName: obj.dbName || undefined,
                 // Do not return password
             };
             

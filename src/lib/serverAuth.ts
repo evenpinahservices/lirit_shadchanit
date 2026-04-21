@@ -53,6 +53,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             username: user.username,
             name: user.name,
             role: user.role as "admin" | "user",
+            dbName: (user as any).dbName || undefined,
         };
     } catch (error) {
         console.error("Error getting current user:", error);

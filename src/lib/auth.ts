@@ -11,6 +11,7 @@ export interface AuthUser {
     username: string;
     name: string;
     role: "admin" | "user";
+    dbName?: string;
 }
 
 /**
@@ -62,6 +63,7 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
             username: user.username,
             name: user.name,
             role: user.role as "admin" | "user",
+            dbName: (user as any).dbName || undefined,
         };
     } catch (error) {
         console.error("Error getting authenticated user:", error);
@@ -107,6 +109,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthUse
                     username: user.username,
                     name: user.name,
                     role: user.role as "admin" | "user",
+                    dbName: (user as any).dbName || undefined,
                 };
             }
         } catch (error) {

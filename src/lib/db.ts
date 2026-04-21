@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// Don't throw at module load - check at runtime instead
 function getMongoUri(): string {
     if (!MONGODB_URI) {
         throw new Error(
@@ -12,52 +11,42 @@ function getMongoUri(): string {
     return MONGODB_URI;
 }
 
-interface MongooseCache {
-    conn: typeof mongoose | null;
-    promise: Promise<typeof mongoose> | null;
-}
+// Cache the main connection promise and child connections by dbName
+let mainConnectionPromise: Promise<typeof mongoose> | null = null;
+const childConnections: Map<string, mongoose.Connection> = new Map();
 
-// Global augmentation to add the mongoose cache property to the global object
-declare global {
-    var mongoose: MongooseCache;
-}
+async function dbConnect(dbName?: string): Promise<mongoose.Connection> {
+    const uri = getMongoUri();
 
-let cached = global.mongoose;
-
-if (!cached) {
-    cached = global.mongoose = { conn: null, promise: null };
-}
-
-async function dbConnect() {
-    if (cached.conn) {
-        return cached.conn;
-    }
-
-    if (!cached.promise) {
-        const opts = {
-            bufferCommands: false,
-        };
-
+    if (!mainConnectionPromise) {
+        const opts = { bufferCommands: false };
         console.log("Connecting to MongoDB...");
-        const uri = getMongoUri();
-        cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
+        mainConnectionPromise = mongoose.connect(uri, opts).then((m) => {
             console.log("MongoDB Connected Successfully");
-            return mongoose;
-        }).catch(err => {
+            return m;
+        }).catch((err) => {
             console.error("MongoDB Connection Error:", err);
-            cached.promise = null; // Reset promise on error
+            mainConnectionPromise = null;
             throw err;
         });
     }
 
-    try {
-        cached.conn = await cached.promise;
-    } catch (e) {
-        cached.promise = null;
-        throw e;
+    await mainConnectionPromise;
+
+    if (!dbName) return mongoose.connection;
+
+    // Extract the default db name from the URI (e.g. /main)
+    const uriDbMatch = uri.match(/\/([^/?]+)(\?|$)/);
+    const defaultDbName = uriDbMatch ? uriDbMatch[1] : "main";
+
+    if (dbName === defaultDbName) return mongoose.connection;
+
+    if (!childConnections.has(dbName)) {
+        const child = mongoose.connection.useDb(dbName, { useCache: true });
+        childConnections.set(dbName, child);
     }
 
-    return cached.conn;
+    return childConnections.get(dbName)!;
 }
 
 export default dbConnect;

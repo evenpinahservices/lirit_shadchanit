@@ -6,12 +6,11 @@ import { User } from "@/lib/mockData";
 
 const UserSchema = new Schema<User>(
     {
-        // We can use a custom ID or let Mongo generate _id, 
-        // but the app expects a string `id`. We'll map _id to id in the actions.
         username: { type: String, required: true, unique: true },
         name: { type: String, required: true },
         role: { type: String, enum: ["admin", "user"], default: "user" },
-        password: { type: String, required: true }, // In production, hash this!
+        password: { type: String, required: true },
+        dbName: { type: String }, // optional: overrides the default database for this user's data
     },
     {
         timestamps: true,

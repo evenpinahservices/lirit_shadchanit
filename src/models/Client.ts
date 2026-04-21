@@ -1,4 +1,4 @@
-import mongoose, { Schema, Model } from "mongoose";
+import mongoose, { Schema, Model, Connection } from "mongoose";
 import { Client } from "@/lib/mockData";
 
 const ClientSchema = new Schema<Client>(
@@ -79,6 +79,10 @@ ClientSchema.set('toJSON', {
     }
 });
 
+
+export function getClientModel(conn: Connection): Model<Client> {
+    return (conn.models["Client"] as Model<Client>) || conn.model<Client>("Client", ClientSchema);
+}
 
 const ClientModel: Model<Client> = mongoose.models.Client || mongoose.model<Client>("Client", ClientSchema);
 

@@ -1897,7 +1897,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                         }
                                                         onApprove();
                                                     }, (validationErrors) => {
-                                                        // Find the first step that has an error and navigate to it
                                                         const errorFields = Object.keys(validationErrors);
                                                         if (errorFields.length > 0) {
                                                             for (let i = 0; i < STEPS.length; i++) {

@@ -7,6 +7,7 @@ export interface User {
     name: string;
     role: "admin" | "user";
     password?: string;
+    dbName?: string; // optional: if set, this user's client data lives in this MongoDB database
 }
 
 export interface Client {
