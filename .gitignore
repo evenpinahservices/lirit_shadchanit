@@ -2,6 +2,10 @@
 
 # dependencies
 /node_modules
+/web-app/node_modules
+/web-app/.next
+/web-app/tsconfig.tsbuildinfo
+/web-app/next-env.d.ts
 /.pnp
 .pnp.*
 .yarn/*

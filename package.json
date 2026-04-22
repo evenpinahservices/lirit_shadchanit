@@ -10,7 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "sync-bugs": "node scripts/sync-bug-directory.js",
-    "seed:demo": "npx tsx scripts/seedDemo.ts"
+    "seed:demo": "npx tsx scripts/seedDemo.ts",
+    "migrate:lirit": "npx tsx scripts/migrateLirit.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
