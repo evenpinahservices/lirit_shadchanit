@@ -9,6 +9,7 @@ import {
     deleteClient as serverDeleteClient
 } from "@/actions/client";
 import { uploadImage as serverUploadImage } from "@/actions/upload";
+import { useAuth } from "@/context/AuthContext";
 
 interface ClientContextType {
     clients: Client[];
@@ -27,6 +28,7 @@ interface ClientContextType {
 const ClientContext = createContext<ClientContextType | undefined>(undefined);
 
 export function ClientProvider({ children }: { children: React.ReactNode }) {
+    const { user } = useAuth();
     const [clients, setClients] = useState<Client[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
@@ -80,8 +82,13 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        fetchClients();
-    }, []);
+        if (user) {
+            fetchClients();
+        } else {
+            setClients([]);
+            setIsLoading(false);
+        }
+    }, [user?.id]);
 
     const refetchClients = async () => {
         await fetchClients();
