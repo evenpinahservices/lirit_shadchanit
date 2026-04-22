@@ -11,7 +11,6 @@ function getMongoUri(): string {
     return MONGODB_URI;
 }
 
-// Cache the main connection promise and child connections by dbName
 let mainConnectionPromise: Promise<typeof mongoose> | null = null;
 const childConnections: Map<string, mongoose.Connection> = new Map();
 
@@ -35,7 +34,6 @@ async function dbConnect(dbName?: string): Promise<mongoose.Connection> {
 
     if (!dbName) return mongoose.connection;
 
-    // Extract the default db name from the URI (e.g. /main)
     const uriDbMatch = uri.match(/\/([^/?]+)(\?|$)/);
     const defaultDbName = uriDbMatch ? uriDbMatch[1] : "main";
 

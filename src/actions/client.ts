@@ -2,12 +2,12 @@
 
 import dbConnect from "@/lib/db";
 import { getClientModel } from "@/models/Client";
+import ClientModel from "@/models/Client";
 import { Client, generateMockClients } from "@/lib/mockData";
 import { revalidatePath } from "next/cache";
 import { requireAuth, getCurrentUser } from "@/lib/serverAuth";
 import { isValidObjectId } from "@/lib/validation";
 
-// Type definition for Client Input (excluding auto-generated fields)
 type ClientInput = Omit<Client, "id" | "createdAt">;
 
 function mapDoc(doc: any): Client {
@@ -30,8 +30,8 @@ export async function getClients(): Promise<Client[]> {
     try {
         const user = await getCurrentUser();
         const conn = await dbConnect(user?.dbName);
-        const ClientModel = getClientModel(conn);
-        const clients = await ClientModel.find({}).sort({ createdAt: -1 }).lean();
+        const Model = getClientModel(conn);
+        const clients = await Model.find({}).sort({ createdAt: -1 }).lean();
         return clients.map(mapDoc);
     } catch (error: any) {
         console.error("Error in getClients:", error);
@@ -42,9 +42,9 @@ export async function getClients(): Promise<Client[]> {
 export async function createClient(data: ClientInput): Promise<Client> {
     const user = await requireAuth();
     const conn = await dbConnect(user.dbName);
-    const ClientModel = getClientModel(conn);
+    const Model = getClientModel(conn);
 
-    const newClient = new ClientModel({
+    const newClient = new Model({
         ...data,
         createdAt: new Date().toISOString().split("T")[0],
     });
@@ -66,9 +66,9 @@ export async function updateClient(id: string, updates: Partial<Client>): Promis
     }
 
     const conn = await dbConnect(user.dbName);
-    const ClientModel = getClientModel(conn);
+    const Model = getClientModel(conn);
     const { id: _, createdAt: __, ...updateData } = updates;
-    await ClientModel.findByIdAndUpdate(id, { $set: updateData }, { new: true, runValidators: true });
+    await Model.findByIdAndUpdate(id, { $set: updateData }, { new: true, runValidators: true });
     revalidatePath("/clients");
     revalidatePath("/matching");
     revalidatePath("/inbox");
@@ -82,9 +82,9 @@ export async function deleteClient(id: string): Promise<void> {
     }
 
     const conn = await dbConnect(user.dbName);
-    const ClientModel = getClientModel(conn);
+    const Model = getClientModel(conn);
 
-    const client = await ClientModel.findById(id);
+    const client = await Model.findById(id);
     if (!client) {
         throw new Error("Client not found");
     }
@@ -96,18 +96,21 @@ export async function deleteClient(id: string): Promise<void> {
         await deleteCloudinaryImages(imageUrls);
     }
 
-    await ClientModel.findByIdAndDelete(id);
+    await Model.findByIdAndDelete(id);
     revalidatePath("/clients");
 }
 
 export async function seedDatabase(count: number = 10): Promise<void> {
     const user = await requireAuth();
     const conn = await dbConnect(user.dbName);
-    const ClientModel = getClientModel(conn);
+    const Model = getClientModel(conn);
     const clients = generateMockClients(count);
     for (const client of clients) {
         const { id, createdAt, ...data } = client;
-        const newClient = new ClientModel({ ...data, createdAt: new Date().toISOString().split("T")[0] });
+        const newClient = new Model({
+            ...data,
+            createdAt: new Date().toISOString().split("T")[0],
+        });
         await newClient.save();
     }
     revalidatePath("/clients");
@@ -117,12 +120,15 @@ export async function seedDatabase(count: number = 10): Promise<void> {
 export async function resetAndSeedDatabase(count: number = 100): Promise<void> {
     const user = await requireAuth();
     const conn = await dbConnect(user.dbName);
-    const ClientModel = getClientModel(conn);
-    await ClientModel.deleteMany({});
+    const Model = getClientModel(conn);
+    await Model.deleteMany({});
     const clients = generateMockClients(count);
     for (const client of clients) {
         const { id, createdAt, ...data } = client;
-        const newClient = new ClientModel({ ...data, createdAt: new Date().toISOString().split("T")[0] });
+        const newClient = new Model({
+            ...data,
+            createdAt: new Date().toISOString().split("T")[0],
+        });
         await newClient.save();
     }
     revalidatePath("/clients");
@@ -133,8 +139,8 @@ export async function resetAndSeedDatabase(count: number = 100): Promise<void> {
 export async function deleteAllExceptBatEl(): Promise<void> {
     const user = await requireAuth();
     const conn = await dbConnect(user.dbName);
-    const ClientModel = getClientModel(conn);
-    await ClientModel.deleteMany({ fullName: { $not: /בת אל/ } });
+    const Model = getClientModel(conn);
+    await Model.deleteMany({ fullName: { $not: /בת אל/ } });
     revalidatePath("/clients");
     revalidatePath("/matching");
     revalidatePath("/search");
@@ -152,7 +158,6 @@ function normalizePhone(phone: string): string {
     return normalized;
 }
 
-// Find approved client by email OR phone (for external form editing) — always uses main DB
 export async function getApprovedClientByIdentifier(
     email?: string,
     phone?: string
@@ -176,9 +181,7 @@ export async function getApprovedClientByIdentifier(
 
     if (!sanitizedEmail && !sanitizedPhone) return null;
 
-    // Always use the main DB for public form lookups
-    const conn = await dbConnect();
-    const ClientModel = getClientModel(conn);
+    await dbConnect();
 
     const query: any = { $or: [] };
 
@@ -192,12 +195,15 @@ export async function getApprovedClientByIdentifier(
         query.$or.push({ phone: sanitizedPhone });
         if (phoneDigits.length >= 9) {
             if (phoneDigits.length === 10 && phoneDigits.startsWith('05')) {
-                query.$or.push({ phone: `${phoneDigits.substring(0, 3)}-${phoneDigits.substring(3, 6)}-${phoneDigits.substring(6)}` });
-                query.$or.push({ phone: `${phoneDigits.substring(0, 3)}-${phoneDigits.substring(3)}` });
+                const formatted = `${phoneDigits.substring(0, 3)}-${phoneDigits.substring(3, 6)}-${phoneDigits.substring(6)}`;
+                query.$or.push({ phone: formatted });
+                const formatted2 = `${phoneDigits.substring(0, 3)}-${phoneDigits.substring(3)}`;
+                query.$or.push({ phone: formatted2 });
             }
             query.$or.push({ phone: phoneDigits });
             if (phoneDigits.startsWith('05') && phoneDigits.length === 10) {
-                query.$or.push({ phone: '+972' + phoneDigits.substring(1) });
+                const intlFormat = '+972' + phoneDigits.substring(1);
+                query.$or.push({ phone: intlFormat });
             }
         }
     }
