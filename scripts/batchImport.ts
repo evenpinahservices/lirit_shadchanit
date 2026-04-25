@@ -343,7 +343,7 @@ function flattenForDb(
     }
 
     // Required field fallbacks — use "Unknown" if AI couldn't extract one; leave dob empty (UI shows N/A)
-    if (!flat.fullName || String(flat.fullName).trim() === "") flat.fullName = "Unknown";
+    if (!flat.fullName || String(flat.fullName).trim() === "") flat.fullName = "Unnamed";
 
     flat.active = true;
     flat.createdAt = new Date().toISOString().split("T")[0];

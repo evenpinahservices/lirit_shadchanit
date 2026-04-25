@@ -18,7 +18,14 @@ interface PendingClient {
 }
 
 export default function DashboardAnalytics() {
-    const { clients } = useClients();
+    const { clients, isLoading } = useClients();
+
+    const Spinner = ({ className = "h-4 w-4" }: { className?: string }) => (
+        <svg className={`animate-spin ${className}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+    );
     const [pendingClients, setPendingClients] = useState<PendingClient[]>([]);
     const [totalPendingCount, setTotalPendingCount] = useState(0);
     const [isLoadingPending, setIsLoadingPending] = useState(true);
@@ -81,6 +88,20 @@ export default function DashboardAnalytics() {
 
         loadPendingClients();
     }, []);
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col h-full space-y-4">
+                <div className="shrink-0 bg-card text-card-foreground shadow p-0 pb-4">
+                    <div className="text-base font-medium text-muted-foreground mb-2">Total Clients</div>
+                    <span className="flex items-center gap-1.5 text-2xl font-bold text-muted-foreground">
+                        <Spinner className="h-5 w-5" />
+                        Loading
+                    </span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full space-y-4">
