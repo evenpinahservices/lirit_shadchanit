@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { Client } from "@/lib/mockData";
 import {
     getClients,
@@ -31,11 +31,13 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const [clients, setClients] = useState<Client[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const hasFetchedRef = useRef(false);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const fetchClients = async () => {
         try {
+            setIsLoading(true);
             setError(null);
             console.log("Attempting to fetch clients...");
             const data = await getClients();
@@ -83,11 +85,14 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         if (user) {
+            hasFetchedRef.current = true;
             fetchClients();
-        } else {
+        } else if (hasFetchedRef.current) {
+            // User logged out after being authenticated — clear state
             setClients([]);
             setIsLoading(false);
         }
+        // If user is null on first mount, auth is still loading from localStorage — keep isLoading=true
     }, [user?.id]);
 
     const refetchClients = async () => {
