@@ -172,10 +172,10 @@ export default function SearchPage() {
 
         // Height filter
         if (filterMinHeight) {
-            results = results.filter((c) => c.height >= parseInt(filterMinHeight));
+            results = results.filter((c) => (c.height ?? 0) >= parseInt(filterMinHeight));
         }
         if (filterMaxHeight) {
-            results = results.filter((c) => c.height <= parseInt(filterMaxHeight));
+            results = results.filter((c) => (c.height ?? 0) <= parseInt(filterMaxHeight));
         }
 
         // Religiosity filter

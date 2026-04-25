@@ -81,7 +81,7 @@ async function imageToBase64(filePath: string): Promise<{ mimeType: string; data
 }
 
 // Global rate limiter: space Gemini calls at least GEMINI_MIN_GAP_MS apart
-const GEMINI_MIN_GAP_MS = 6000; // ~10 RPM ceiling
+const GEMINI_MIN_GAP_MS = 3000; // ~20 RPM ceiling
 let lastGeminiCallAt = 0;
 const geminiQueue: Array<() => void> = [];
 let geminiQueueRunning = false;
@@ -462,7 +462,7 @@ async function main() {
 
     // Parse --concurrency N (default 5)
     const concArgIdx = process.argv.indexOf("--concurrency");
-    const CONCURRENCY = concArgIdx !== -1 ? Math.min(parseInt(process.argv[concArgIdx + 1], 10), 10) : 3;
+    const CONCURRENCY = concArgIdx !== -1 ? Math.min(parseInt(process.argv[concArgIdx + 1], 10), 10) : 5;
 
     const allProfiles = await scanProfiles();
     if (allProfiles.length === 0) {

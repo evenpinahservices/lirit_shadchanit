@@ -14,7 +14,9 @@
     "migrate:lirit": "npx tsx scripts/migrateLirit.ts",
     "import:batch": "npx tsx scripts/batchImport.ts",
     "import:test": "npx tsx scripts/batchImport.ts --test 10",
-    "fixup:clients": "npx tsx scripts/fixupClients.ts"
+    "fixup:clients": "npx tsx scripts/fixupClients.ts",
+    "fixup:photos": "npx tsx scripts/fixupPhotos.ts",
+    "fixup:photos:dry": "npx tsx scripts/fixupPhotos.ts --dry-run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -21,7 +21,7 @@ export interface Client {
     gender: "Male" | "Female";
 
     // Appearance
-    height: number; // in cm
+    height?: number; // in cm
     eyeColor: string;
     hairColor: string;
     photoUrl?: string;
@@ -84,7 +84,10 @@ export const ClientSchema = z.object({
     gender: z.enum(["Male", "Female"]),
     location: z.string().optional().default(""),
 
-    height: z.coerce.number().optional().default(0),
+    height: z.preprocess(
+        (v) => (v === "" || v === null || v === undefined || (typeof v === "number" && isNaN(v as number))) ? undefined : Number(v),
+        z.number().min(0).optional()
+    ),
     eyeColor: z.string().optional().default(""),
     hairColor: z.string().optional().default(""),
     photoUrl: z.string().optional(),
