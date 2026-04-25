@@ -11,7 +11,10 @@
     "test:watch": "jest --watch",
     "sync-bugs": "node scripts/sync-bug-directory.js",
     "seed:demo": "npx tsx scripts/seedDemo.ts",
-    "migrate:lirit": "npx tsx scripts/migrateLirit.ts"
+    "migrate:lirit": "npx tsx scripts/migrateLirit.ts",
+    "import:batch": "npx tsx scripts/batchImport.ts",
+    "import:test": "npx tsx scripts/batchImport.ts --test 10",
+    "fixup:clients": "npx tsx scripts/fixupClients.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -40,6 +40,9 @@ yarn-error.log*
 # local bug report directory (synced from DB by scripts/sync-bug-directory.js)
 /bug/
 
+# local profile images folder (large binary files, not for VCS)
+/profiles/
+
 # vercel
 .vercel
 

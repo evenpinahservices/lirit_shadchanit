@@ -7,7 +7,7 @@ import { Client, ClientSchema } from "@/lib/mockData";
 import { useClients } from "@/context/ClientContext";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Check, UploadCloud, X, FileJson, CheckCircle2, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, UploadCloud, X, FileJson, CheckCircle2, Trash2, Star } from "lucide-react";
 import { CircularProgress } from "@/components/ui/CircularProgress";
 import { useUploadWithProgress } from "@/hooks/useUploadWithProgress";
 import Image from "next/image";
@@ -1283,6 +1283,19 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                     className="absolute top-1 right-1 bg-danger-500 text-white rounded-full p-0.5 hover:bg-danger-600 transition-colors"
                                                 >
                                                     <X className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="Set as profile photo"
+                                                    onClick={() => handleSetProfilePhoto(img)}
+                                                    className={cn(
+                                                        "absolute bottom-1 left-1 rounded-full p-0.5 transition-colors",
+                                                        img === watchedPhotoUrl
+                                                            ? "bg-yellow-400 text-white"
+                                                            : "bg-black/40 text-white hover:bg-yellow-400"
+                                                    )}
+                                                >
+                                                    <Star className="h-3 w-3" fill={img === watchedPhotoUrl ? "currentColor" : "none"} />
                                                 </button>
                                             </div>
                                         ))}

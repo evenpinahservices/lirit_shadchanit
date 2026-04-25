@@ -90,11 +90,11 @@ export default function ClientsPage() {
 
     // Helper to calculate age from DOB
     const calculateAge = (dob: string) => {
-        if (!dob) return "N/A";
-        const birthDate = new Date(dob);
-        const ageDifMs = Date.now() - birthDate.getTime();
-        const ageDate = new Date(ageDifMs);
-        return Math.abs(ageDate.getUTCFullYear() - 1970);
+        if (!dob || dob === "NaN") return "N/A";
+        // Support plain year (e.g. "1998") or full date (e.g. "1998-05-15")
+        const year = dob.length <= 4 ? parseInt(dob, 10) : new Date(dob).getFullYear();
+        if (!year || isNaN(year) || year < 1900 || year > new Date().getFullYear()) return "N/A";
+        return new Date().getFullYear() - year;
     };
 
     return (
@@ -169,7 +169,19 @@ export default function ClientsPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {paginatedClients.length === 0 ? (
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-16 text-center text-muted-foreground">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <svg className="animate-spin h-8 w-8 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                            </svg>
+                                            <span className="text-sm">Loading clients…</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : paginatedClients.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                                         {searchTerm ? "No clients found matching your search." : "No clients found. Add your first client to get started."}
@@ -242,7 +254,15 @@ export default function ClientsPage() {
 
             {/* Mobile Card View */}
             <div id="tour-client-results-mobile" className="md:hidden flex-1 overflow-y-auto min-h-0 space-y-3 px-1 pb-32 custom-scrollbar">
-                {paginatedClients.length === 0 ? (
+                {isLoading ? (
+                    <div className="flex flex-col items-center gap-3 py-16 text-muted-foreground">
+                        <svg className="animate-spin h-8 w-8 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        <span className="text-sm">Loading clients…</span>
+                    </div>
+                ) : paginatedClients.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground">
                         {searchTerm ? "No results found." : "No clients yet."}
                     </div>

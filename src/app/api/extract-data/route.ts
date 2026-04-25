@@ -221,67 +221,30 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // Call Gemini API - Try Gemini 3.0 Flash first, then fallback
-        let geminiResponse: Response;
+        // Call Gemini API with fallback chain
+        const geminiModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-001"];
+        let geminiResponse: Response | null = null;
         try {
-            // Try gemini-3-flash-preview first (Gemini 3.0 Flash)
-            geminiResponse = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        contents: [
-                            {
-                                parts: contentParts,
-                            },
-                        ],
-                    }),
-                }
-            );
-            
-            // If 404, try gemini-2.0-flash-exp
-            if (geminiResponse.status === 404) {
-                console.log("gemini-3-flash-preview not found, trying gemini-2.0-flash-exp");
-                geminiResponse = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+            for (const model of geminiModels) {
+                const attempt = await fetch(
+                    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
                     {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            contents: [
-                                {
-                                    parts: contentParts,
-                                },
-                            ],
-                        }),
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ contents: [{ parts: contentParts }] }),
                     }
                 );
-                
-                // If still 404, try v1 API with gemini-1.5-flash (stable fallback)
-                if (geminiResponse.status === 404) {
-                    console.log("gemini-2.0-flash-exp not found, trying v1 API with gemini-1.5-flash");
-                    geminiResponse = await fetch(
-                        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                                contents: [
-                                    {
-                                        parts: contentParts,
-                                    },
-                                ],
-                            }),
-                        }
-                    );
+                if (attempt.status !== 404) {
+                    geminiResponse = attempt;
+                    break;
                 }
+                console.log(`${model} not found, trying next model`);
+            }
+            if (!geminiResponse) {
+                return NextResponse.json(
+                    { success: false, error: "No Gemini model available. Check API key and model access." },
+                    { status: 503 }
+                );
             }
         } catch (error: any) {
             console.error("Gemini API fetch error:", error);
@@ -294,16 +257,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (!geminiResponse.ok) {
-            const errorText = await geminiResponse.text();
+        if (!geminiResponse!.ok) {
+            const errorText = await geminiResponse!.text();
             console.error("Gemini API error:", errorText);
             return NextResponse.json(
                 { success: false, error: `Gemini API error: ${errorText}` },
-                { status: geminiResponse.status }
+                { status: geminiResponse!.status }
             );
         }
 
-        const geminiData = await geminiResponse.json();
+        const geminiData = await geminiResponse!.json();
         const responseText =
             geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
