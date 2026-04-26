@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Heart } from "lucide-react";
 import { getBrand } from "@/config/branding";
@@ -16,6 +16,18 @@ type FormState = {
 };
 
 export default function SignupPage() {
+    return (
+        <Suspense fallback={
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <p className="text-sm text-muted-foreground">Loading…</p>
+            </div>
+        }>
+            <SignupContent />
+        </Suspense>
+    );
+}
+
+function SignupContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get("invite") || "";
