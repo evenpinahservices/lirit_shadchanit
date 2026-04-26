@@ -8,6 +8,7 @@ import { Plus, Pencil, Trash2, Heart, MapPin, Briefcase, Search, ChevronLeft, Ch
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { ItemsPerPageSelector } from "@/components/ui/ItemsPerPageSelector";
 import { useSwipeNavigation } from "@/hooks/useSwipeNavigation";
+import { calculateAge as calcAge } from "@/lib/matchingUtils";
 
 export default function ClientsPage() {
     const { clients, deleteClient, error, clearError, isLoading } = useClients();
@@ -73,10 +74,9 @@ export default function ClientsPage() {
     });
 
     const calculateAge = (dob: string) => {
-        if (!dob || dob === "NaN") return "N/A";
-        const year = dob.length <= 4 ? parseInt(dob, 10) : new Date(dob).getFullYear();
-        if (!year || isNaN(year) || year < 1900 || year > new Date().getFullYear()) return "N/A";
-        return new Date().getFullYear() - year;
+        if (!dob) return "N/A";
+        const age = calcAge(dob);
+        return isNaN(age) ? "N/A" : age;
     };
 
     return (

@@ -1,8 +1,31 @@
 import { Client } from "./mockData";
-import { areLocationsCompatible } from "./utils";
+import { areLocationsCompatible, parseHebrewYearToNumber } from "./utils";
 
 export const calculateAge = (dob: string): number => {
+    if (!dob) return NaN;
+
+    // Year-only: "1985"
+    if (/^\d{4}$/.test(dob)) {
+        return new Date().getFullYear() - parseInt(dob, 10);
+    }
+
+    // Hebrew date: "Hebrew: ה אייר תשס״ח"
+    if (dob.includes("Hebrew:")) {
+        const parts = dob.trim().split(" ");
+        const hebrewYearStr = parts[parts.length - 1];
+        let numericYear = parseInt(hebrewYearStr, 10);
+        if (isNaN(numericYear) || numericYear < 1000) {
+            numericYear = parseHebrewYearToNumber(hebrewYearStr);
+        }
+        if (!isNaN(numericYear) && numericYear > 1000) {
+            return new Date().getFullYear() - (numericYear - 3760);
+        }
+        return NaN;
+    }
+
+    // Standard date: "YYYY-MM-DD"
     const birthDate = new Date(dob);
+    if (isNaN(birthDate.getTime())) return NaN;
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();

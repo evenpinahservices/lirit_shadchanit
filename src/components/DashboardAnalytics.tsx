@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { User as UserIcon, ArrowRight, Clock, Hourglass } from "lucide-react";
 import Link from "next/link";
 import { getPendingClients } from "@/actions/pendingClient";
+import { calculateAge } from "@/lib/matchingUtils";
 
 interface PendingClient {
     id: string;
@@ -44,14 +45,6 @@ export default function DashboardAnalytics() {
     const totalGirls = genderCounts["Female"] || 0;
 
     // Calculate Age
-    const calculateAge = (dob: string) => {
-        if (!dob) return null;
-        const birthDate = new Date(dob);
-        const ageDifMs = Date.now() - birthDate.getTime();
-        const ageDate = new Date(ageDifMs);
-        return Math.abs(ageDate.getUTCFullYear() - 1970);
-    };
-
     // Get clients added in the last week
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -156,7 +149,7 @@ export default function DashboardAnalytics() {
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-semibold text-sm group-hover:text-red-600 transition-colors truncate">{client.fullName}</h3>
                                             <p className="text-xs text-muted-foreground truncate">
-                                                {calculateAge(client.dob) !== null ? `${calculateAge(client.dob)} y/o` : 'Age N/A'} • {client.location}
+                                                {!isNaN(calculateAge(client.dob)) ? `${calculateAge(client.dob)} y/o` : 'Age N/A'} • {client.location}
                                             </p>
                                         </div>
                                         <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-red-600 transition-colors shrink-0" />
@@ -207,7 +200,7 @@ export default function DashboardAnalytics() {
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-semibold text-sm group-hover:text-red-600 transition-colors truncate">{client.fullName}</h3>
                                             <p className="text-xs text-muted-foreground truncate">
-                                                {calculateAge(client.dob) !== null ? `${calculateAge(client.dob)} y/o` : 'Age N/A'} • {client.location}
+                                                {!isNaN(calculateAge(client.dob)) ? `${calculateAge(client.dob)} y/o` : 'Age N/A'} • {client.location}
                                             </p>
                                         </div>
                                         <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-red-600 transition-colors shrink-0" />

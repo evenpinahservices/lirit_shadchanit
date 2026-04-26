@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getPendingClients, rejectPendingClient } from "@/actions/pendingClient";
+import { calculateAge } from "@/lib/matchingUtils";
 import { Hourglass, MapPin, Briefcase, Search, User as UserIcon, Trash2, Clock, CheckCircle2, Link as LinkIcon, MessageSquare, FileText, Inbox, Sparkles } from "lucide-react";
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 import { ErrorAlertModal } from "@/components/ui/ErrorAlertModal";
@@ -65,14 +66,6 @@ export default function InboxPage() {
                 setFriendlyError(getFriendlyError(error, "reject-client"));
             }
         }
-    };
-
-    const calculateAge = (dob: string) => {
-        if (!dob) return "N/A";
-        const birthDate = new Date(dob);
-        const ageDifMs = Date.now() - birthDate.getTime();
-        const ageDate = new Date(ageDifMs);
-        return Math.abs(ageDate.getUTCFullYear() - 1970);
     };
 
     const formatDate = (dateString: string) => {
