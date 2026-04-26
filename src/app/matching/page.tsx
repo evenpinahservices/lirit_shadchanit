@@ -107,7 +107,7 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
             usedSeedIds.current = new Set();
             const next = buildFeed(allClients);
             setSlots(next);
-        }, 280);
+        }, 650);
     };
 
     const handleNotNow = (slotId: string) => {
@@ -139,8 +139,8 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
 
             setSlots(prev => prev.map(s => s.id === slotId ? newSlot : s));
             // Tick: fade in
-            setTimeout(() => setSlots(prev => prev.map(s => s.id === newSlot.id ? { ...s, visible: true } : s)), 30);
-        }, 280);
+            setTimeout(() => setSlots(prev => prev.map(s => s.id === newSlot.id ? { ...s, visible: true } : s)), 50);
+        }, 650);
     };
 
     const tierOrder: Tier[] = ["week", "month", "older"];
@@ -193,6 +193,12 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
     );
 }
 
+function safeAge(dob: string): string {
+    if (!dob) return "—";
+    const age = calculateAge(dob);
+    return isNaN(age) || age < 0 || age > 120 ? "—" : `${age} y/o`;
+}
+
 // ── Feed Card ──────────────────────────────────────────────────────────────────
 
 function FeedCard({ slot, onNotNow }: { slot: FeedSlot; onNotNow: () => void }) {
@@ -201,27 +207,31 @@ function FeedCard({ slot, onNotNow }: { slot: FeedSlot; onNotNow: () => void }) 
     return (
         <div
             className="flex flex-col bg-white dark:bg-gray-950 rounded-xl shadow-sm overflow-hidden"
-            style={{ opacity: visible ? 1 : 0, transition: "opacity 0.25s ease" }}
+            style={{ opacity: visible ? 1 : 0, transition: "opacity 0.6s ease" }}
         >
-            {/* Two avatars */}
-            <div className="flex items-center justify-around p-4 bg-gradient-to-b from-red-50/60 to-transparent dark:from-red-900/10">
-                <MiniAvatar client={seed} />
-                <div className="w-px self-stretch bg-gray-100 dark:bg-gray-800 mx-1" />
-                {match ? (
-                    <MiniAvatar client={match} />
-                ) : (
-                    <div className="flex flex-col items-center gap-1">
-                        <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                            <Users2 className="h-5 w-5 text-gray-300 dark:text-gray-600" />
+            {/* Two person columns */}
+            <div className="grid grid-cols-2 bg-gradient-to-b from-red-50/60 to-transparent dark:from-red-900/10">
+                {/* Left person */}
+                <div className="flex flex-col items-center gap-1 px-3 py-4 border-r border-gray-100 dark:border-gray-800">
+                    <MiniAvatar client={seed} />
+                    <span className="text-[10px] text-gray-400 text-center truncate w-full px-1">{seed.location || "—"}</span>
+                </div>
+                {/* Right person */}
+                <div className="flex flex-col items-center gap-1 px-3 py-4">
+                    {match ? (
+                        <>
+                            <MiniAvatar client={match} />
+                            <span className="text-[10px] text-gray-400 text-center truncate w-full px-1">{match.location || "—"}</span>
+                        </>
+                    ) : (
+                        <div className="flex flex-col items-center gap-1 h-full justify-center">
+                            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                <Users2 className="h-5 w-5 text-gray-300 dark:text-gray-600" />
+                            </div>
+                            <span className="text-[10px] text-gray-400">No match</span>
                         </div>
-                        <span className="text-[10px] text-gray-400">No match</span>
-                    </div>
-                )}
-            </div>
-
-            <div className="px-3 pb-3 grid grid-cols-2 gap-1 text-[10px] text-gray-400 text-center">
-                <span className="truncate">{seed.location || "—"}</span>
-                {match && <span className="truncate">{match.location || "—"}</span>}
+                    )}
+                </div>
             </div>
 
             {/* Actions */}
@@ -251,7 +261,7 @@ function FeedCard({ slot, onNotNow }: { slot: FeedSlot; onNotNow: () => void }) 
 
 function MiniAvatar({ client }: { client: Client }) {
     return (
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-1 w-full">
             <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
                 {client.photoUrl ? (
                     <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
@@ -259,10 +269,10 @@ function MiniAvatar({ client }: { client: Client }) {
                     <span className="text-base font-bold text-gray-300 dark:text-gray-600">{client.fullName.charAt(0)}</span>
                 )}
             </div>
-            <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 text-center leading-tight max-w-[70px] truncate">
+            <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 text-center leading-tight w-full truncate">
                 {client.fullName.split(" ")[0]}
             </span>
-            <span className="text-[10px] text-gray-400">{calculateAge(client.dob)} y/o</span>
+            <span className="text-[10px] text-gray-400">{safeAge(client.dob)}</span>
         </div>
     );
 }
