@@ -393,7 +393,32 @@ export function getLocationCountry(location: string): CountryCode {
       return info.country;
     }
   }
-  
+
+  // Hebrew locations with " - suffix" (e.g. "בית מאיר - מושב", "גבעת שמואל - קיבוץ")
+  // Strip the suffix and retry with just the base name
+  if (location.includes(" - ")) {
+    const base = location.split(" - ")[0].trim();
+    if (base !== location) {
+      const baseCountry = getLocationCountry(base);
+      if (baseCountry !== "OTHER") return baseCountry;
+    }
+  }
+
+  // English addresses that include a US state abbreviation anywhere in the string
+  // Covers "Far Rockaway NY", "222 Beach St, Brooklyn NY", "Baltimore, MD", etc.
+  const US_STATES = /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)\b/;
+  if (US_STATES.test(location)) return "US";
+
+  // Last comma segment — handles "Street Address, City ST" → try "City ST"
+  const commaParts = location.split(",");
+  if (commaParts.length >= 2) {
+    const lastSeg = commaParts[commaParts.length - 1].trim();
+    if (lastSeg !== location) {
+      const segCountry = getLocationCountry(lastSeg);
+      if (segCountry !== "OTHER") return segCountry;
+    }
+  }
+
   return "OTHER";
 }
 
