@@ -32,6 +32,16 @@ export async function getDismissedMatches(clientId: string): Promise<DismissedEn
     }));
 }
 
+export async function restoreMatch(clientId: string, candidateId: string): Promise<void> {
+    const user = await requireAuth();
+    if (!isValidObjectId(clientId) || !isValidObjectId(candidateId)) {
+        throw new Error("Invalid ID");
+    }
+    const conn = await dbConnect(user.dbName);
+    const Model = getMatchRecordModel(conn);
+    await Model.deleteOne({ clientId, candidateId });
+}
+
 export async function dismissMatch(
     clientId: string,
     candidateId: string,
