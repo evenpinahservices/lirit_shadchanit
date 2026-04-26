@@ -505,8 +505,20 @@ export default function MatchingPage() {
     );
 
     const handleRestore = (candidateId: string) => {
-        // Remove from dismissed list; match will reappear on next generation
         setDismissed(prev => prev.filter(d => d.candidateId !== candidateId));
+
+        // Re-add the restored client to the displayed list immediately
+        const restoredClient = clients.find(c => c.id === candidateId);
+        if (!restoredClient || !selectedClient) return;
+
+        // Determine match level
+        const { level1 } = findMatchesWithLevels(selectedClient, [restoredClient], new Set());
+        const level = level1.length > 0 ? 1 : 2;
+
+        setDisplayed(prev => {
+            if (prev.some(m => m.client.id === candidateId)) return prev; // already shown
+            return [...prev, { client: restoredClient, level: level as 1 | 2 }];
+        });
     };
 
     const getCountryName = (code: CountryCode): string => {
