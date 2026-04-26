@@ -179,12 +179,12 @@ export async function verifySession(): Promise<User | null> {
             return null;
         }
         
-        // Return user data in the same format as loginUser
         return {
             id: authUser.id,
             username: authUser.username,
             name: authUser.name,
             role: authUser.role,
+            impersonating: authUser.impersonating || undefined,
         };
     } catch (error) {
         console.error("Error verifying session:", error);

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { User } from "@/lib/mockData";
 import { useRouter, usePathname } from "next/navigation";
 import { loginUser, verifySession, logoutSession } from "@/actions/auth";
+import { stopImpersonation } from "@/actions/admin";
 
 const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
@@ -12,6 +13,8 @@ interface AuthContextType {
     login: (username: string, password?: string) => Promise<boolean>;
     logout: () => void;
     isAuthenticated: boolean;
+    impersonatingUsername: string | null;
+    stopImpersonating: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +30,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("mock_user");
         logoutSession().catch(() => {});
         router.push("/login");
+    }, [router]);
+
+    const stopImpersonating = useCallback(async () => {
+        await stopImpersonation();
+        // Refresh the session to pick up the real user again
+        const serverUser = await verifySession();
+        if (serverUser) {
+            setUser(serverUser);
+            localStorage.setItem("mock_user", JSON.stringify(serverUser));
+        }
+        router.push("/admin");
+        router.refresh();
     }, [router]);
 
     // Verify the server-side session is still valid
@@ -97,8 +112,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
     };
 
+    const impersonatingUsername = (user as any)?.impersonating || null;
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, impersonatingUsername, stopImpersonating }}>
             {children}
         </AuthContext.Provider>
     );

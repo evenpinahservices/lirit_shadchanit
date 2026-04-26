@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { getBrand } from "@/config/branding";
-import { LayoutDashboard, Users, Heart, Search, LogOut, Maximize2, Minimize2, StickyNote, Hourglass } from "lucide-react";
+import { LayoutDashboard, Users, Heart, Search, LogOut, Maximize2, Minimize2, StickyNote, Hourglass, ShieldCheck } from "lucide-react";
 import { BugReportButton } from "@/components/ui/BugReportButton";
 import { useBackgroundAiProgress } from "@/context/BackgroundAiProgressContext";
 import { CircularProgress } from "@/components/ui/CircularProgress";
@@ -35,7 +35,7 @@ function useIsPwa() {
 
 export function Navbar() {
     const pathname = usePathname();
-    const { user, logout } = useAuth();
+    const { user, logout, impersonatingUsername, stopImpersonating } = useAuth();
     const aiProgress = useBackgroundAiProgress();
     const [isFullscreen, setIsFullscreen] = useState(false);
     const isPwa = useIsPwa();
@@ -65,15 +65,27 @@ export function Navbar() {
         { href: "/notes", label: "Notes", icon: StickyNote },
     ];
 
-    // Hide navbar on login page and external form pages
-    if (pathname === "/login" || pathname.startsWith("/form/")) {
+    // Hide navbar on login/signup pages and external form pages
+    if (pathname === "/login" || pathname === "/signup" || pathname.startsWith("/form/")) {
         return null;
     }
 
     const brand = getBrand();
 
     return (
-        <nav className="bg-gray-50 dark:bg-gray-900 px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 md:py-4 sticky top-0 z-10 shadow-sm shrink-0">
+        <nav className="sticky top-0 z-10 shadow-sm shrink-0">
+            {impersonatingUsername && (
+                <div className="bg-amber-400 text-amber-900 text-xs font-semibold px-4 py-1.5 flex items-center justify-between">
+                    <span>Viewing as @{impersonatingUsername}</span>
+                    <button
+                        onClick={stopImpersonating}
+                        className="underline hover:no-underline ml-4"
+                    >
+                        Stop impersonating
+                    </button>
+                </div>
+            )}
+        <div className="bg-gray-50 dark:bg-gray-900 px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 md:py-4">
             <div className="flex items-center justify-between gap-2 sm:gap-4 min-w-0">
                 <div className="flex items-center gap-4 sm:gap-6 md:gap-8 min-w-0 flex-shrink">
                     <Link href="/" className="text-lg sm:text-xl font-bold text-primary flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
@@ -143,6 +155,22 @@ export function Navbar() {
                         <BugReportButton />
                     </div>
 
+                    {user?.role === "admin" && (
+                        <Link
+                            href="/admin"
+                            className={cn(
+                                "text-xs sm:text-sm font-medium flex items-center gap-1 shrink-0 px-1 sm:px-0 transition-colors",
+                                pathname === "/admin"
+                                    ? "text-primary"
+                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                            )}
+                            title="Admin Panel"
+                        >
+                            <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <span className="hidden sm:inline">Admin</span>
+                        </Link>
+                    )}
+
                     {user && (
                         <button
                             onClick={logout}
@@ -155,6 +183,7 @@ export function Navbar() {
                     )}
                 </div>
             </div>
+        </div>
         </nav>
     );
 }

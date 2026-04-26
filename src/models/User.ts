@@ -10,7 +10,10 @@ const UserSchema = new Schema<User>(
         name: { type: String, required: true },
         role: { type: String, enum: ["admin", "user"], default: "user" },
         password: { type: String, required: true },
-        dbName: { type: String }, // optional: overrides the default database for this user's data
+        dbName: { type: String },
+        email: { type: String, sparse: true },
+        phone: { type: String },
+        profilePhotoUrl: { type: String },
     },
     {
         timestamps: true,

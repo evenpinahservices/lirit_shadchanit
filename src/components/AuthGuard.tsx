@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/signup"];
 const PUBLIC_PATH_PREFIXES = ["/form/"]; // External form routes
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {

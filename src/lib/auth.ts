@@ -12,6 +12,7 @@ export interface AuthUser {
     name: string;
     role: "admin" | "user";
     dbName?: string;
+    impersonating?: string; // username being impersonated (admin only)
 }
 
 /**

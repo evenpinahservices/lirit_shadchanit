@@ -3,6 +3,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { requireAuthAndRateLimit } from "@/lib/apiAuth";
 import dbConnect from "@/lib/db";
 import FormTokenModel from "@/models/FormToken";
+import UserModel from "@/models/User";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -43,11 +44,10 @@ async function validateFormToken(token: string): Promise<boolean> {
 }
 
 export async function GET(request: NextRequest) {
-    // Check if this is a form token request (for external form links)
     const token = request.nextUrl.searchParams.get("token");
-    
+    let ownerUsername: string | undefined;
+
     if (token) {
-        // Validate form token (for external form links)
         const isValidToken = await validateFormToken(token);
         if (!isValidToken) {
             return NextResponse.json(
@@ -55,35 +55,38 @@ export async function GET(request: NextRequest) {
                 { status: 401 }
             );
         }
+        // Resolve the folder from the form token's ownerUsername
+        await dbConnect();
+        const tokenDoc = await FormTokenModel.findOne({ token }).lean();
+        ownerUsername = (tokenDoc as any)?.ownerUsername || undefined;
     } else {
-        // Require regular authentication and rate limiting (100 requests per hour)
         const authResult = await requireAuthAndRateLimit(request, 100, 3600000);
         if ("error" in authResult) {
             return authResult.error;
         }
+        ownerUsername = (authResult as { user: any }).user?.username;
     }
-    
+
+    const folder = ownerUsername
+        ? `shadchanit_clients/${ownerUsername}`
+        : "shadchanit_clients";
+
     try {
         const timestamp = Math.round(new Date().getTime() / 1000);
-        
-        const paramsToSign = {
-            timestamp,
-            folder: "shadchanit_clients",
-        };
+
+        const paramsToSign = { timestamp, folder };
 
         const signature = cloudinary.utils.api_sign_request(
             paramsToSign,
             process.env.CLOUDINARY_API_SECRET!
         );
 
-        // Return signature, timestamp, cloudName, folder, and apiKey
-        // Note: apiKey is needed for direct Cloudinary uploads from client
         return NextResponse.json({
             signature,
             timestamp,
             cloudName: process.env.CLOUDINARY_CLOUD_NAME,
             apiKey: process.env.CLOUDINARY_API_KEY,
-            folder: "shadchanit_clients",
+            folder,
         });
     } catch (error: any) {
         console.error("Signature generation error:", error);

@@ -7,6 +7,8 @@ export interface FormToken {
     usageCount: number;
     maxUsage: number;
     isActive: boolean;
+    ownerUsername?: string;
+    ownerDbName?: string;
 }
 
 const FormTokenSchema = new Schema<FormToken>(
@@ -17,6 +19,8 @@ const FormTokenSchema = new Schema<FormToken>(
         usageCount: { type: Number, default: 0 },
         maxUsage: { type: Number, default: 30 },
         isActive: { type: Boolean, default: true },
+        ownerUsername: { type: String },
+        ownerDbName: { type: String },
     },
     {
         timestamps: true,

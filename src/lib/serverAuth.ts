@@ -42,18 +42,36 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
         }
         
         await dbConnect();
-        const user = await UserModel.findById(sessionData.userId).lean();
-        
-        if (!user) {
+        const realUser = await UserModel.findById(sessionData.userId).lean();
+
+        if (!realUser) {
             return null;
         }
 
+        // Impersonation: if admin has chosen to "view as" another user
+        if (sessionData.impersonatingId && (realUser as any).role === "admin") {
+            const { isValidObjectId: isValidOid } = await import("@/lib/validation");
+            if (isValidOid(sessionData.impersonatingId)) {
+                const impersonated = await UserModel.findById(sessionData.impersonatingId).lean();
+                if (impersonated) {
+                    return {
+                        id: realUser._id.toString(),
+                        username: (impersonated as any).username,
+                        name: (impersonated as any).name,
+                        role: (realUser as any).role as "admin" | "user",
+                        dbName: (impersonated as any).dbName || undefined,
+                        impersonating: (impersonated as any).username,
+                    };
+                }
+            }
+        }
+
         return {
-            id: user._id.toString(),
-            username: user.username,
-            name: user.name,
-            role: user.role as "admin" | "user",
-            dbName: (user as any).dbName || undefined,
+            id: realUser._id.toString(),
+            username: (realUser as any).username,
+            name: (realUser as any).name,
+            role: (realUser as any).role as "admin" | "user",
+            dbName: (realUser as any).dbName || undefined,
         };
     } catch (error) {
         console.error("Error getting current user:", error);

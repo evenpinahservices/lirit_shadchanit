@@ -5,7 +5,7 @@ import { getClientModel } from "@/models/Client";
 import ClientModel from "@/models/Client";
 import { Client, generateMockClients } from "@/lib/mockData";
 import { revalidatePath } from "next/cache";
-import { requireAuth, getCurrentUser } from "@/lib/serverAuth";
+import { requireAuth } from "@/lib/serverAuth";
 import { isValidObjectId } from "@/lib/validation";
 
 type ClientInput = Omit<Client, "id" | "createdAt">;
@@ -28,8 +28,8 @@ function mapDoc(doc: any): Client {
 
 export async function getClients(): Promise<Client[]> {
     try {
-        const user = await getCurrentUser();
-        const conn = await dbConnect(user?.dbName);
+        const user = await requireAuth();
+        const conn = await dbConnect(user.dbName);
         const Model = getClientModel(conn);
         const clients = await Model.find({}).sort({ createdAt: -1 }).lean();
         return clients.map(mapDoc);

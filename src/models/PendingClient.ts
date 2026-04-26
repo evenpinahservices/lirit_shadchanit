@@ -1,4 +1,4 @@
-import mongoose, { Schema, Model } from "mongoose";
+import mongoose, { Schema, Model, Connection } from "mongoose";
 import { Client } from "@/lib/mockData";
 
 // PendingClient interface extends Client with pending-specific fields
@@ -95,6 +95,10 @@ PendingClientSchema.set('toJSON', {
         delete (ret as any)._id;
     }
 });
+
+export function getPendingClientModel(conn: Connection): Model<PendingClient> {
+    return (conn.models["PendingClient"] as Model<PendingClient>) || conn.model<PendingClient>("PendingClient", PendingClientSchema);
+}
 
 const PendingClientModel: Model<PendingClient> = mongoose.models.PendingClient || mongoose.model<PendingClient>("PendingClient", PendingClientSchema);
 

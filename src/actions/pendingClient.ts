@@ -1,7 +1,7 @@
 "use server";
 
 import dbConnect from "@/lib/db";
-import PendingClientModel from "@/models/PendingClient";
+import PendingClientModel, { getPendingClientModel } from "@/models/PendingClient";
 import FormTokenModel from "@/models/FormToken";
 import { Client } from "@/lib/mockData";
 import { revalidatePath } from "next/cache";
@@ -23,8 +23,10 @@ type PendingClientInput = Omit<Client, "id" | "createdAt"> & {
 
 export async function getPendingClients(): Promise<(PendingClientInput & { id: string })[]> {
     try {
-        await dbConnect();
-        const pendingClients = await PendingClientModel.find({}).sort({ submittedAt: -1 }).lean();
+        const user = await requireAuth();
+        const conn = await dbConnect(user.dbName);
+        const Model = getPendingClientModel(conn);
+        const pendingClients = await Model.find({}).sort({ submittedAt: -1 }).lean();
 
         return pendingClients.map((doc: any) => {
             const { _id, __v, ...rest } = doc;
@@ -50,7 +52,21 @@ export async function getPendingClients(): Promise<(PendingClientInput & { id: s
 
 export async function createPendingClient(data: PendingClientInput): Promise<PendingClientInput & { id: string }> {
   try {
-    await dbConnect();
+    // Resolve which DB to save into:
+    // - Authenticated admin actions land in the admin's own DB.
+    // - External form submissions use the FormToken's ownerDbName (if set).
+    let targetDbName: string | undefined;
+    if (data.token) {
+        const mainConn = await dbConnect();
+        const tokenDoc = await FormTokenModel.findOne({ token: data.token }).lean();
+        targetDbName = (tokenDoc as any)?.ownerDbName || undefined;
+    } else {
+        const { requireAuth: _requireAuth } = await import("@/lib/serverAuth");
+        const user = await _requireAuth();
+        targetDbName = user.dbName;
+    }
+    const conn = await dbConnect(targetDbName);
+    const PendingModel = getPendingClientModel(conn);
 
     // Rate limiting: per-client identifier (email or phone) to avoid
     // blocking different clients who share the same form link.
@@ -126,7 +142,7 @@ export async function createPendingClient(data: PendingClientInput): Promise<Pen
     // Ensure existingApprovedClientId is preserved (it might be in normalizedData already)
     const finalExistingApprovedClientId = existingApprovedClientId || (normalizedData as any).existingApprovedClientId;
     
-    const newPendingClient = new PendingClientModel({
+    const newPendingClient = new PendingModel({
         ...normalizedData,
         submittedAt: normalizedData.submittedAt || new Date().toISOString(),
         createdAt: new Date().toISOString().split("T")[0],
@@ -168,17 +184,16 @@ export async function createPendingClient(data: PendingClientInput): Promise<Pen
 }
 
 export async function approvePendingClient(pendingClientId: string, overwriteExisting: boolean = false): Promise<Client> {
-    // Require authentication
-    await requireAuth();
-    
-    // Validate ObjectId
+    const user = await requireAuth();
+
     if (!isValidObjectId(pendingClientId)) {
         throw new Error("Invalid pending client ID");
     }
-    
-    await dbConnect();
-    
-    const pendingClient = await PendingClientModel.findById(pendingClientId);
+
+    const conn = await dbConnect(user.dbName);
+    const PendingModel = getPendingClientModel(conn);
+
+    const pendingClient = await PendingModel.findById(pendingClientId);
     if (!pendingClient) {
         throw new Error("Pending client not found");
     }
@@ -251,7 +266,7 @@ export async function approvePendingClient(pendingClientId: string, overwriteExi
         }
         
         // Delete the pending client
-        await PendingClientModel.findByIdAndDelete(pendingClientId);
+        await PendingModel.findByIdAndDelete(pendingClientId);
         
         console.log("Successfully updated existing client:", existingApprovedClientId);
         
@@ -280,9 +295,11 @@ export async function approvePendingClient(pendingClientId: string, overwriteExi
 
 // Check if pending client will overwrite an existing approved client
 export async function willOverwriteApprovedClient(pendingClientId: string): Promise<{ willOverwrite: boolean; existingClientId?: string }> {
-    await dbConnect();
-    
-    const pendingClient = await PendingClientModel.findById(pendingClientId).lean();
+    const user = await requireAuth();
+    const conn = await dbConnect(user.dbName);
+    const PendingModel = getPendingClientModel(conn);
+
+    const pendingClient = await PendingModel.findById(pendingClientId).lean();
     if (!pendingClient) {
         console.log("willOverwriteApprovedClient: Pending client not found:", pendingClientId);
         return { willOverwrite: false };
@@ -376,56 +393,50 @@ export async function updatePendingClient(
 }
 
 export async function rejectPendingClient(pendingClientId: string): Promise<void> {
-    // Require authentication
-    await requireAuth();
-    
-    // Validate ObjectId
+    const user = await requireAuth();
+
     if (!isValidObjectId(pendingClientId)) {
         throw new Error("Invalid pending client ID");
     }
-    
-    await dbConnect();
-    
-    // Get the pending client before deleting to extract image URLs
-    const pendingClient = await PendingClientModel.findById(pendingClientId);
+
+    const conn = await dbConnect(user.dbName);
+    const PendingModel = getPendingClientModel(conn);
+
+    const pendingClient = await PendingModel.findById(pendingClientId);
     if (!pendingClient) {
         throw new Error("Pending client not found");
     }
 
-    // Extract and delete images from Cloudinary
     const imageUrls = extractImageUrls(pendingClient.toObject());
     if (imageUrls.length > 0) {
         console.log(`[Reject] Deleting ${imageUrls.length} image(s) from Cloudinary for rejected pending client`);
         await deleteCloudinaryImages(imageUrls);
     }
 
-    // Delete from MongoDB
-    await PendingClientModel.findByIdAndDelete(pendingClientId);
+    await PendingModel.findByIdAndDelete(pendingClientId);
     revalidatePath("/inbox");
 }
 
 export async function generateFormToken(): Promise<string> {
-    // Require authentication
-    await requireAuth();
-    
+    const user = await requireAuth();
+
     await dbConnect();
-    
-    // Generate a secure random token
+
     const token = crypto.randomBytes(32).toString('hex');
-    
-    // Set expiration to 1 week from now
+
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
-    
-    // Create token record in database
+
     await FormTokenModel.create({
         token,
         expiresAt,
         usageCount: 0,
         maxUsage: 30,
         isActive: true,
+        ownerUsername: user.username,
+        ownerDbName: user.dbName,
     });
-    
+
     return token;
 }
 
