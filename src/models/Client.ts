@@ -55,6 +55,7 @@ const ClientSchema = new Schema<Client>(
         resumeRawText: { type: String },
         active: { type: Boolean, default: true }, // Added missing field
         status: { type: String }, // Deprecated but kept for type signature
+        clientStatus: { type: String, enum: ["active", "not_relevant", "remind_later"], default: "active" },
         formLanguage: { type: String, enum: ["en", "he"], default: "en" }, // Language the form was filled in
         createdAt: { type: String }, // Storing as string YYYY-MM-DD
     },

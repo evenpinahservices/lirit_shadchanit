@@ -69,6 +69,7 @@ export interface Client {
     resumeRawText?: string; // Raw text extracted from resume images
     active?: boolean; // For form compatibility
     status?: "Active" | "Inactive" | "Matched"; // Deprecated
+    clientStatus?: "active" | "not_relevant" | "remind_later"; // Shadchan-managed per-client status
     formLanguage?: "en" | "he"; // Language the form was filled in
     createdAt: string;
 }
