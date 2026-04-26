@@ -418,6 +418,7 @@ export default function MatchingPage() {
     const searchParams = useSearchParams();
 
     const initialClientId = searchParams.get("clientId") || "";
+    const autoRun = searchParams.get("view") === "results" && !!initialClientId;
     const [tab, setTab] = useState<"discover" | "search">(initialClientId ? "search" : "discover");
     const [selectedClientId, setSelectedClientId] = useState(initialClientId);
     const [isResultsView, setIsResultsView] = useState(false);
@@ -431,6 +432,15 @@ export default function MatchingPage() {
 
     const clientOptions = clients.map(c => ({ label: `${c.fullName} (${c.gender})`, value: c.id }));
     const selectedClient = clients.find(c => c.id === selectedClientId);
+
+    // Auto-generate matches when arriving from the clients page heart button
+    const autoRanRef = useRef(false);
+    useEffect(() => {
+        if (autoRun && selectedClient && clients.length > 0 && !autoRanRef.current) {
+            autoRanRef.current = true;
+            handleMatch();
+        }
+    }, [autoRun, selectedClient, clients.length]);
 
     const handleMatch = async () => {
         if (!selectedClientId || !selectedClient) return;
