@@ -520,20 +520,26 @@ function ExternalClientForm({
         if (savingRef.current) return;
         savingRef.current = true;
         try {
-            await saveFormDraft({
-                token,
-                email: identifierEmail,
-                phone: identifierPhone,
-                formLanguage: language,
-                currentStep: step,
-                data: formData,
-            });
+            if (existingPendingId) {
+                // Editing an existing pending submission — persist directly so changes survive page reload
+                const { notes, resumeRawText, ...clientValues } = formData;
+                await updatePendingClient(existingPendingId, { ...clientValues, token } as any);
+            } else {
+                await saveFormDraft({
+                    token,
+                    email: identifierEmail,
+                    phone: identifierPhone,
+                    formLanguage: language,
+                    currentStep: step,
+                    data: formData,
+                });
+            }
         } catch (err) {
             console.error("Auto-save failed:", err);
         } finally {
             savingRef.current = false;
         }
-    }, [token, identifierEmail, identifierPhone, language]);
+    }, [token, identifierEmail, identifierPhone, language, existingPendingId]);
 
     const handleSubmitToPending = async (values: any) => {
         try {

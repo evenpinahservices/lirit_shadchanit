@@ -342,19 +342,34 @@ export async function willOverwriteApprovedClient(pendingClientId: string): Prom
 }
 
 export async function updatePendingClient(
-    pendingClientId: string, 
+    pendingClientId: string,
     updates: Partial<PendingClientInput>
 ): Promise<PendingClientInput & { id: string }> {
-    // Note: This is used by external forms, so we don't require auth here
-    // But we validate the ObjectId for security
-    
     // Validate ObjectId
     if (!isValidObjectId(pendingClientId)) {
         throw new Error("Invalid pending client ID");
     }
-    
-    await dbConnect();
-    
+
+    // Determine which DB to use:
+    // - Authenticated admin  → use their per-user DB
+    // - External form (no session) → look up ownerDbName via the token in updates
+    let targetDbName: string | undefined;
+    try {
+        const user = await requireAuth();
+        targetDbName = user.dbName;
+    } catch {
+        // Not authenticated — external form path
+        const tokenValue = (updates as any).token as string | undefined;
+        if (tokenValue) {
+            const mainConn = await dbConnect();
+            const tokenDoc = await FormTokenModel.findOne({ token: tokenValue }).lean();
+            targetDbName = (tokenDoc as any)?.ownerDbName || undefined;
+        }
+    }
+
+    const conn = await dbConnect(targetDbName);
+    const Model = getPendingClientModel(conn);
+
     // Normalize email and phone if provided
     const normalizedUpdates: any = { ...updates };
     if (updates.email) {
@@ -363,11 +378,11 @@ export async function updatePendingClient(
     if (updates.phone) {
         normalizedUpdates.phone = updates.phone.trim();
     }
-    
+
     // Update submittedAt to current time
     normalizedUpdates.submittedAt = new Date().toISOString();
-    
-    const updated = await PendingClientModel.findByIdAndUpdate(
+
+    const updated = await Model.findByIdAndUpdate(
         pendingClientId,
         { $set: normalizedUpdates },
         { new: true }

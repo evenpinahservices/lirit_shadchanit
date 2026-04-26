@@ -763,16 +763,36 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                 }
                 
                 // Age field: when present, derive a year-only DOB from it.
-                // Age wins over AI's dob (AI sometimes calculates a wrong full date from age).
+                // Age wins over AI's dob year (AI sometimes calculates a wrong full date from age),
+                // but we preserve the specific day/month if the AI also extracted a Hebrew DOB.
                 if (key === "age") {
                     if (value !== null && value !== undefined && value !== "") {
                         const ageNum = Math.floor(typeof value === "number" ? value : parseFloat(String(value).replace(",", ".")));
                         if (!isNaN(ageNum) && ageNum >= 18 && ageNum <= 60) {
                             const birthYear = ageToYear(ageNum);
                             const newMode = lang === "he" ? "Hebrew" : "Year";
-                            const newDob = lang === "he"
-                                ? `Hebrew: א תשרי ${convertHebrewYearToLetters(birthYear + 3760)}`
-                                : birthYear.toString();
+                            let newDob: string;
+                            if (lang === "he") {
+                                const hebrewYearLetters = convertHebrewYearToLetters(birthYear + 3760);
+                                // Try to use day/month from the DOB field if the AI extracted a specific Hebrew date
+                                const dobFieldRaw = data?.dob != null
+                                    ? (typeof data.dob === "object" && "value" in data.dob ? data.dob.value : data.dob)
+                                    : null;
+                                const dobStr = dobFieldRaw != null ? String(dobFieldRaw).trim() : null;
+                                if (dobStr && dobStr.startsWith("Hebrew:")) {
+                                    const parts = dobStr.replace("Hebrew: ", "").split(" ");
+                                    // parts[0]=day, parts[1]=month — use them but replace the year with the age-derived one
+                                    if (parts.length >= 2) {
+                                        newDob = `Hebrew: ${parts[0]} ${parts[1]} ${hebrewYearLetters}`;
+                                    } else {
+                                        newDob = `Hebrew: א תשרי ${hebrewYearLetters}`;
+                                    }
+                                } else {
+                                    newDob = `Hebrew: א תשרי ${hebrewYearLetters}`;
+                                }
+                            } else {
+                                newDob = birthYear.toString();
+                            }
                             setDateMode(newMode);
                             setValue("dob", newDob);
                             confidences["dob"] = confidence !== undefined ? confidence : 0.8;
@@ -1794,7 +1814,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                             }}
                         />
                         <div className="flex gap-2 relative z-10">
-                            {isEditing && onCancel && !onApprove && !onReject && (
+                            {isEditing && onCancel && (
                                 <>
                                     <button
                                         type="button"
