@@ -14,6 +14,11 @@ function normalizeArr(val: string | string[] | undefined | null): string[] {
     return [val];
 }
 
+const HEBREW_RE = /[֐-׿]/;
+function textDir(s: string): "rtl" | "ltr" {
+    return HEBREW_RE.test(s) ? "rtl" : "ltr";
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function Avatar({ client }: { client: Client }) {
@@ -52,13 +57,27 @@ interface RowProps {
 }
 
 function CompareRow({ label, aVal, bVal }: RowProps) {
+    const aDir = textDir(aVal);
+    const bDir = textDir(bVal);
     return (
         <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2 px-3 py-2 text-sm">
-            <div className="text-gray-800 dark:text-gray-200 font-medium text-right pr-2 min-w-0 break-words">{aVal || "—"}</div>
+            <div
+                dir={aDir}
+                className="text-gray-800 dark:text-gray-200 font-medium pr-2 min-w-0 break-words"
+                style={{ textAlign: aDir === "rtl" ? "right" : "right" }}
+            >
+                {aVal || "—"}
+            </div>
             <div className="shrink-0 text-center">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 whitespace-nowrap">{label}</span>
             </div>
-            <div className="text-gray-800 dark:text-gray-200 font-medium pl-2 min-w-0 break-words">{bVal || "—"}</div>
+            <div
+                dir={bDir}
+                className="text-gray-800 dark:text-gray-200 font-medium pl-2 min-w-0 break-words"
+                style={{ textAlign: bDir === "rtl" ? "left" : "left" }}
+            >
+                {bVal || "—"}
+            </div>
         </div>
     );
 }

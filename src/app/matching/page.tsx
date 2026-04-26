@@ -101,6 +101,16 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
     const [slots, setSlots] = useState<FeedSlot[]>(() => buildFeed(allClients));
     const usedSeedIds = useRef(new Set(slots.map(s => s.seed.id)));
 
+    // Rebuild if feed was built before clients loaded
+    useEffect(() => {
+        if (allClients.length > 0 && slots.length === 0) {
+            usedSeedIds.current = new Set();
+            const next = buildFeed(allClients);
+            usedSeedIds.current = new Set(next.map(s => s.seed.id));
+            setSlots(next);
+        }
+    }, [allClients.length]);
+
     const rebuildFeed = () => {
         setSlots(prev => prev.map(s => ({ ...s, visible: false })));
         setTimeout(() => {
@@ -169,7 +179,7 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
                             </span>
                             <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {tierSlots.map(slot => (
                                 <FeedCard
                                     key={slot.id}
@@ -210,7 +220,7 @@ function FeedCard({ slot, onNotNow }: { slot: FeedSlot; onNotNow: () => void }) 
             style={{ opacity: visible ? 1 : 0, transition: "opacity 0.6s ease" }}
         >
             {/* Two person columns */}
-            <div className="grid grid-cols-2 bg-gradient-to-b from-red-50/60 to-transparent dark:from-red-900/10">
+            <div className="grid grid-cols-2 bg-linear-to-b from-red-50/60 to-transparent dark:from-red-900/10">
                 {/* Left person */}
                 <div className="flex flex-col items-center gap-1 px-3 py-4 border-r border-gray-100 dark:border-gray-800">
                     <MiniAvatar client={seed} />
@@ -282,46 +292,50 @@ function MiniAvatar({ client }: { client: Client }) {
 
 interface SearchMatchCardProps {
     match: DisplayedMatch;
-    selectedClientId: string;
+    selectedClient: Client | undefined;
     isDismissing: boolean;
     onDismiss: (match: DisplayedMatch, permanent: boolean) => void;
 }
 
-function SearchMatchCard({ match, selectedClientId, isDismissing, onDismiss }: SearchMatchCardProps) {
+function SearchMatchCard({ match, selectedClient, isDismissing, onDismiss }: SearchMatchCardProps) {
     const { client, level } = match;
 
     return (
         <div className={cn("flex flex-col bg-white dark:bg-gray-950 rounded-xl shadow-sm overflow-hidden transition-opacity", isDismissing && "opacity-40 pointer-events-none")}>
             {level === 2 && (
-                <div className="px-3 pt-2">
+                <div className="px-2 pt-2">
                     <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
-                        Broader match
+                        Broader
                     </span>
                 </div>
             )}
 
-            {/* Avatar + info */}
+            {/* Two-column layout matching FeedCard */}
             <Link
-                href={`/compare?a=${selectedClientId}&b=${client.id}&back=/matching`}
-                className="flex flex-col items-center p-4 bg-gradient-to-b from-red-50/40 to-transparent dark:from-red-900/10 hover:bg-red-50/60 dark:hover:bg-red-900/20 transition-colors"
+                href={`/compare?a=${selectedClient?.id}&b=${client.id}&back=/matching`}
+                className="grid grid-cols-2 bg-linear-to-b from-red-50/40 to-transparent dark:from-red-900/10 hover:from-red-50/70 transition-colors"
             >
-                <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden mb-2">
-                    {client.photoUrl ? (
-                        <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
+                {/* Selected client (left) */}
+                <div className="flex flex-col items-center gap-1 px-3 py-4 border-r border-gray-100 dark:border-gray-800">
+                    {selectedClient ? (
+                        <MiniAvatar client={selectedClient} />
                     ) : (
-                        <span className="text-xl font-bold text-gray-300 dark:text-gray-600">{client.fullName.charAt(0)}</span>
+                        <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <Users2 className="h-5 w-5 text-gray-300" />
+                        </div>
                     )}
+                    <span className="text-[10px] text-gray-400 text-center truncate w-full px-1">{selectedClient?.location || "—"}</span>
                 </div>
-                <h3 className="font-semibold text-sm text-center">{client.fullName}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 text-center" dir="ltr">
-                    {client.location || "—"} · {client.dob ? `${calculateAge(client.dob)} y/o` : "—"}
-                </p>
-                <div className="text-xs text-muted-foreground mt-1 text-center space-y-0.5">
-                    <p>{client.ethnicity || "—"}</p>
-                    <p>{(Array.isArray(client.religiousAffiliation) ? client.religiousAffiliation[0] : client.religiousAffiliation) || "—"}</p>
+                {/* Match candidate (right) */}
+                <div className="flex flex-col items-center gap-1 px-3 py-4">
+                    <MiniAvatar client={client} />
+                    <span className="text-[10px] text-gray-400 text-center truncate w-full px-1">{client.location || "—"}</span>
                 </div>
-                <span className="mt-2 text-xs font-semibold text-red-600">View Comparison →</span>
             </Link>
+
+            <div className="px-3 py-1.5 text-center">
+                <span className="text-[10px] font-semibold text-red-600">View Comparison →</span>
+            </div>
 
             {/* Dismiss actions */}
             <div className="border-t border-gray-100 dark:border-gray-800 flex">
@@ -423,7 +437,7 @@ function DismissedSection({ clientId, dismissed, allClients, onRestore }: Dismis
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function MatchingPage() {
-    const { clients } = useClients();
+    const { clients, isLoading: clientsLoading } = useClients();
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -614,7 +628,12 @@ export default function MatchingPage() {
                 {/* ── DISCOVER TAB ── */}
                 {tab === "discover" && (
                     <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-1 pb-4">
-                        {clients.length === 0 ? (
+                        {clientsLoading ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mb-4" />
+                                <p className="text-sm">Loading clients…</p>
+                            </div>
+                        ) : clients.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                                 <Sparkles className="h-10 w-10 mb-3 opacity-40" />
                                 <p>Add clients to start discovering matches.</p>
@@ -710,12 +729,12 @@ export default function MatchingPage() {
                                             <p className="text-sm text-gray-500">No compatible matches for this client.</p>
                                         </div>
                                     ) : (
-                                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                                             {displayed.map(match => (
                                                 <SearchMatchCard
                                                     key={match.client.id}
                                                     match={match}
-                                                    selectedClientId={selectedClientId}
+                                                    selectedClient={selectedClient}
                                                     isDismissing={dismissingId === match.client.id}
                                                     onDismiss={handleDismiss}
                                                 />
