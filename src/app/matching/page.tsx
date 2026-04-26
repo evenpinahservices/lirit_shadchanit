@@ -169,7 +169,7 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
                             </span>
                             <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {tierSlots.map(slot => (
                                 <FeedCard
                                     key={slot.id}
@@ -219,9 +219,9 @@ function FeedCard({ slot, onNotNow }: { slot: FeedSlot; onNotNow: () => void }) 
                 )}
             </div>
 
-            <div className="px-3 pb-3 flex justify-between text-[10px] text-gray-400">
-                <span className="truncate max-w-[48%]">{seed.location || "—"}</span>
-                {match && <span className="truncate max-w-[48%] text-right">{match.location || "—"}</span>}
+            <div className="px-3 pb-3 grid grid-cols-2 gap-1 text-[10px] text-gray-400 text-center">
+                <span className="truncate">{seed.location || "—"}</span>
+                {match && <span className="truncate">{match.location || "—"}</span>}
             </div>
 
             {/* Actions */}
