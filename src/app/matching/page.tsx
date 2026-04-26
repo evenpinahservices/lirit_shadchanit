@@ -91,7 +91,7 @@ const TIER_LABELS: Record<Tier, string> = {
 };
 const TIER_COLORS: Record<Tier, string> = {
     week: "text-green-600 dark:text-green-400",
-    month: "text-blue-600 dark:text-blue-400",
+    month: "text-amber-600 dark:text-amber-400",
     older: "text-gray-500 dark:text-gray-400",
 };
 
@@ -206,7 +206,7 @@ function FeedCard({ slot, onNotNow }: { slot: FeedSlot; onNotNow: () => void }) 
             {/* Two avatars */}
             <div className="flex items-center justify-around p-4 bg-gradient-to-b from-red-50/60 to-transparent dark:from-red-900/10">
                 <MiniAvatar client={seed} />
-                <Heart className="h-5 w-5 text-red-400 fill-red-300 shrink-0" />
+                <div className="w-px self-stretch bg-gray-100 dark:bg-gray-800 mx-1" />
                 {match ? (
                     <MiniAvatar client={match} />
                 ) : (
