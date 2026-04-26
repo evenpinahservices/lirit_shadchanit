@@ -1,6 +1,7 @@
 "use server";
 
 import { v2 as cloudinary } from "cloudinary";
+import { getCurrentUser } from "@/lib/serverAuth";
 
 // Configure Cloudinary only if credentials are available
 // Don't configure at module level to avoid crashes
@@ -35,6 +36,11 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB in bytes
 export async function uploadImage(formData: FormData): Promise<{ url: string | null; error: string | null }> {
     console.log("[uploadImage] Server action called");
     try {
+        const user = await getCurrentUser();
+        const folder = user?.username
+            ? `shadchanit_clients/${user.username}`
+            : "shadchanit_clients";
+
         const file = formData.get("file") as File;
         if (!file) {
             console.warn("[uploadImage] No file provided for upload");
@@ -94,7 +100,7 @@ export async function uploadImage(formData: FormData): Promise<{ url: string | n
             
             const result = await Promise.race([
                 cloudinary.uploader.upload(base64Data, {
-                    folder: "shadchanit_clients",
+                    folder,
                     resource_type: "image",
                     // Optimize for large files
                     chunk_size: 6000000, // 6MB chunks for large files
