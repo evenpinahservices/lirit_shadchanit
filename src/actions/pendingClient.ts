@@ -282,8 +282,8 @@ export async function approvePendingClient(pendingClientId: string, overwriteExi
     const newClient = await createClient(clientData as any);
     
     // Delete the pending client
-    await PendingClientModel.findByIdAndDelete(pendingClientId);
-    
+    await PendingModel.findByIdAndDelete(pendingClientId);
+
     console.log("Successfully created new client:", newClient.id);
     
     revalidatePath("/inbox");
