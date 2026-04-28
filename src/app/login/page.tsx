@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { Heart } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { getBrand } from "@/config/branding";
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
@@ -23,20 +21,14 @@ export default function LoginPage() {
         }
     };
 
-    const brand = getBrand();
-
     return (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 z-50">
             <div className="w-full max-w-md space-y-8 bg-white dark:bg-gray-950 p-8 rounded-xl shadow-lg">
                 <div className="flex flex-col items-center text-center">
-                    <div className={`w-24 h-24 mb-4 shrink-0 flex items-center justify-center [&_img]:block ${brand.logoNavbar ? "" : "rounded-full overflow-hidden bg-red-100 dark:bg-red-950/50"}`}>
-                        {brand.logoNavbar ? (
-                            <Image src={brand.logoNavbar} alt={brand.shortName} width={96} height={96} className="w-full h-full object-contain block" />
-                        ) : (
-                            <Heart className="w-12 h-12 text-red-500 fill-red-500" />
-                        )}
+                    <div className="w-24 h-24 mb-4 shrink-0 flex items-center justify-center rounded-full overflow-hidden bg-blue-100 dark:bg-blue-950/50">
+                        <Heart className="w-12 h-12 text-blue-500 fill-blue-500" />
                     </div>
-                    <h2 className="text-2xl font-bold tracking-tight">Sign in to {brand.shortName}</h2>
+                    <h2 className="text-2xl font-bold tracking-tight">Sign in to ShidduchDB</h2>
                     <p className="text-sm text-muted-foreground mt-2">
                         Enter your credentials to access the dashboard
                     </p>
