@@ -48,7 +48,7 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
         
         // Validate userId is a valid ObjectId
         const { isValidObjectId } = await import("@/lib/validation");
-        if (!isValidObjectId(sessionData.userId)) {
+        if (typeof sessionData.userId !== "string" || !isValidObjectId(sessionData.userId)) {
             return null;
         }
         
@@ -98,7 +98,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthUse
             
             // Validate userId is a valid ObjectId
             const { isValidObjectId } = await import("@/lib/validation");
-            if (!isValidObjectId(sessionData.userId)) {
+            if (typeof sessionData.userId !== "string" || !isValidObjectId(sessionData.userId)) {
                 return null;
             }
             

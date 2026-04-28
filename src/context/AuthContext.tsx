@@ -103,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (foundUser) {
                 setUser(foundUser);
                 localStorage.setItem("mock_user", JSON.stringify(foundUser));
+                localStorage.setItem("loginBrandHint", foundUser.role === "admin" ? "lirit" : "default");
                 router.push("/");
                 return true;
             }

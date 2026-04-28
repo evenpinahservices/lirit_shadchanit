@@ -72,6 +72,7 @@ export interface Client {
     status?: "Active" | "Inactive" | "Matched"; // Deprecated
     clientStatus?: "active" | "not_relevant" | "remind_later"; // Shadchan-managed per-client status
     formLanguage?: "en" | "he"; // Language the form was filled in
+    deletedAt?: Date | null;
     createdAt: string;
 }
 
