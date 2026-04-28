@@ -98,19 +98,24 @@ const TIER_COLORS: Record<Tier, string> = {
 // ── Discovery Feed ─────────────────────────────────────────────────────────────
 
 function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
-    // Start empty — buildFeed is expensive (runs findMatchesWithLevels per seed)
-    // and would block the JS thread before the page could paint.
     const [slots, setSlots] = useState<FeedSlot[]>([]);
+    const [isBuilding, setIsBuilding] = useState(true);
     const usedSeedIds = useRef(new Set<string>());
 
-    // Build after first paint so navigation feels instant
     useEffect(() => {
-        if (allClients.length > 0 && slots.length === 0) {
+        if (allClients.length === 0) return;
+        setIsBuilding(true);
+        // setTimeout(0) yields one paint frame so the page renders before buildFeed blocks
+        const id = setTimeout(() => {
+            console.time("buildFeed");
             usedSeedIds.current = new Set();
             const next = buildFeed(allClients);
             usedSeedIds.current = new Set(next.map(s => s.seed.id));
             setSlots(next);
-        }
+            setIsBuilding(false);
+            console.timeEnd("buildFeed");
+        }, 0);
+        return () => clearTimeout(id);
     }, [allClients.length]);
 
     const rebuildFeed = () => {
@@ -194,7 +199,13 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
                 );
             })}
 
-            {slots.length === 0 && (
+            {isBuilding && (
+                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mb-4" />
+                    <p className="text-sm">Finding matches…</p>
+                </div>
+            )}
+            {!isBuilding && slots.length === 0 && (
                 <div className="text-center py-12 text-gray-400">
                     <Users2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
                     <p className="font-medium">No suggestions available</p>

@@ -39,9 +39,10 @@ export function ClientProvider({ children }: { children: React.ReactNode }) {
         try {
             setIsLoading(true);
             setError(null);
-            console.log("Attempting to fetch clients...");
+            console.time("getClients");
             const data = await getClients();
-            console.log("Clients fetched successfully:", data.length);
+            console.timeEnd("getClients");
+            console.log("Clients fetched:", data.length);
             setClients(data);
         } catch (err: any) {
             console.error("Failed to fetch clients - Full error:", err);
