@@ -1,5 +1,6 @@
 import { Client } from "./mockData";
 import { areLocationsCompatible, parseHebrewYearToNumber, detectClientLanguage } from "./utils";
+import { compareLocationsEnhanced } from "./locationMapping";
 
 export const calculateAge = (dob: string): number => {
     if (!dob) return NaN;
@@ -212,6 +213,12 @@ export function findMatchesWithLevels(
             level2.push(candidate);
         }
     }
+
+    const sameCity = (c: Client) =>
+        compareLocationsEnhanced(client.location || "", c.location || "");
+
+    level1.sort((a, b) => (sameCity(b) ? 1 : 0) - (sameCity(a) ? 1 : 0));
+    level2.sort((a, b) => (sameCity(b) ? 1 : 0) - (sameCity(a) ? 1 : 0));
 
     return { level1, level2 };
 }
