@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Heart, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -13,6 +13,7 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [brandId, setBrandId] = useState<BrandId>("default");
     const { login } = useAuth();
+    const submittingRef = useRef(false);
 
     useEffect(() => {
         const hint = localStorage.getItem("loginBrandHint");
@@ -23,9 +24,13 @@ export default function LoginPage() {
 
     const handleSubmit = async (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (isLoading) return;
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setError("");
-        if (!username.trim() || !password.trim()) return;
+        if (!username.trim() || !password.trim()) {
+            submittingRef.current = false;
+            return;
+        }
         setIsLoading(true);
         try {
             const success = await login(username, password);
@@ -34,6 +39,7 @@ export default function LoginPage() {
             }
         } finally {
             setIsLoading(false);
+            submittingRef.current = false;
         }
     };
 
@@ -105,7 +111,7 @@ export default function LoginPage() {
                     </div>
 
                     <button
-                        type="submit"
+                        type="button"
                         disabled={isLoading}
                         onClick={() => handleSubmit()}
                         className="flex w-full justify-center items-center gap-2 rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 disabled:opacity-70 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors"

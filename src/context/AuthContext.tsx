@@ -25,12 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const sessionCheckRef = useRef<NodeJS.Timeout | null>(null);
 
-    const logout = useCallback(() => {
+    const logout = useCallback(async () => {
         setUser(null);
         localStorage.removeItem("mock_user");
-        logoutSession().catch(() => {});
-        router.push("/login");
-    }, [router]);
+        try { await logoutSession(); } catch {}
+        window.location.replace("/login");
+    }, []);
 
     const stopImpersonating = useCallback(async () => {
         await stopImpersonation();
