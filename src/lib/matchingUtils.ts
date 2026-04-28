@@ -94,9 +94,9 @@ function checkLevel1(a: Client, b: Client): boolean {
     const bDiv = b.maritalStatus?.toLowerCase().includes("divorced") ?? false;
     if (aDiv !== bDiv) return false;
 
-    // Same country / willing to relocate
+    // Same country / willing to relocate (use locationEnglish when available — no translation needed)
     if (!areLocationsCompatible(
-        a.location || "", b.location || "",
+        a.locationEnglish || a.location || "", b.locationEnglish || b.location || "",
         a.willingToRelocate, b.willingToRelocate
     )) return false;
 
@@ -145,7 +145,7 @@ function checkLevel2(a: Client, b: Client): boolean {
     if (aDiv !== bDiv) return false;
 
     if (!areLocationsCompatible(
-        a.location || "", b.location || "",
+        a.locationEnglish || a.location || "", b.locationEnglish || b.location || "",
         a.willingToRelocate, b.willingToRelocate
     )) return false;
 

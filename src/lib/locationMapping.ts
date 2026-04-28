@@ -409,12 +409,24 @@ export function getLocationCountry(location: string): CountryCode {
   const US_STATES = /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC)\b/;
   if (US_STATES.test(location)) return "US";
 
-  // Last comma segment — handles "Street Address, City ST" → try "City ST"
+  // "City, Country" format — try to resolve country name from the last segment
   const commaParts = location.split(",");
   if (commaParts.length >= 2) {
-    const lastSeg = commaParts[commaParts.length - 1].trim();
-    if (lastSeg !== location) {
-      const segCountry = getLocationCountry(lastSeg);
+    const lastSeg = commaParts[commaParts.length - 1].trim().toLowerCase();
+    const COUNTRY_NAME_MAP: Record<string, CountryCode> = {
+      "israel": "IL", "ישראל": "IL",
+      "united states": "US", "usa": "US", "u.s.a.": "US", "america": "US", "us": "US",
+      "united kingdom": "UK", "uk": "UK", "england": "UK", "britain": "UK", "great britain": "UK",
+      "france": "FR",
+      "belgium": "BE",
+      "australia": "AU",
+      "canada": "CA",
+    };
+    if (COUNTRY_NAME_MAP[lastSeg]) return COUNTRY_NAME_MAP[lastSeg];
+
+    // Recurse on the last segment (handles "City ST" → US state check above)
+    if (lastSeg !== location.toLowerCase()) {
+      const segCountry = getLocationCountry(commaParts[commaParts.length - 1].trim());
       if (segCountry !== "OTHER") return segCountry;
     }
   }
@@ -519,15 +531,13 @@ export function areLocationsCompatible(
     return true;
   }
   
-  // Third check: different countries - only compatible if at least one is willing to relocate
+  // Third check: different countries — requires at least one explicit "yes" to relocate.
+  // "maybe" is intentionally excluded: willingness to consider moving within one's own country
+  // should not be enough to match someone across continents (NY ↔ Tel Aviv, Raanana ↔ Panama).
   const relocate1 = willingToRelocate1?.toLowerCase();
   const relocate2 = willingToRelocate2?.toLowerCase();
-  
-  const isOpenToRelocate1 = relocate1 === "yes" || relocate1 === "maybe";
-  const isOpenToRelocate2 = relocate2 === "yes" || relocate2 === "maybe";
-  
-  // If at least one person is willing to relocate, locations are compatible
-  return isOpenToRelocate1 || isOpenToRelocate2;
+
+  return relocate1 === "yes" || relocate2 === "yes";
 }
 
 /**

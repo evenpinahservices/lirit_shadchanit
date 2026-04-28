@@ -36,6 +36,8 @@ const GENDER_FILTER = genderArgIdx !== -1
     ? (process.argv[genderArgIdx + 1]?.toLowerCase().startsWith("m") ? "Male" : "Female")
     : null; // null = both
 
+const SKIP_DEDUP = process.argv.includes("--skip-dedup");
+
 // ── Cloudinary ────────────────────────────────────────────────────────────────
 
 cloudinary.config({
@@ -200,6 +202,10 @@ async function extractProfileDataAndSelectPhoto(
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function normalizeName(name: string): string {
+    return name.trim().toLowerCase().replace(/\s+/g, " ");
+}
 
 function toTitleCase(name: string): string {
     return name.split(/\s+/).map(word => {
@@ -425,7 +431,7 @@ async function scanProfiles(): Promise<ProfileEntry[]> {
 
 // ── Process one profile ───────────────────────────────────────────────────────
 
-async function processProfile(entry: ProfileEntry, ClientModel: any): Promise<{ photoIndex: number; imgCount: number }> {
+async function processProfile(entry: ProfileEntry, ClientModel: any): Promise<{ photoIndex: number; imgCount: number; skipped?: string }> {
     const { profileDir, profileName, gender, doneDir } = entry;
 
     const imagePaths = (await fs.readdir(profileDir))
@@ -444,6 +450,21 @@ async function processProfile(entry: ProfileEntry, ClientModel: any): Promise<{ 
 
     // Flatten and save
     const clientData = flattenForDb(aiData, galleryUrls, profilePhotoUrl, gender, profileName);
+
+    // Dedup check: skip if a client with the same name already exists
+    if (!SKIP_DEDUP && clientData.fullName && String(clientData.fullName) !== "Unnamed") {
+        const namePattern = new RegExp(
+            `^${normalizeName(String(clientData.fullName)).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+            "i"
+        );
+        const existing = await ClientModel.findOne({ fullName: namePattern }).lean();
+        if (existing) {
+            await fs.mkdir(doneDir, { recursive: true });
+            await fs.rename(profileDir, path.join(doneDir, profileName));
+            return { photoIndex: -1, imgCount: imagePaths.length, skipped: String(clientData.fullName) };
+        }
+    }
+
     const doc = new ClientModel(clientData);
     await doc.save();
 
@@ -473,13 +494,14 @@ async function main() {
     const filtered = GENDER_FILTER ? allProfiles.filter(p => p.gender === GENDER_FILTER) : allProfiles;
     const profiles = TEST_LIMIT ? filtered.slice(0, TEST_LIMIT) : filtered;
     const genderLabel = GENDER_FILTER ? ` [${GENDER_FILTER} only]` : "";
+    const dedupNote = SKIP_DEDUP ? "dedup OFF" : "dedup ON";
     console.log(`\n🚀  Batch Import — ${profiles.length} profile${profiles.length !== 1 ? "s" : ""}${TEST_LIMIT ? ` (first ${TEST_LIMIT})` : ""}${genderLabel}`);
-    console.log(`    Database: lirit  |  Concurrency: ${CONCURRENCY}  |  All images → Cloudinary\n`);
+    console.log(`    Database: lirit  |  Concurrency: ${CONCURRENCY}  |  ${dedupNote}  |  All images → Cloudinary\n`);
 
     const liritConn = await connectLiritDb();
     const ClientModel = liritConn.models["Client"] || liritConn.model("Client", LooseSchema);
 
-    let succeeded = 0, failed = 0, completed = 0;
+    let succeeded = 0, failed = 0, skipped = 0, completed = 0;
     const errors: { name: string; error: string }[] = [];
     const startMs = Date.now();
     const total = profiles.length;
@@ -501,12 +523,18 @@ async function main() {
             const entry = profiles[i];
             const t0 = Date.now();
             try {
-                const { photoIndex, imgCount } = await processProfile(entry, ClientModel);
-                succeeded++;
-                completed++;
-                const sec = Math.round((Date.now() - t0) / 1000);
-                const photoLabel = photoIndex === -1 ? "no-face" : `photo:${photoIndex + 1}`;
-                logLine(`  ✓ [${completed}/${total}] ${entry.profileName.padEnd(20)} ${entry.gender === "Female" ? "♀" : "♂"}  ${imgCount} img${imgCount>1?"s":" "}  ${photoLabel}  ${sec}s`);
+                const { photoIndex, imgCount, skipped: skipName } = await processProfile(entry, ClientModel);
+                if (skipName) {
+                    skipped++;
+                    completed++;
+                    logLine(`  ⟳ [${completed}/${total}] ${entry.profileName.padEnd(20)} duplicate — "${skipName}" already in DB`);
+                } else {
+                    succeeded++;
+                    completed++;
+                    const sec = Math.round((Date.now() - t0) / 1000);
+                    const photoLabel = photoIndex === -1 ? "no-face" : `photo:${photoIndex + 1}`;
+                    logLine(`  ✓ [${completed}/${total}] ${entry.profileName.padEnd(20)} ${entry.gender === "Female" ? "♀" : "♂"}  ${imgCount} img${imgCount>1?"s":" "}  ${photoLabel}  ${sec}s`);
+                }
             } catch (err: any) {
                 failed++;
                 completed++;
@@ -532,7 +560,8 @@ async function main() {
     const timeStr = h > 0 ? `${h}h ${m}m ${s}s` : m > 0 ? `${m}m ${s}s` : `${s}s`;
 
     process.stdout.write("\r" + " ".repeat(70) + "\r");
-    console.log(`\n✅  Done in ${timeStr} — ${succeeded} imported, ${failed} failed`);
+    const skipNote = skipped > 0 ? `, ${skipped} duplicate${skipped !== 1 ? "s" : ""} skipped` : "";
+    console.log(`\n✅  Done in ${timeStr} — ${succeeded} imported, ${failed} failed${skipNote}`);
 
     if (errors.length > 0) {
         console.log("\nFailed profiles:");

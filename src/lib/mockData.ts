@@ -21,7 +21,8 @@ export interface Client {
     email: string;
     phone: string;
     dob: string; // Date of Birth
-    location: string; // City, Country
+    location: string; // City, Country (cosmetic — same language as profile)
+    locationEnglish?: string; // Always English "City, Country" — used for matching
     gender: "Male" | "Female";
 
     // Appearance

@@ -18,6 +18,7 @@ const PendingClientSchema = new Schema<PendingClient>(
         phone: { type: String },
         dob: { type: String, required: true },
         location: { type: String },
+        locationEnglish: { type: String }, // Always English "City, Country" — used for matching
         gender: { type: String, enum: ["Male", "Female"], required: true },
 
         // Appearance

@@ -10,8 +10,10 @@ import {
     deleteUser,
     resetUserPassword,
     startImpersonation,
+    migrateUnnamedHebrewClients,
     type UserSummary,
     type InviteTokenSummary,
+    type MigrateUnnamedResult,
 } from "@/actions/admin";
 import {
     Users,
@@ -43,6 +45,10 @@ export default function AdminPage() {
     // Invite state
     const [generatingInvite, setGeneratingInvite] = useState(false);
     const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+    // Migration state
+    const [migrating, setMigrating] = useState(false);
+    const [migrateResult, setMigrateResult] = useState<MigrateUnnamedResult | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -106,6 +112,20 @@ export default function AdminPage() {
             setError(e?.message || "Failed to delete user.");
         } finally {
             setDeleting(null);
+        }
+    };
+
+    const handleMigrateUnnamed = async () => {
+        if (!confirm("This will rename all unnamed Hebrew profiles to 'ללא שם'. Continue?")) return;
+        setMigrating(true);
+        setMigrateResult(null);
+        try {
+            const result = await migrateUnnamedHebrewClients();
+            setMigrateResult(result);
+        } catch (e: any) {
+            setError(e?.message || "Migration failed.");
+        } finally {
+            setMigrating(false);
         }
     };
 
@@ -244,6 +264,35 @@ export default function AdminPage() {
                         </table>
                     </div>
                 )}
+            </section>
+
+            {/* ─── Data Migrations ────────────────────── */}
+            <section className="space-y-4">
+                <h2 className="text-lg font-semibold">Data Migrations</h2>
+                <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <p className="text-sm font-medium">Rename unnamed Hebrew profiles</p>
+                            <p className="text-xs text-muted-foreground">Finds all profiles with an empty name, detects language, and renames Hebrew ones to "ללא שם".</p>
+                        </div>
+                        <button
+                            onClick={handleMigrateUnnamed}
+                            disabled={migrating}
+                            className="shrink-0 flex items-center gap-2 rounded-md bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-medium px-3 py-2 transition-colors"
+                        >
+                            {migrating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                            {migrating ? "Running…" : "Run"}
+                        </button>
+                    </div>
+                    {migrateResult && (
+                        <div className="text-xs bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded p-3 space-y-1">
+                            <p className="font-medium">Done — scanned {migrateResult.scanned} unnamed profiles, renamed {migrateResult.renamed} Hebrew profiles.</p>
+                            {migrateResult.details.map((d) => (
+                                <p key={d.user}>{d.user}: {d.renamed} renamed</p>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </section>
 
             {/* ─── Invite Links ───────────────────────── */}

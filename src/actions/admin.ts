@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/serverAuth";
 import { getClientModel } from "@/models/Client";
 import { isValidObjectId } from "@/lib/validation";
 import { User } from "@/lib/mockData";
+import { isHebrew } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -316,4 +317,58 @@ export async function stopImpersonation(): Promise<void> {
         sameSite: "lax",
         maxAge: 60 * 60 * 24 * 7,
     });
+}
+
+// ─── Migrate unnamed Hebrew clients ───────────────────────────────────────────
+
+export interface MigrateUnnamedResult {
+    scanned: number;
+    renamed: number;
+    details: { user: string; renamed: number }[];
+}
+
+export async function migrateUnnamedHebrewClients(): Promise<MigrateUnnamedResult> {
+    await requireAdmin();
+    await dbConnect();
+
+    const users = await UserModel.find({ dbName: { $exists: true, $ne: null } }).lean();
+    let totalScanned = 0;
+    let totalRenamed = 0;
+    const details: { user: string; renamed: number }[] = [];
+
+    for (const u of users as any[]) {
+        const conn = await dbConnect(u.dbName);
+        const Model = getClientModel(conn);
+
+        const unnamed = await Model.find({
+            $or: [
+                { fullName: { $exists: false } },
+                { fullName: null },
+                { fullName: "" },
+                { fullName: /^\s*$/ },
+            ],
+        }).lean();
+
+        totalScanned += unnamed.length;
+        let userRenamed = 0;
+
+        for (const client of unnamed as any[]) {
+            const isHebrewProfile =
+                client.formLanguage === "he" ||
+                [client.location, client.personality, client.hobbies, client.familyBackground, client.notes, client.education, client.references]
+                    .some((f: unknown) => typeof f === "string" && isHebrew(f));
+
+            if (isHebrewProfile) {
+                await Model.updateOne({ _id: client._id }, { $set: { fullName: "ללא שם" } });
+                userRenamed++;
+            }
+        }
+
+        totalRenamed += userRenamed;
+        if (unnamed.length > 0) {
+            details.push({ user: u.username, renamed: userRenamed });
+        }
+    }
+
+    return { scanned: totalScanned, renamed: totalRenamed, details };
 }

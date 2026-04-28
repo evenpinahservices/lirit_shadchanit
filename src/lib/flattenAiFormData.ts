@@ -22,7 +22,7 @@ function extractValue(field: unknown): unknown {
 
 /** Known Client/PendingClient top-level keys (excluding id, createdAt) */
 const CLIENT_KEYS = [
-    "fullName", "email", "phone", "dob", "location", "gender",
+    "fullName", "email", "phone", "dob", "location", "locationEnglish", "gender",
     "height", "eyeColor", "hairColor", "photoUrl", "galleryImages",
     "ethnicity", "tribalStatus", "religiousAffiliation", "learningStatus", "maritalStatus", "children",
     "languages", "familyBackground", "education", "occupationTitle", "occupationDescription", "smoking", "headCovering", "religiousDetailsFreeText",

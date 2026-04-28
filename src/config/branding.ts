@@ -22,10 +22,10 @@ export interface BrandConfig {
 
 export const brands: Record<BrandId, BrandConfig> = {
   default: {
-    themeColor: "#ef4444",
+    themeColor: "#3b82f6",
     backgroundColor: "#f9fafb",
-    appName: "ShadchanitDB - Matchmaking Database",
-    shortName: "ShadchanitDB",
+    appName: "ShidduchDB - Matchmaking Database",
+    shortName: "ShidduchDB",
     logoNavbar: null,
     icon192: "/icon-heart.svg",
     icon512: "/icon-heart.svg",
