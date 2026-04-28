@@ -29,17 +29,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         // But since AuthContext runs its effect on mount, we might have a race condition.
         // A safer bet for this MVP is:
 
-        const checkAuth = () => {
-            const storedUser = localStorage.getItem("mock_user");
-            if (!storedUser && !user) {
-                router.push("/login");
-            }
-            setIsChecking(false);
-        };
-
-        // Small timeout to allow AuthContext to initialize from localStorage
-        const timeout = setTimeout(checkAuth, 100);
-        return () => clearTimeout(timeout);
+        // Check localStorage directly — no timeout needed since we don't rely on AuthContext state
+        const storedUser = localStorage.getItem("mock_user");
+        if (!storedUser && !user) {
+            router.push("/login");
+        }
+        setIsChecking(false);
 
     }, [user, pathname, router]);
 

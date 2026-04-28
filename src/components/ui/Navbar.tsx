@@ -162,9 +162,11 @@ export function Navbar() {
                         </button>
                     )}
 
-                    <div className="flex-shrink-0">
-                        <BugReportButton />
-                    </div>
+                    {user && (
+                        <div className="flex-shrink-0">
+                            <BugReportButton />
+                        </div>
+                    )}
 
                     {user?.role === "admin" && (
                         <Link

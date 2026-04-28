@@ -25,10 +25,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const sessionCheckRef = useRef<NodeJS.Timeout | null>(null);
 
-    const logout = useCallback(async () => {
-        setUser(null);
+    const logout = useCallback(() => {
         localStorage.removeItem("mock_user");
-        try { await logoutSession(); } catch {}
+        logoutSession().catch(() => {});
         window.location.replace("/login");
     }, []);
 

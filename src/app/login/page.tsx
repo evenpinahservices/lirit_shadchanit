@@ -37,8 +37,11 @@ export default function LoginPage() {
             const success = await login(username, password);
             if (!success) {
                 setError("Invalid username or password");
+                setIsLoading(false);
+                submittingRef.current = false;
             }
-        } finally {
+            // On success: stay in loading state while navigation completes
+        } catch {
             setIsLoading(false);
             submittingRef.current = false;
         }
