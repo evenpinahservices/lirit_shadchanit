@@ -6,7 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { getBrand } from "@/config/branding";
+import { brands, currentBrandId, type BrandId } from "@/config/branding";
 import { LayoutDashboard, Users, Heart, Search, LogOut, Maximize2, Minimize2, StickyNote, Hourglass, ShieldCheck } from "lucide-react";
 import { BugReportButton } from "@/components/ui/BugReportButton";
 import { useBackgroundAiProgress } from "@/context/BackgroundAiProgressContext";
@@ -39,6 +39,17 @@ export function Navbar() {
     const aiProgress = useBackgroundAiProgress();
     const [isFullscreen, setIsFullscreen] = useState(false);
     const isPwa = useIsPwa();
+    const [brandId, setBrandId] = useState<BrandId>(() => {
+        if (typeof window !== "undefined") {
+            const hint = localStorage.getItem("loginBrandHint");
+            if (hint === "lirit" || hint === "default") return hint;
+        }
+        return currentBrandId;
+    });
+
+    useEffect(() => {
+        if (user !== null) setBrandId(user.role === "admin" ? "lirit" : "default");
+    }, [user?.role]);
 
     const toggleFullscreen = useCallback(() => {
         if (typeof document === "undefined") return;
@@ -70,7 +81,7 @@ export function Navbar() {
         return null;
     }
 
-    const brand = getBrand();
+    const brand = brands[brandId];
 
     return (
         <nav className="sticky top-0 z-10 shadow-sm shrink-0">
