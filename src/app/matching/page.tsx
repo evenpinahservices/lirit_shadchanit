@@ -95,6 +95,9 @@ const TIER_COLORS: Record<Tier, string> = {
     older: "text-gray-500 dark:text-gray-400",
 };
 
+// ── Feed cache — persists across navigations within the same browser session ──
+let _feedCache: { len: number; slots: FeedSlot[] } | null = null;
+
 // ── Discovery Feed ─────────────────────────────────────────────────────────────
 
 function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
@@ -104,13 +107,22 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
 
     useEffect(() => {
         if (allClients.length === 0) return;
+
+        // Reuse cached feed if clients haven't changed — avoids 3-4s recompute on every navigation
+        if (_feedCache && _feedCache.len === allClients.length) {
+            setSlots(_feedCache.slots);
+            setIsBuilding(false);
+            return;
+        }
+
         setIsBuilding(true);
-        // setTimeout(0) yields one paint frame so the page renders before buildFeed blocks
+        // setTimeout(0) yields one paint frame so the page is visible before the heavy compute
         const id = setTimeout(() => {
             console.time("buildFeed");
             usedSeedIds.current = new Set();
             const next = buildFeed(allClients);
             usedSeedIds.current = new Set(next.map(s => s.seed.id));
+            _feedCache = { len: allClients.length, slots: next };
             setSlots(next);
             setIsBuilding(false);
             console.timeEnd("buildFeed");
@@ -119,10 +131,12 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
     }, [allClients.length]);
 
     const rebuildFeed = () => {
+        _feedCache = null;
         setSlots(prev => prev.map(s => ({ ...s, visible: false })));
         setTimeout(() => {
             usedSeedIds.current = new Set();
             const next = buildFeed(allClients);
+            _feedCache = { len: allClients.length, slots: next };
             setSlots(next);
         }, 650);
     };

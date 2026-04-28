@@ -79,7 +79,13 @@ function SignupContent() {
             localStorage.setItem("mock_user", JSON.stringify(user));
             router.push("/");
         } catch (err: any) {
-            setError(err?.message || "Registration failed.");
+            const msg: string = err?.message ?? "";
+            // Next.js wraps server action errors in production with a generic digest message
+            const isGenericServerError = msg.includes("Server Components") || msg.includes("digest") || !msg;
+            setError(isGenericServerError
+                ? "Server error — please try again. If this keeps happening, contact your administrator."
+                : msg
+            );
         } finally {
             setLoading(false);
         }
