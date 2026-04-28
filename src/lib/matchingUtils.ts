@@ -67,6 +67,34 @@ function sameEthGroup(a: string, b: string): boolean {
     return ethGroup(a) === ethGroup(b);
 }
 
+// ── Hashkafa groups ───────────────────────────────────────────────────────────
+// Defined early — used by both hard filters and scoring.
+// Groups: 0 = Chareidi, 1 = Dati, 2 = Traditional/BT, 3 = Secular
+const HASHKAFA_GROUP: Record<string, number> = {
+    "Haredi": 0, "Yeshivish American": 0, "Yeshivish Litvish": 0,
+    "Yeshivish Hasidish": 0, "Chabad": 0,
+    "Hardal": 1, "Dati Leumi": 1, "Modern Orthodox": 1,
+    "Baal Teshuva": 2, "Masorti": 2, "Traditional": 2,
+    "Secular": 3,
+};
+
+// True if at least one hashkafa pair falls in the same group.
+// Unknown/missing hashkafa on either side → don't filter (benefit of the doubt).
+function sameHashkafaGroup(a: Client, b: Client): boolean {
+    const aAff = normalizeArr(a.religiousAffiliation);
+    const bAff = normalizeArr(b.religiousAffiliation);
+    if (aAff.length === 0 || bAff.length === 0) return true;
+    for (const ah of aAff) {
+        for (const bh of bAff) {
+            const ag = HASHKAFA_GROUP[ah];
+            const bg = HASHKAFA_GROUP[bh];
+            if (ag === undefined || bg === undefined) return true; // unknown → allow
+            if (ag === bg) return true;
+        }
+    }
+    return false;
+}
+
 // ── Age gap ──────────────────────────────────────────────────────────────────
 
 function ageGapAllowed(prefs: string[], actualGap: number): boolean {
@@ -82,37 +110,47 @@ function ageGapAllowed(prefs: string[], actualGap: number): boolean {
     });
 }
 
+// For gaps above the hard limit: both sides must have explicit (non-empty, non-wildcard)
+// age gap preferences that accommodate the actual gap.
+function ageGapExplicitlyAllowed(prefs: string[], actualGap: number): boolean {
+    if (prefs.length === 0 || prefs.some(isWildcard)) return false;
+    return ageGapAllowed(prefs, actualGap);
+}
+
 // ── Level 1: baseline (bidirectional) ────────────────────────────────────────
-// Passes only when ALL community defaults are met on both sides.
+// All community defaults must be met. Hard filters:
+//   • divorced ↔ divorced only
+//   • location compatible
+//   • same ethnicity (never relaxed)
+//   • age gap ≤ 3 years absolute (never relaxed here)
+//   • same hashkafa group (Chareidi, Dati, Traditional/BT — never cross-group)
+//   • head covering and learning status preferences
 
 function checkLevel1(a: Client, b: Client): boolean {
     const male = a.gender === "Male" ? a : b;
     const female = a.gender === "Female" ? a : b;
 
-    // Divorced ↔ divorced only (strict, no expansion)
+    // Divorced ↔ divorced only
     const aDiv = a.maritalStatus?.toLowerCase().includes("divorced") ?? false;
     const bDiv = b.maritalStatus?.toLowerCase().includes("divorced") ?? false;
     if (aDiv !== bDiv) return false;
 
-    // Same country / willing to relocate (use locationEnglish when available — no translation needed)
+    // Location: same country, or both explicitly willing to relocate
     if (!areLocationsCompatible(
         a.locationEnglish || a.location || "", b.locationEnglish || b.location || "",
         a.willingToRelocate, b.willingToRelocate
     )) return false;
 
-    // Same ethnicity group (skip if either is missing)
+    // Ethnicity: hard filter — never match different groups
     if (a.ethnicity && b.ethnicity && !sameEthGroup(a.ethnicity, b.ethnicity)) return false;
 
-    // Default age gap: boy ≤ 3 yrs older, girl ≤ 1 yr older
+    // Age gap: absolute max 3 years (symmetric). Skip if either age is unknown.
     const mAge = calculateAge(male.dob);
     const fAge = calculateAge(female.dob);
-    const ageDiff = mAge - fAge; // positive = male older
-    if (ageDiff > 3 || ageDiff < -1) return false;
+    if (!isNaN(mAge) && !isNaN(fAge) && Math.abs(mAge - fAge) > 3) return false;
 
-    // Haskafa: any overlap (liberal, bidirectional)
-    const aAff = normalizeArr(a.religiousAffiliation);
-    const bAff = normalizeArr(b.religiousAffiliation);
-    if (aAff.length > 0 && bAff.length > 0 && !aAff.some((h) => bAff.includes(h))) return false;
+    // Hashkafa: must be in the same group — never pair Chareidi with Dati, Dati with Traditional, etc.
+    if (!sameHashkafaGroup(a, b)) return false;
 
     // Head covering: male's preference vs female's value
     const headPrefs = normalizeArr(male.preferredHeadCovering);
@@ -132,85 +170,61 @@ function checkLevel1(a: Client, b: Client): boolean {
 }
 
 // ── Level 2: personal expansion (bidirectional) ──────────────────────────────
-// Hard rules always apply. Ethnicity and age gap are relaxed via personal prefs.
-// Head covering and learning status are not checked — Level 2 is a broader match.
+// Same hard filters as Level 1 for ethnicity and hashkafa (never relaxed).
+// Age gap > 3 yrs only allowed when BOTH sides have explicit preferences permitting it.
+// Head covering and learning status not re-checked (broader match).
 
 function checkLevel2(a: Client, b: Client): boolean {
     const male = a.gender === "Male" ? a : b;
     const female = a.gender === "Female" ? a : b;
 
-    // Hard rules (always strict)
+    // Divorced ↔ divorced only
     const aDiv = a.maritalStatus?.toLowerCase().includes("divorced") ?? false;
     const bDiv = b.maritalStatus?.toLowerCase().includes("divorced") ?? false;
     if (aDiv !== bDiv) return false;
 
+    // Location
     if (!areLocationsCompatible(
         a.locationEnglish || a.location || "", b.locationEnglish || b.location || "",
         a.willingToRelocate, b.willingToRelocate
     )) return false;
 
-    // Haskafa overlap still required
-    const aAff = normalizeArr(a.religiousAffiliation);
-    const bAff = normalizeArr(b.religiousAffiliation);
-    if (aAff.length > 0 && bAff.length > 0 && !aAff.some((h) => bAff.includes(h))) return false;
+    // Ethnicity: always a hard filter — no relaxation in broader matching
+    if (a.ethnicity && b.ethnicity && !sameEthGroup(a.ethnicity, b.ethnicity)) return false;
 
-    // Ethnicity: if different groups, both sides' personal prefs must allow it
-    if (a.ethnicity && b.ethnicity && !sameEthGroup(a.ethnicity, b.ethnicity)) {
-        const aEthPrefs = normalizeArr(a.preferredEthnicities);
-        const bEthPrefs = normalizeArr(b.preferredEthnicities);
-        const aOk =
-            aEthPrefs.length === 0 ||
-            aEthPrefs.some(isWildcard) ||
-            aEthPrefs.some((e) => sameEthGroup(e, b.ethnicity!));
-        const bOk =
-            bEthPrefs.length === 0 ||
-            bEthPrefs.some(isWildcard) ||
-            bEthPrefs.some((e) => sameEthGroup(e, a.ethnicity!));
-        if (!aOk || !bOk) return false;
-    }
+    // Hashkafa: same group required even in broader matching
+    if (!sameHashkafaGroup(a, b)) return false;
 
-    // Age gap: both sides' personal prefs must allow the actual gap
+    // Age gap: ≤3 always passes; >3 only if BOTH sides have explicit preferences allowing it
     const mAge = calculateAge(male.dob);
     const fAge = calculateAge(female.dob);
-    const absGap = Math.abs(mAge - fAge);
-    const aGapPrefs = normalizeArr(a.ageGapPreference);
-    const bGapPrefs = normalizeArr(b.ageGapPreference);
-    if (!ageGapAllowed(aGapPrefs, absGap)) return false;
-    if (!ageGapAllowed(bGapPrefs, absGap)) return false;
+    if (!isNaN(mAge) && !isNaN(fAge)) {
+        const absGap = Math.abs(mAge - fAge);
+        if (absGap > 3) {
+            const aGapPrefs = normalizeArr(a.ageGapPreference);
+            const bGapPrefs = normalizeArr(b.ageGapPreference);
+            if (!ageGapExplicitlyAllowed(aGapPrefs, absGap)) return false;
+            if (!ageGapExplicitlyAllowed(bGapPrefs, absGap)) return false;
+        }
+    }
 
     return true;
 }
 
 // ── Weighted scoring ─────────────────────────────────────────────────────────
 // Max possible score: age(3) + hashkafa(4) + location(4) + ethnicity(2) + knownAge(1) = 14
-// Hard filters (deal breakers) still gate inclusion; scoring only determines order.
-
-// Group 0 = Chareidi, 1 = Dati, 2 = Traditional/BT, 3 = Secular
-const HASHKAFA_GROUP: Record<string, number> = {
-    "Haredi": 0, "Yeshivish American": 0, "Yeshivish Litvish": 0,
-    "Yeshivish Hasidish": 0, "Chabad": 0,
-    "Hardal": 1, "Dati Leumi": 1, "Modern Orthodox": 1,
-    "Baal Teshuva": 2, "Masorti": 2, "Traditional": 2,
-    "Secular": 3,
-};
+// Hard filters gate inclusion; scoring only determines order within each level.
 
 function hashkafaScore(a: Client, b: Client): number {
     const aAff = normalizeArr(a.religiousAffiliation);
     const bAff = normalizeArr(b.religiousAffiliation);
     if (aAff.length === 0 || bAff.length === 0) return 0;
     const overlaps = aAff.filter(h => bAff.includes(h)).length;
-    if (overlaps >= 2) return 4;
-    if (overlaps === 1) return 3;
-    // Level-2 pairs may have no exact overlap — score by closest group distance
-    let minDist = Infinity;
-    for (const ah of aAff) {
-        for (const bh of bAff) {
-            const ag = HASHKAFA_GROUP[ah];
-            const bg = HASHKAFA_GROUP[bh];
-            if (ag !== undefined && bg !== undefined) minDist = Math.min(minDist, Math.abs(ag - bg));
-        }
-    }
-    return minDist === 1 ? 1 : 0;
+    if (overlaps >= 2) return 4; // multiple shared hashkafot
+    if (overlaps === 1) return 3; // one exact match
+    // Same group but different subtypes (e.g. Haredi + Chabad — both Chareidi).
+    // Cross-group pairs are blocked by the hard filter so can't reach here.
+    return 2;
 }
 
 function ageScore(male: Client, female: Client): number {
@@ -221,8 +235,7 @@ function ageScore(male: Client, female: Client): number {
     if (gap <= 1) return 3;
     if (gap <= 2) return 2;
     if (gap <= 3) return 1;
-    if (gap <= 5) return 0;
-    return -1;
+    return 0; // >3yr only reachable via level2 personal prefs
 }
 
 function locationScore(client: Client, candidate: Client): number {
@@ -270,7 +283,6 @@ export function findMatchesWithLevels(
     const clientLang = detectClientLanguage(client);
 
     // Pre-filter to opposite-gender active non-dismissed candidates before scoring.
-    // Halves the comparison set and avoids per-iteration guard checks.
     const candidates = allClients.filter(
         (c) =>
             c.id !== client.id &&
@@ -280,8 +292,7 @@ export function findMatchesWithLevels(
     );
 
     for (const candidate of candidates) {
-
-        // Hebrew ↔ English pairs are never shown on the first pass; they fall to Level 2
+        // Hebrew ↔ English pairs fall to Level 2 (different form language)
         const mixedLanguages = detectClientLanguage(candidate) !== clientLang;
 
         if (!mixedLanguages && checkLevel1(client, candidate)) {
