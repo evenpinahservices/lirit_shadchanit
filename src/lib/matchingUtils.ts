@@ -1,5 +1,5 @@
 import { Client } from "./mockData";
-import { areLocationsCompatible, parseHebrewYearToNumber } from "./utils";
+import { areLocationsCompatible, parseHebrewYearToNumber, detectClientLanguage } from "./utils";
 
 export const calculateAge = (dob: string): number => {
     if (!dob) return NaN;
@@ -195,13 +195,18 @@ export function findMatchesWithLevels(
     const level1: Client[] = [];
     const level2: Client[] = [];
 
+    const clientLang = detectClientLanguage(client);
+
     for (const candidate of allClients) {
         if (candidate.id === client.id) continue;
         if (!candidate.active) continue;
         if (dismissedIds.has(candidate.id)) continue;
         if (client.gender === candidate.gender) continue; // opposite gender only
 
-        if (checkLevel1(client, candidate)) {
+        // Hebrew ↔ English pairs are never shown on the first pass; they fall to Level 2
+        const mixedLanguages = detectClientLanguage(candidate) !== clientLang;
+
+        if (!mixedLanguages && checkLevel1(client, candidate)) {
             level1.push(candidate);
         } else if (checkLevel2(client, candidate)) {
             level2.push(candidate);

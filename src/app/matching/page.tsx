@@ -451,6 +451,7 @@ export default function MatchingPage() {
     const [poolL1, setPoolL1] = useState<Client[]>([]);
     const [poolL2, setPoolL2] = useState<Client[]>([]);
     const [displayed, setDisplayed] = useState<DisplayedMatch[]>([]);
+    const [showAll, setShowAll] = useState(false);
     const [dismissingId, setDismissingId] = useState<string | null>(null);
     const [dismissed, setDismissed] = useState<DismissedEntry[]>([]);
 
@@ -488,6 +489,7 @@ export default function MatchingPage() {
             }
 
             setDisplayed(initial);
+            setShowAll(false);
             setIsResultsView(true);
 
             const params = new URLSearchParams(searchParams.toString());
@@ -505,7 +507,18 @@ export default function MatchingPage() {
         setPoolL1([]);
         setPoolL2([]);
         setDismissed([]);
+        setShowAll(false);
         router.push("/matching");
+    };
+
+    const handleShowAll = () => {
+        const dismissedIds = new Set(dismissed.map(d => d.candidateId));
+        const all: DisplayedMatch[] = [
+            ...poolL1.filter(c => !dismissedIds.has(c.id)).map(c => ({ client: c, level: 1 as const })),
+            ...poolL2.filter(c => !dismissedIds.has(c.id)).map(c => ({ client: c, level: 2 as const })),
+        ];
+        setDisplayed(all);
+        setShowAll(true);
     };
 
     const handleDismiss = useCallback(
@@ -717,6 +730,14 @@ export default function MatchingPage() {
                                             <span className="text-xs text-gray-400">
                                                 {level1Count} standard{level2Count > 0 ? `, ${level2Count} broader` : ""}
                                             </span>
+                                        )}
+                                        {!showAll && (poolL1.length + poolL2.length > displayed.length) && (
+                                            <button
+                                                onClick={handleShowAll}
+                                                className="ml-auto text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                            >
+                                                See all ({poolL1.length + poolL2.length})
+                                            </button>
                                         )}
                                     </div>
                                 )}
