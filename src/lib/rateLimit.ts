@@ -3,6 +3,24 @@
 import dbConnect from "@/lib/db";
 import mongoose from "mongoose";
 
+// In-memory fallback used when MongoDB is unavailable.
+// Keys map to { count, resetAt }.
+const memFallback = new Map<string, { count: number; resetAt: number }>();
+
+function checkMemFallback(key: string, maxRequests: number, windowMs: number): RateLimitResult {
+    const now = Date.now();
+    const entry = memFallback.get(key);
+    if (!entry || now >= entry.resetAt) {
+        memFallback.set(key, { count: 1, resetAt: now + windowMs });
+        return { allowed: true, remaining: maxRequests - 1, resetAt: new Date(now + windowMs) };
+    }
+    if (entry.count >= maxRequests) {
+        return { allowed: false, remaining: 0, resetAt: new Date(entry.resetAt) };
+    }
+    entry.count += 1;
+    return { allowed: true, remaining: maxRequests - entry.count, resetAt: new Date(entry.resetAt) };
+}
+
 // Rate limit storage schema
 interface RateLimitEntry {
     key: string;
@@ -100,13 +118,8 @@ export async function checkRateLimit(
             resetAt: entry.resetAt,
         };
     } catch (error) {
-        console.error("Rate limit check error:", error);
-        // On error, allow the request (fail open)
-        return {
-            allowed: true,
-            remaining: maxRequests,
-            resetAt,
-        };
+        console.error("Rate limit check error — falling back to in-memory limiter:", error);
+        return checkMemFallback(key, maxRequests, windowMs);
     }
 }
 

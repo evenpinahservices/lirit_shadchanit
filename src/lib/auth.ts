@@ -33,10 +33,10 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
             return null;
         }
 
-        // Parse session data (in production, use JWT or signed cookies)
         let sessionData;
         try {
-            sessionData = JSON.parse(sessionCookie.value);
+            const { parseSession } = await import("@/lib/session");
+            sessionData = parseSession(sessionCookie.value);
         } catch (error) {
             return null;
         }
@@ -88,7 +88,8 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthUse
                 return null;
             }
             
-            const sessionData = JSON.parse(sessionCookie.value);
+            const { parseSession } = await import("@/lib/session");
+            const sessionData = parseSession(sessionCookie.value);
             
             // Validate session data structure
             if (!sessionData || typeof sessionData !== 'object' || !sessionData.userId) {

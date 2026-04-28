@@ -478,36 +478,36 @@ export async function validateTokenOnly(token: string): Promise<boolean> {
 }
 
 /**
- * Validate a form token and increment usage count
- * Returns true if token is valid, false otherwise
+ * Validate a form token and atomically increment usage count.
+ * Uses findOneAndUpdate to prevent double-submission race conditions.
  */
 export async function validateAndIncrementToken(token: string): Promise<boolean> {
     await dbConnect();
-    
-    const tokenDoc = await FormTokenModel.findOne({ token, isActive: true });
-    
-    if (!tokenDoc) {
+
+    const now = new Date();
+
+    // Atomically claim one usage slot — only succeeds if the token is valid,
+    // active, not expired, and still has quota remaining.
+    const updated = await FormTokenModel.findOneAndUpdate(
+        {
+            token,
+            isActive: true,
+            expiresAt: { $gt: now },
+            $expr: { $lt: ["$usageCount", "$maxUsage"] },
+        },
+        { $inc: { usageCount: 1 } },
+        { new: true }
+    );
+
+    if (!updated) {
+        // Mark token inactive if it exists but is expired or exhausted
+        await FormTokenModel.updateOne(
+            { token, isActive: true, $or: [{ expiresAt: { $lte: now } }, { $expr: { $gte: ["$usageCount", "$maxUsage"] } }] },
+            { $set: { isActive: false } }
+        );
         return false;
     }
-    
-    // Check if expired
-    if (new Date() > tokenDoc.expiresAt) {
-        tokenDoc.isActive = false;
-        await tokenDoc.save();
-        return false;
-    }
-    
-    // Check if usage limit exceeded
-    if (tokenDoc.usageCount >= tokenDoc.maxUsage) {
-        tokenDoc.isActive = false;
-        await tokenDoc.save();
-        return false;
-    }
-    
-    // Increment usage count
-    tokenDoc.usageCount += 1;
-    await tokenDoc.save();
-    
+
     return true;
 }
 

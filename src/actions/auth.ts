@@ -5,6 +5,8 @@ import UserModel from "@/models/User";
 import { User, MOCK_USERS } from "@/lib/mockData";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { signSession } from "@/lib/session";
+import { SESSION_MAX_AGE_SECONDS } from "@/lib/constants";
 
 export async function loginUser(username: string, password?: string): Promise<User | null> {
     try {
@@ -75,11 +77,11 @@ export async function loginUser(username: string, password?: string): Promise<Us
             // Set session cookie for API authentication
             try {
                 const cookieStore = await cookies();
-                cookieStore.set("auth_session", JSON.stringify({ userId: userData.id }), {
+                cookieStore.set("auth_session", signSession({ userId: userData.id }), {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === "production",
                     sameSite: "lax",
-                    maxAge: 60 * 60 * 24 * 7, // 7 days
+                    maxAge: SESSION_MAX_AGE_SECONDS,
                 });
             } catch (error) {
                 console.error("Error setting session cookie:", error);
@@ -134,11 +136,11 @@ export async function loginUser(username: string, password?: string): Promise<Us
             try {
                 const cookieStore = await cookies();
                 const sessionUserId = userId || mockUser.id; // Fallback to mock id if DB unavailable
-                cookieStore.set("auth_session", JSON.stringify({ userId: sessionUserId }), {
+                cookieStore.set("auth_session", signSession({ userId: sessionUserId }), {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === "production",
                     sameSite: "lax",
-                    maxAge: 60 * 60 * 24 * 7, // 7 days
+                    maxAge: SESSION_MAX_AGE_SECONDS,
                 });
             } catch (cookieError) {
                 console.error("Error setting session cookie:", cookieError);
@@ -148,11 +150,11 @@ export async function loginUser(username: string, password?: string): Promise<Us
             // Still try to set cookie even if migration fails
             try {
                 const cookieStore = await cookies();
-                cookieStore.set("auth_session", JSON.stringify({ userId: mockUser.id }), {
+                cookieStore.set("auth_session", signSession({ userId: mockUser.id }), {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === "production",
                     sameSite: "lax",
-                    maxAge: 60 * 60 * 24 * 7, // 7 days
+                    maxAge: SESSION_MAX_AGE_SECONDS,
                 });
             } catch (cookieError) {
                 console.error("Error setting fallback session cookie:", cookieError);

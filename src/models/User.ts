@@ -6,12 +6,12 @@ import { User } from "@/lib/mockData";
 
 const UserSchema = new Schema<User>(
     {
-        username: { type: String, required: true, unique: true },
+        username: { type: String, required: true, unique: true, index: true },
         name: { type: String, required: true },
         role: { type: String, enum: ["admin", "user"], default: "user" },
         password: { type: String, required: true },
         dbName: { type: String },
-        email: { type: String, sparse: true },
+        email: { type: String, sparse: true, index: true },
         phone: { type: String },
         profilePhotoUrl: { type: String },
     },

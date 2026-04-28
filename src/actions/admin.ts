@@ -5,12 +5,15 @@ import { cookies } from "next/headers";
 import dbConnect from "@/lib/db";
 import UserModel from "@/models/User";
 import InviteTokenModel from "@/models/InviteToken";
+import AuditLogModel from "@/models/AuditLog";
 import { hashPassword } from "@/lib/auth";
 import { requireAdmin } from "@/lib/serverAuth";
 import { getClientModel } from "@/models/Client";
 import { isValidObjectId } from "@/lib/validation";
 import { User } from "@/lib/mockData";
 import { isHebrew } from "@/lib/utils";
+import { signSession, parseSession } from "@/lib/session";
+import { SESSION_MAX_AGE_SECONDS } from "@/lib/constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -200,13 +203,13 @@ export async function registerUser(
     tokenDoc.usedBy = newUser._id;
     await tokenDoc.save();
 
-    // Auto-login: set auth_session cookie
+        // Auto-login: set auth_session cookie
     const cookieStore = await cookies();
-    cookieStore.set("auth_session", JSON.stringify({ userId: newUser._id.toString() }), {
+    cookieStore.set("auth_session", signSession({ userId: newUser._id.toString() }), {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
+        maxAge: SESSION_MAX_AGE_SECONDS,
     });
 
     return {
@@ -271,35 +274,45 @@ export async function resetUserPassword(userId: string): Promise<string> {
 // ─── Impersonation ─────────────────────────────────────────────────────────────
 
 export async function startImpersonation(targetUserId: string): Promise<User> {
-    await requireAdmin();
+    const admin = await requireAdmin();
     if (!isValidObjectId(targetUserId)) throw new Error("Invalid user ID.");
     await dbConnect();
 
-    const targetUser = await UserModel.findById(targetUserId).lean();
+    const targetUser = await UserModel.findById(targetUserId).lean() as any;
     if (!targetUser) throw new Error("User not found.");
 
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("auth_session");
     if (!sessionCookie?.value) throw new Error("No session.");
-    const sessionData = JSON.parse(sessionCookie.value);
+    const sessionData = parseSession(sessionCookie.value);
+    if (!sessionData) throw new Error("Invalid session.");
 
     cookieStore.set(
         "auth_session",
-        JSON.stringify({ ...sessionData, impersonatingId: targetUserId }),
+        signSession({ ...sessionData, impersonatingId: targetUserId }),
         {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
-            maxAge: 60 * 60 * 24 * 7,
+            maxAge: SESSION_MAX_AGE_SECONDS,
         }
     );
 
+    // Audit log — fire-and-forget, non-fatal
+    AuditLogModel.create({
+        action: "impersonation_start",
+        actorId: admin.id,
+        actorUsername: admin.username,
+        targetId: targetUserId,
+        targetUsername: targetUser.username,
+    }).catch((e: unknown) => console.error("[audit] Failed to write audit log:", e));
+
     return {
-        id: (targetUser as any)._id.toString(),
-        username: (targetUser as any).username,
-        name: (targetUser as any).name,
-        role: (targetUser as any).role as "admin" | "user",
-        dbName: (targetUser as any).dbName || undefined,
+        id: targetUser._id.toString(),
+        username: targetUser.username,
+        name: targetUser.name,
+        role: targetUser.role as "admin" | "user",
+        dbName: targetUser.dbName || undefined,
     };
 }
 
@@ -308,15 +321,30 @@ export async function stopImpersonation(): Promise<void> {
     const sessionCookie = cookieStore.get("auth_session");
     if (!sessionCookie?.value) return;
 
-    const sessionData = JSON.parse(sessionCookie.value);
-    const { impersonatingId: _removed, ...rest } = sessionData;
+    const sessionData = parseSession(sessionCookie.value);
+    if (!sessionData) return;
 
-    cookieStore.set("auth_session", JSON.stringify(rest), {
+    const { impersonatingId: _removed, ...rest } = sessionData as Record<string, unknown>;
+
+    cookieStore.set("auth_session", signSession(rest), {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7,
+        maxAge: SESSION_MAX_AGE_SECONDS,
     });
+
+    // Audit log — fire-and-forget
+    if (_removed) {
+        const { getCurrentUser } = await import("@/lib/serverAuth");
+        const user = await getCurrentUser().catch(() => null);
+        if (user) {
+            AuditLogModel.create({
+                action: "impersonation_stop",
+                actorId: user.id,
+                actorUsername: user.username,
+            }).catch((e: unknown) => console.error("[audit] Failed to write audit log:", e));
+        }
+    }
 }
 
 // ─── Migrate unnamed Hebrew clients ───────────────────────────────────────────

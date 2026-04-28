@@ -8,18 +8,36 @@ cloudinary.config({
 });
 
 /**
- * Extract Cloudinary public ID from URL
- * Example: https://res.cloudinary.com/cloud/image/upload/v1234567890/whatsapp_resumes/abc123.jpg
- * Returns: whatsapp_resumes/abc123
+ * Extract Cloudinary public ID from a URL using URL parsing rather than regex.
+ * Handles versioned URLs: .../upload/v1234567890/folder/file.jpg
+ * and un-versioned URLs: .../upload/folder/file.jpg
  */
 function extractPublicId(url: string): string | null {
     try {
-        // Cloudinary URLs have format: https://res.cloudinary.com/{cloud_name}/image/upload/{version}/{public_id}.{format}
-        const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[^.]+)?$/);
-        if (match && match[1]) {
-            return match[1];
+        const parsed = new URL(url);
+        const pathParts = parsed.pathname.split("/");
+
+        // Find the "upload" segment index
+        const uploadIdx = pathParts.indexOf("upload");
+        if (uploadIdx < 0 || uploadIdx >= pathParts.length - 1) return null;
+
+        // Skip the optional version segment (starts with "v" followed by digits)
+        let startIdx = uploadIdx + 1;
+        if (/^v\d+$/.test(pathParts[startIdx])) {
+            startIdx++;
         }
-        return null;
+
+        if (startIdx >= pathParts.length) return null;
+
+        // Join remaining parts and strip file extension from the last segment
+        const remaining = pathParts.slice(startIdx);
+        const last = remaining[remaining.length - 1];
+        const dotIdx = last.lastIndexOf(".");
+        if (dotIdx > 0) {
+            remaining[remaining.length - 1] = last.slice(0, dotIdx);
+        }
+
+        return remaining.join("/") || null;
     } catch (error) {
         console.error("Error extracting public ID from URL:", url, error);
         return null;

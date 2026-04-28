@@ -54,8 +54,9 @@ const ClientSchema = new Schema<Client>(
         references: { type: String },
         notes: { type: String },
         resumeRawText: { type: String },
-        active: { type: Boolean, default: true }, // Added missing field
+        active: { type: Boolean, default: true },
         status: { type: String }, // Deprecated but kept for type signature
+        deletedAt: { type: Date, default: null },
         clientStatus: { type: String, enum: ["active", "not_relevant", "remind_later"], default: "active" },
         formLanguage: { type: String, enum: ["en", "he"], default: "en" }, // Language the form was filled in
         createdAt: { type: String }, // Storing as string YYYY-MM-DD
@@ -71,6 +72,12 @@ const ClientSchema = new Schema<Client>(
 ClientSchema.virtual('id').get(function (this: any) {
     return this._id.toHexString();
 });
+
+// Indexes for common query patterns
+ClientSchema.index({ active: 1 });
+ClientSchema.index({ gender: 1, dob: 1 });
+ClientSchema.index({ location: 1 });
+ClientSchema.index({ deletedAt: 1 });
 
 // Ensure virtuals are included
 ClientSchema.set('toJSON', {

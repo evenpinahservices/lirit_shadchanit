@@ -75,7 +75,9 @@ export function flattenAiFormDataForPending(payload: FlattenAiPayload): Record<s
     }
     if (flat.active !== undefined) {
         const v = String(flat.active).toLowerCase();
-        flat.active = v !== "false" && v !== "no" && v !== "0" && v !== "inactive";
+        // Whitelist truthy values — anything else (unexpected AI output) defaults to false
+        // rather than silently marking a client active.
+        flat.active = v === "true" || v === "yes" || v === "1" || v === "active";
     }
 
     // If dob is missing but AI extracted an age, derive birth year from age

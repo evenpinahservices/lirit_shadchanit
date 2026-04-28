@@ -7,6 +7,7 @@ import { Client, generateMockClients } from "@/lib/mockData";
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/serverAuth";
 import { isValidObjectId } from "@/lib/validation";
+import { CLIENT_QUERY_LIMIT } from "@/lib/constants";
 
 type ClientInput = Omit<Client, "id" | "createdAt">;
 
@@ -31,7 +32,11 @@ export async function getClients(): Promise<Client[]> {
         const user = await requireAuth();
         const conn = await dbConnect(user.dbName);
         const Model = getClientModel(conn);
-        const clients = await Model.find({}).sort({ createdAt: -1 }).lean();
+        // `{ deletedAt: null }` matches documents where deletedAt is null OR missing (MongoDB semantics)
+        const clients = await Model.find({ deletedAt: null })
+            .sort({ createdAt: -1 })
+            .limit(CLIENT_QUERY_LIMIT)
+            .lean();
         return clients.map(mapDoc);
     } catch (error: any) {
         console.error("Error in getClients:", error);
@@ -84,15 +89,37 @@ export async function deleteClient(id: string): Promise<void> {
     const conn = await dbConnect(user.dbName);
     const Model = getClientModel(conn);
 
-    const client = await Model.findById(id);
+    const client = await Model.findOne({ _id: id, deletedAt: null });
     if (!client) {
         throw new Error("Client not found");
     }
 
+    // Soft delete — mark with deletedAt instead of destroying the record
+    await Model.findByIdAndUpdate(id, { $set: { deletedAt: new Date() } });
+
+    revalidatePath("/clients");
+}
+
+/**
+ * Permanently remove a soft-deleted client and its Cloudinary images.
+ * Call only from admin tools, not from the UI delete button.
+ */
+export async function purgeClient(id: string): Promise<void> {
+    const user = await requireAuth();
+
+    if (!isValidObjectId(id)) {
+        throw new Error("Invalid client ID");
+    }
+
+    const conn = await dbConnect(user.dbName);
+    const Model = getClientModel(conn);
+
+    const client = await Model.findById(id);
+    if (!client) throw new Error("Client not found");
+
     const { deleteCloudinaryImages, extractImageUrls } = await import("@/lib/cloudinaryCleanup");
     const imageUrls = extractImageUrls(client.toObject());
     if (imageUrls.length > 0) {
-        console.log(`[Delete] Deleting ${imageUrls.length} image(s) from Cloudinary for deleted client`);
         await deleteCloudinaryImages(imageUrls);
     }
 
@@ -208,7 +235,7 @@ export async function getApprovedClientByIdentifier(
         }
     }
 
-    const client = await ClientModel.findOne(query).sort({ createdAt: -1 }).lean();
+    const client = await ClientModel.findOne({ ...query, deletedAt: null }).sort({ createdAt: -1 }).lean();
     if (!client) return null;
     return mapDoc(client);
 }

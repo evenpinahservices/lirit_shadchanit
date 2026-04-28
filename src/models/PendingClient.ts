@@ -83,6 +83,11 @@ const PendingClientSchema = new Schema<PendingClient>(
     }
 );
 
+// Indexes for common query patterns
+PendingClientSchema.index({ status: 1, createdAt: -1 });
+PendingClientSchema.index({ email: 1 });
+PendingClientSchema.index({ phone: 1 });
+
 // Virtual for 'id' to match our frontend interface
 PendingClientSchema.virtual('id').get(function (this: any) {
     return this._id.toHexString();

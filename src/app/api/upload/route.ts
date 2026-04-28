@@ -40,21 +40,21 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         
-        // Basic file signature validation (magic bytes)
-        // Check first few bytes to verify it's actually an image
-        const allowedSignatures = [
-            [0xFF, 0xD8, 0xFF], // JPEG
-            [0x89, 0x50, 0x4E, 0x47], // PNG
-            [0x47, 0x49, 0x46, 0x38], // GIF
-            [0x52, 0x49, 0x46, 0x46], // WEBP (RIFF)
-        ];
-        
-        const fileSignature = Array.from(buffer.slice(0, 4));
-        const isValidImage = allowedSignatures.some(sig => 
-            sig.every((byte, index) => fileSignature[index] === byte)
-        );
-        
-        if (!isValidImage) {
+        // Magic-byte validation. Read 12 bytes to cover WEBP (needs bytes 8-11 = "WEBP").
+        const header = Array.from(buffer.slice(0, 12));
+        const isJpeg = header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF;
+        const isPng  = header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E &&
+                       header[3] === 0x47 && header[4] === 0x0D && header[5] === 0x0A &&
+                       header[6] === 0x1A && header[7] === 0x0A;
+        const isGif  = header[0] === 0x47 && header[1] === 0x49 && header[2] === 0x46 &&
+                       header[3] === 0x38 && (header[4] === 0x37 || header[4] === 0x39) &&
+                       header[5] === 0x61;
+        // WEBP: first 4 bytes = RIFF, bytes 8-11 = WEBP
+        const isWebp = header[0] === 0x52 && header[1] === 0x49 && header[2] === 0x46 &&
+                       header[3] === 0x46 && header[8] === 0x57 && header[9] === 0x45 &&
+                       header[10] === 0x42 && header[11] === 0x50;
+
+        if (!isJpeg && !isPng && !isGif && !isWebp) {
             return NextResponse.json({ error: "Invalid image file format." }, { status: 400 });
         }
         const base64Data = `data:${file.type};base64,${buffer.toString("base64")}`;

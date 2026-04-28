@@ -4,6 +4,22 @@ import { cookies } from "next/headers";
 import dbConnect from "@/lib/db";
 import UserModel from "@/models/User";
 import { AuthUser } from "./auth";
+import { parseSession } from "@/lib/session";
+
+interface UserDoc {
+    _id: { toString(): string };
+    username: string;
+    name: string;
+    role: "admin" | "user";
+    dbName?: string;
+}
+
+function assertUserDoc(doc: unknown): asserts doc is UserDoc {
+    if (!doc || typeof doc !== "object") throw new Error("Malformed user document");
+    const d = doc as Record<string, unknown>;
+    if (!d._id || typeof d.username !== "string" || !d.username) throw new Error("Malformed user document");
+    if (!d.name || typeof d.name !== "string") throw new Error("Malformed user document");
+}
 
 /**
  * Get the currently authenticated user from cookies
@@ -13,34 +29,22 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     try {
         const cookieStore = await cookies();
         const sessionCookie = cookieStore.get("auth_session");
-        
+
         if (!sessionCookie?.value) {
             return null;
         }
 
-        // Validate cookie value before parsing
-        if (typeof sessionCookie.value !== 'string') {
+        const sessionData = parseSession(sessionCookie.value);
+
+        if (!sessionData || typeof sessionData !== "object" || !sessionData.userId) {
             return null;
         }
 
-        let sessionData;
-        try {
-            sessionData = JSON.parse(sessionCookie.value);
-        } catch (error) {
-            return null;
-        }
-        
-        // Validate session data structure
-        if (!sessionData || typeof sessionData !== 'object' || !sessionData.userId) {
-            return null;
-        }
-        
-        // Validate userId is a valid ObjectId
         const { isValidObjectId } = await import("@/lib/validation");
-        if (!isValidObjectId(sessionData.userId)) {
+        if (!isValidObjectId(String(sessionData.userId))) {
             return null;
         }
-        
+
         await dbConnect();
         const realUser = await UserModel.findById(sessionData.userId).lean();
 
@@ -48,30 +52,44 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             return null;
         }
 
-        // Impersonation: if admin has chosen to "view as" another user
-        if (sessionData.impersonatingId && (realUser as any).role === "admin") {
-            const { isValidObjectId: isValidOid } = await import("@/lib/validation");
-            if (isValidOid(sessionData.impersonatingId)) {
+        try {
+            assertUserDoc(realUser);
+        } catch {
+            console.error("[serverAuth] Malformed user document for id:", sessionData.userId);
+            return null;
+        }
+
+        // Impersonation: admin viewing as another user
+        if (sessionData.impersonatingId && realUser.role === "admin") {
+            if (isValidObjectId(String(sessionData.impersonatingId))) {
                 const impersonated = await UserModel.findById(sessionData.impersonatingId).lean();
                 if (impersonated) {
-                    return {
-                        id: realUser._id.toString(),
-                        username: (impersonated as any).username,
-                        name: (impersonated as any).name,
-                        role: (realUser as any).role as "admin" | "user",
-                        dbName: (impersonated as any).dbName || undefined,
-                        impersonating: (impersonated as any).username,
-                    };
+                    try {
+                        assertUserDoc(impersonated);
+                    } catch {
+                        console.error("[serverAuth] Malformed impersonated user document");
+                        // Fall through to return real user
+                    }
+                    if (impersonated) {
+                        return {
+                            id: realUser._id.toString(),
+                            username: (impersonated as UserDoc).username,
+                            name: (impersonated as UserDoc).name,
+                            role: realUser.role as "admin" | "user",
+                            dbName: (impersonated as UserDoc).dbName || undefined,
+                            impersonating: (impersonated as UserDoc).username,
+                        };
+                    }
                 }
             }
         }
 
         return {
             id: realUser._id.toString(),
-            username: (realUser as any).username,
-            name: (realUser as any).name,
-            role: (realUser as any).role as "admin" | "user",
-            dbName: (realUser as any).dbName || undefined,
+            username: realUser.username,
+            name: realUser.name,
+            role: realUser.role as "admin" | "user",
+            dbName: realUser.dbName || undefined,
         };
     } catch (error) {
         console.error("Error getting current user:", error);

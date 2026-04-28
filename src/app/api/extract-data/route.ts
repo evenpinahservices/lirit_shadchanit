@@ -31,15 +31,42 @@ async function imageToBase64(file: File): Promise<{ mimeType: string; data: stri
 }
 
 // Fetch image from URL and convert to base64 (avoids 413 by not sending body from client)
-async function imageUrlToBase64(imageUrl: string): Promise<{ mimeType: string; data: string }> {
+async function imageUrlToBase64(
+    imageUrl: string,
+    opts?: { maxBytes?: number }
+): Promise<{ mimeType: string; data: string }> {
+    const { IMAGE_MAX_BYTES, IMAGE_FETCH_TIMEOUT_MS } = await import("@/lib/constants");
+    const limit = opts?.maxBytes ?? IMAGE_MAX_BYTES;
+
     if (!imageUrl.startsWith("https://")) {
         throw new Error("Image URL must be HTTPS");
     }
-    const res = await fetch(imageUrl, { cache: "no-store" });
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS);
+
+    let res: Response;
+    try {
+        res = await fetch(imageUrl, { cache: "no-store", signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+
     if (!res.ok) {
         throw new Error(`Failed to fetch image: ${res.status}`);
     }
+
+    // Reject before downloading if Content-Length already exceeds the limit
+    const contentLength = Number(res.headers.get("content-length") ?? "0");
+    if (contentLength > limit) {
+        throw new Error(`Image too large: ${contentLength} bytes (max ${limit})`);
+    }
+
     const arrayBuffer = await res.arrayBuffer();
+    if (arrayBuffer.byteLength > limit) {
+        throw new Error(`Image too large: ${arrayBuffer.byteLength} bytes (max ${limit})`);
+    }
+
     const buffer = Buffer.from(arrayBuffer);
     const base64 = buffer.toString("base64");
     const contentType = res.headers.get("content-type") || "image/jpeg";
@@ -180,8 +207,17 @@ export async function POST(request: NextRequest) {
                 );
             }
 
+            const { IMAGE_MAX_BYTES, IMAGE_TOTAL_MAX_BYTES } = await import("@/lib/constants");
+            let totalBytes = 0;
             for (const url of urls) {
-                const base64Image = await imageUrlToBase64(url);
+                const base64Image = await imageUrlToBase64(url, { maxBytes: IMAGE_MAX_BYTES });
+                totalBytes += base64Image.data.length * 0.75; // base64 → raw byte estimate
+                if (totalBytes > IMAGE_TOTAL_MAX_BYTES) {
+                    return NextResponse.json(
+                        { success: false, error: "Total image size exceeds limit." },
+                        { status: 400 }
+                    );
+                }
                 imageParts.push(base64Image);
             }
         } else {
