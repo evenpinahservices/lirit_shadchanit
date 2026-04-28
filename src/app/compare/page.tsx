@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { useClients } from "@/context/ClientContext";
 import { Client } from "@/lib/mockData";
 import { calculateAge } from "@/lib/matchingUtils";
+import { detectClientLanguage } from "@/lib/utils";
+import { valueToLabel } from "@/lib/translations";
 import Link from "next/link";
 import { ArrowLeft, User as UserIcon, MapPin, ExternalLink, Heart } from "lucide-react";
 
@@ -21,7 +23,9 @@ function textDir(s: string): "rtl" | "ltr" {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function Avatar({ client }: { client: Client }) {
+function Avatar({ client, he }: { client: Client; he: boolean }) {
+    const age = calculateAge(client.dob);
+    const ageLabel = he ? `${age} שנה` : `${age} y/o`;
     return (
         <div className="flex flex-col items-center gap-2">
             <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border-2 border-white dark:border-gray-700 shadow-md">
@@ -33,7 +37,7 @@ function Avatar({ client }: { client: Client }) {
             </div>
             <div className="text-center">
                 <h2 className="font-bold text-base text-gray-900 dark:text-gray-100 leading-tight">{client.fullName}</h2>
-                <p className="text-xs text-gray-500 mt-0.5">{client.gender} · {calculateAge(client.dob)} y/o</p>
+                <p className="text-xs text-gray-500 mt-0.5">{client.gender} · {ageLabel}</p>
                 {client.location && (
                     <p className="text-xs text-gray-400 flex items-center justify-center gap-0.5 mt-0.5">
                         <MapPin className="h-3 w-3" />{client.location}
@@ -44,7 +48,7 @@ function Avatar({ client }: { client: Client }) {
                 href={`/clients/${client.id}`}
                 className="flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 transition-colors"
             >
-                Full Profile <ExternalLink className="h-3 w-3" />
+                {he ? "פרופיל מלא" : "Full Profile"} <ExternalLink className="h-3 w-3" />
             </Link>
         </div>
     );
@@ -63,8 +67,8 @@ function CompareRow({ label, aVal, bVal }: RowProps) {
         <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2 px-3 py-2 text-sm">
             <div
                 dir={aDir}
-                className="text-gray-800 dark:text-gray-200 font-medium pr-2 min-w-0 break-words"
-                style={{ textAlign: aDir === "rtl" ? "right" : "right" }}
+                className="text-gray-800 dark:text-gray-200 font-medium pr-2 min-w-0 wrap-break-word"
+                style={{ textAlign: "right" }}
             >
                 {aVal || "—"}
             </div>
@@ -73,8 +77,8 @@ function CompareRow({ label, aVal, bVal }: RowProps) {
             </div>
             <div
                 dir={bDir}
-                className="text-gray-800 dark:text-gray-200 font-medium pl-2 min-w-0 break-words"
-                style={{ textAlign: bDir === "rtl" ? "left" : "left" }}
+                className="text-gray-800 dark:text-gray-200 font-medium pl-2 min-w-0 wrap-break-word"
+                style={{ textAlign: bDir === "rtl" ? "right" : "left" }}
             >
                 {bVal || "—"}
             </div>
@@ -127,6 +131,67 @@ function CompareContent() {
     const female = clientA.gender === "Female" ? clientA : clientB;
     const mixedGenders = clientA.gender !== clientB.gender;
 
+    const bothHebrew =
+        detectClientLanguage(clientA) === "he" &&
+        detectClientLanguage(clientB) === "he";
+
+    // Translate an English option value (or comma-separated list) to Hebrew when both profiles are Hebrew
+    type OptionKey = Parameters<typeof valueToLabel>[1];
+    function tv(val: string | undefined, key: OptionKey): string {
+        if (!val) return "";
+        if (!bothHebrew) return val;
+        return val.split(", ").map(v => valueToLabel("he", key, v.trim())).join("، ");
+    }
+
+    // Labels — Hebrew when both profiles are Hebrew
+    const L = bothHebrew
+        ? {
+            back: "חזרה",
+            title: "השוואה",
+            core: "פרטים מרכזיים",
+            prefs: "העדפות",
+            background: "רקע",
+            personal: "אישי",
+            location: "מיקום",
+            ethnicity: "עדה",
+            hashkafa: "השקפה",
+            maritalStatus: "מצב משפחתי",
+            age: "גיל",
+            relocate: "מוכן לעבור?",
+            learning: "לימוד (זכר / העדפת נקבה)",
+            headCovering: "כיסוי ראש (נקבה / העדפת זכר)",
+            familyBg: "רקע משפחתי",
+            education: "השכלה",
+            occupation: "עיסוק",
+            languages: "שפות",
+            personality: "אישיות",
+            hobbies: "תחביבים",
+            lookingFor: "מחפש/ת",
+        }
+        : {
+            back: "Back",
+            title: "Comparison",
+            core: "Core",
+            prefs: "Preferences",
+            background: "Background",
+            personal: "Personal",
+            location: "Location",
+            ethnicity: "Ethnicity",
+            hashkafa: "Hashkafa",
+            maritalStatus: "Marital Status",
+            age: "Age",
+            relocate: "Relocate?",
+            learning: "Learning (♂ / ♀ pref)",
+            headCovering: "Head Covering (♀ / ♂ pref)",
+            familyBg: "Family Background",
+            education: "Education",
+            occupation: "Occupation",
+            languages: "Languages",
+            personality: "Personality",
+            hobbies: "Hobbies",
+            lookingFor: "Looking For",
+        };
+
     return (
         <div className="flex flex-col h-full min-h-0 gap-4 overflow-hidden">
             {/* Header */}
@@ -136,11 +201,11 @@ function CompareContent() {
                     className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
                     <ArrowLeft className="h-4 w-4" />
-                    Back
+                    {L.back}
                 </button>
                 <div className="flex items-center gap-2">
                     <Heart className="h-5 w-5 text-red-600 fill-red-600" />
-                    <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Comparison</h1>
+                    <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">{L.title}</h1>
                 </div>
                 <div className="w-12" /> {/* spacer */}
             </div>
@@ -150,59 +215,59 @@ function CompareContent() {
 
                 {/* Profile headers */}
                 <div className="grid grid-cols-2 gap-4 mb-4 bg-white dark:bg-gray-950 rounded-xl p-4 shadow-sm">
-                    <Avatar client={clientA} />
-                    <Avatar client={clientB} />
+                    <Avatar client={clientA} he={bothHebrew} />
+                    <Avatar client={clientB} he={bothHebrew} />
                 </div>
 
                 {/* Comparison rows */}
                 <div className="bg-white dark:bg-gray-950 rounded-xl shadow-sm py-3 divide-y divide-gray-50 dark:divide-gray-800/50">
-                    <SectionLabel>Core</SectionLabel>
-                    <CompareRow label="Location" aVal={clientA.location} bVal={clientB.location} />
-                    <CompareRow label="Ethnicity" aVal={clientA.ethnicity} bVal={clientB.ethnicity} />
+                    <SectionLabel>{L.core}</SectionLabel>
+                    <CompareRow label={L.location} aVal={clientA.location} bVal={clientB.location} />
+                    <CompareRow label={L.ethnicity} aVal={tv(clientA.ethnicity, "ethnicity")} bVal={tv(clientB.ethnicity, "ethnicity")} />
                     <CompareRow
-                        label="Hashkafa"
-                        aVal={normalizeArr(clientA.religiousAffiliation).join(", ")}
-                        bVal={normalizeArr(clientB.religiousAffiliation).join(", ")}
+                        label={L.hashkafa}
+                        aVal={tv(normalizeArr(clientA.religiousAffiliation).join(", "), "religiousAffiliation")}
+                        bVal={tv(normalizeArr(clientB.religiousAffiliation).join(", "), "religiousAffiliation")}
                     />
-                    <CompareRow label="Marital Status" aVal={clientA.maritalStatus} bVal={clientB.maritalStatus} />
+                    <CompareRow label={L.maritalStatus} aVal={tv(clientA.maritalStatus, "maritalStatus")} bVal={tv(clientB.maritalStatus, "maritalStatus")} />
                     <CompareRow
-                        label="Age"
-                        aVal={`${calculateAge(clientA.dob)} y/o`}
-                        bVal={`${calculateAge(clientB.dob)} y/o`}
+                        label={L.age}
+                        aVal={bothHebrew ? `${calculateAge(clientA.dob)} שנה` : `${calculateAge(clientA.dob)} y/o`}
+                        bVal={bothHebrew ? `${calculateAge(clientB.dob)} שנה` : `${calculateAge(clientB.dob)} y/o`}
                     />
-                    <CompareRow label="Relocate?" aVal={clientA.willingToRelocate} bVal={clientB.willingToRelocate} />
+                    <CompareRow label={L.relocate} aVal={tv(clientA.willingToRelocate, "willingToRelocate")} bVal={tv(clientB.willingToRelocate, "willingToRelocate")} />
 
                     {mixedGenders && (
                         <>
-                            <SectionLabel>Preferences</SectionLabel>
+                            <SectionLabel>{L.prefs}</SectionLabel>
                             <CompareRow
-                                label="Learning (♂ / ♀ pref)"
-                                aVal={male.learningStatus || "—"}
-                                bVal={normalizeArr(female.preferredLearningStatus).join(", ") || "Any"}
+                                label={L.learning}
+                                aVal={tv(male.learningStatus || "", "learningStatus") || "—"}
+                                bVal={tv(normalizeArr(female.preferredLearningStatus).join(", "), "learningStatus") || (bothHebrew ? "כל סטטוס" : "Any")}
                             />
                             <CompareRow
-                                label="Head Covering (♀ / ♂ pref)"
-                                aVal={female.headCovering || "—"}
-                                bVal={normalizeArr(male.preferredHeadCovering).join(", ") || "Any"}
+                                label={L.headCovering}
+                                aVal={tv(female.headCovering || "", "headCovering") || "—"}
+                                bVal={tv(normalizeArr(male.preferredHeadCovering).join(", "), "headCovering") || (bothHebrew ? "כל כיסוי" : "Any")}
                             />
                         </>
                     )}
 
-                    <SectionLabel>Background</SectionLabel>
-                    <CompareRow label="Family Background" aVal={clientA.familyBackground} bVal={clientB.familyBackground} />
-                    <CompareRow label="Education" aVal={clientA.education} bVal={clientB.education} />
-                    <CompareRow label="Occupation" aVal={clientA.occupationTitle} bVal={clientB.occupationTitle} />
+                    <SectionLabel>{L.background}</SectionLabel>
+                    <CompareRow label={L.familyBg} aVal={clientA.familyBackground} bVal={clientB.familyBackground} />
+                    <CompareRow label={L.education} aVal={clientA.education} bVal={clientB.education} />
+                    <CompareRow label={L.occupation} aVal={clientA.occupationTitle} bVal={clientB.occupationTitle} />
                     <CompareRow
-                        label="Languages"
-                        aVal={normalizeArr(clientA.languages).join(", ")}
-                        bVal={normalizeArr(clientB.languages).join(", ")}
+                        label={L.languages}
+                        aVal={tv(normalizeArr(clientA.languages).join(", "), "languages")}
+                        bVal={tv(normalizeArr(clientB.languages).join(", "), "languages")}
                     />
 
-                    <SectionLabel>Personal</SectionLabel>
-                    <CompareRow label="Personality" aVal={clientA.personality} bVal={clientB.personality} />
-                    <CompareRow label="Hobbies" aVal={clientA.hobbies} bVal={clientB.hobbies} />
+                    <SectionLabel>{L.personal}</SectionLabel>
+                    <CompareRow label={L.personality} aVal={clientA.personality} bVal={clientB.personality} />
+                    <CompareRow label={L.hobbies} aVal={clientA.hobbies} bVal={clientB.hobbies} />
                     {(clientA.preferencesFreeText || clientB.preferencesFreeText) && (
-                        <CompareRow label="Looking For" aVal={clientA.preferencesFreeText || ""} bVal={clientB.preferencesFreeText || ""} />
+                        <CompareRow label={L.lookingFor} aVal={clientA.preferencesFreeText || ""} bVal={clientB.preferencesFreeText || ""} />
                     )}
                 </div>
 
@@ -213,14 +278,14 @@ function CompareContent() {
                         className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     >
                         <ExternalLink className="h-4 w-4" />
-                        {clientA.fullName.split(" ")[0]}'s Profile
+                        {bothHebrew ? `הפרופיל של ${clientA.fullName.split(" ")[0]}` : `${clientA.fullName.split(" ")[0]}'s Profile`}
                     </Link>
                     <Link
                         href={`/clients/${clientB.id}`}
                         className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     >
                         <ExternalLink className="h-4 w-4" />
-                        {clientB.fullName.split(" ")[0]}'s Profile
+                        {bothHebrew ? `הפרופיל של ${clientB.fullName.split(" ")[0]}` : `${clientB.fullName.split(" ")[0]}'s Profile`}
                     </Link>
                 </div>
             </div>
