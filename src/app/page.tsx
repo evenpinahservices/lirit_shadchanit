@@ -1,20 +1,11 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import DashboardAnalytics from "@/components/DashboardAnalytics";
 import { LayoutDashboard } from "lucide-react";
 
 export default function Home() {
-  const { user, isAuthenticated } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
-    }
-  }, [isAuthenticated, router]);
+  const { user } = useAuth();
 
   if (!user) return null;
 

@@ -1,24 +1,25 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
 import { Heart, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { brands, type BrandId } from "@/config/branding";
+import { brands, currentBrandId, type BrandId } from "@/config/branding";
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [brandId, setBrandId] = useState<BrandId>("default");
+    const [brandId] = useState<BrandId>(() => {
+        if (typeof window !== "undefined") {
+            const hint = localStorage.getItem("loginBrandHint");
+            if (hint === "lirit" || hint === "default") return hint;
+        }
+        return currentBrandId;
+    });
     const { login } = useAuth();
     const submittingRef = useRef(false);
-
-    useEffect(() => {
-        const hint = localStorage.getItem("loginBrandHint");
-        if (hint === "lirit") setBrandId("lirit");
-    }, []);
 
     const brand = brands[brandId];
 
