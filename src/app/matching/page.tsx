@@ -98,10 +98,12 @@ const TIER_COLORS: Record<Tier, string> = {
 // ── Discovery Feed ─────────────────────────────────────────────────────────────
 
 function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
-    const [slots, setSlots] = useState<FeedSlot[]>(() => buildFeed(allClients));
-    const usedSeedIds = useRef(new Set(slots.map(s => s.seed.id)));
+    // Start empty — buildFeed is expensive (runs findMatchesWithLevels per seed)
+    // and would block the JS thread before the page could paint.
+    const [slots, setSlots] = useState<FeedSlot[]>([]);
+    const usedSeedIds = useRef(new Set<string>());
 
-    // Rebuild if feed was built before clients loaded
+    // Build after first paint so navigation feels instant
     useEffect(() => {
         if (allClients.length > 0 && slots.length === 0) {
             usedSeedIds.current = new Set();

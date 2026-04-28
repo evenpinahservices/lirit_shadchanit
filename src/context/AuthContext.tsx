@@ -10,7 +10,7 @@ const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 interface AuthContextType {
     user: User | null;
-    login: (username: string, password?: string) => Promise<boolean>;
+    login: (username: string, password?: string) => Promise<{ ok: true } | { ok: false; error: string }>;
     logout: () => void;
     isAuthenticated: boolean;
     impersonatingUsername: string | null;
@@ -95,21 +95,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => window.removeEventListener("session-expired", handler);
     }, [user, logout]);
 
-    const login = async (username: string, password?: string) => {
+    const login = async (username: string, password?: string): Promise<{ ok: true } | { ok: false; error: string }> => {
         try {
             const foundUser = await loginUser(username, password);
-
             if (foundUser) {
                 setUser(foundUser);
                 localStorage.setItem("mock_user", JSON.stringify(foundUser));
                 localStorage.setItem("loginBrandHint", foundUser.role === "admin" ? "lirit" : "default");
                 router.push("/");
-                return true;
+                return { ok: true };
             }
-        } catch (error) {
+            return { ok: false, error: "Invalid username or password" };
+        } catch (error: any) {
             console.error("Login failed", error);
+            const msg = error?.message || "";
+            if (msg.includes("ECONNREFUSED") || msg.includes("ETIMEDOUT") || msg.includes("serverSelection")) {
+                return { ok: false, error: "Cannot reach server — check your connection and try again" };
+            }
+            return { ok: false, error: "Something went wrong, please try again" };
         }
-        return false;
     };
 
     const impersonatingUsername = (user as any)?.impersonating || null;

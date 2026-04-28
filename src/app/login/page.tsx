@@ -33,18 +33,13 @@ export default function LoginPage() {
             return;
         }
         setIsLoading(true);
-        try {
-            const success = await login(username, password);
-            if (!success) {
-                setError("Invalid username or password");
-                setIsLoading(false);
-                submittingRef.current = false;
-            }
-            // On success: stay in loading state while navigation completes
-        } catch {
+        const result = await login(username, password);
+        if (!result.ok) {
+            setError(result.error);
             setIsLoading(false);
             submittingRef.current = false;
         }
+        // On success: stay in loading state while navigation completes
     };
 
     return (

@@ -54,7 +54,11 @@ async function dbConnect(dbName?: string): Promise<mongoose.Connection> {
     const uri = getMongoUri();
 
     if (!mainConnectionPromise) {
-        const opts = { bufferCommands: false };
+        const opts = {
+            bufferCommands: false,
+            serverSelectionTimeoutMS: 8000,
+            connectTimeoutMS: 8000,
+        };
         console.log("Connecting to MongoDB...");
         mainConnectionPromise = mongoose.connect(uri, opts).then((m) => {
             console.log("MongoDB Connected Successfully");
