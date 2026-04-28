@@ -177,7 +177,7 @@ export function useDateHandling(
 
     const calculateDobFromAge = (age: number | "", currentDob: string): string => {
         if (age === "" || typeof age !== "number") return currentDob || "";
-        if (isNaN(age) || age < 18 || age > 60) return currentDob || "";
+        if (isNaN(age) || age < 18 || age > 80) return currentDob || "";
 
         const birthYear = ageToYear(age);
 
@@ -232,7 +232,7 @@ export function useDateHandling(
         if (!isNaN(parsedAge)) {
             setAge(parsedAge);
 
-            if (parsedAge >= 18 && parsedAge <= 60) {
+            if (parsedAge >= 18 && parsedAge <= 80) {
                 isUpdatingFromAgeRef.current = true;
                 const newDob = calculateDobFromAge(parsedAge, currentDob || "");
                 if (newDob) {
@@ -254,7 +254,7 @@ export function useDateHandling(
         const parsedAge = parseInt(inputValue);
         if (isNaN(parsedAge)) return;
 
-        const clampedAge = Math.min(Math.max(parsedAge, 18), 60);
+        const clampedAge = Math.min(Math.max(parsedAge, 18), 80);
         if (clampedAge !== parsedAge) {
             setAge(clampedAge);
         }

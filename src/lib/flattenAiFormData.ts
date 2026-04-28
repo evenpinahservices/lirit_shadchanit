@@ -1,4 +1,4 @@
-import { ageToYear } from "./utils";
+import { ageToYear, isHebrew } from "./utils";
 
 /**
  * Flattens AI-extracted form data (with optional { value, confidence, sourceQuote }) into
@@ -85,7 +85,7 @@ export function flattenAiFormDataForPending(payload: FlattenAiPayload): Record<s
             ? (rawAge as { value: unknown }).value
             : rawAge;
         const ageNum = Number(ageValue);
-        if (ageNum && ageNum >= 18 && ageNum <= 60) {
+        if (ageNum && ageNum >= 18 && ageNum <= 80) {
             flat.dob = String(ageToYear(ageNum));
         }
     }
@@ -135,7 +135,11 @@ export function flattenAiFormDataForPending(payload: FlattenAiPayload): Record<s
 
     // Required fields with fallbacks for draft
     if (!flat.fullName || String(flat.fullName).trim() === "") {
-        flat.fullName = "Draft";
+        const isHebrewProfile =
+            flat.formLanguage === "he" ||
+            [flat.location, flat.personality, flat.hobbies, flat.familyBackground, flat.notes]
+                .some(f => typeof f === "string" && isHebrew(f));
+        flat.fullName = isHebrewProfile ? "ללא שם" : "Unnamed";
     }
     if (!flat.dob || String(flat.dob).trim() === "") {
         flat.dob = new Date().getFullYear().toString();

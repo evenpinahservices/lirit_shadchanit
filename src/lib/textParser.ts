@@ -40,7 +40,7 @@ export function parseTextToClientData(text: string): Partial<Client> {
     const yearMatch = text.match(/(?:born|birth|year|שנת לידה)[\s:]*(\d{4})/i);
     if (ageMatch) {
         const age = parseInt(ageMatch[1]);
-        if (!isNaN(age) && age >= 18 && age <= 60) {
+        if (!isNaN(age) && age >= 18 && age <= 80) {
             // When converting age to DOB, assume birthday has already passed this year
             // This gives the most recent possible birth year for the given age
             const currentYear = new Date().getFullYear();
