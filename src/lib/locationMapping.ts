@@ -537,7 +537,7 @@ export function areLocationsCompatible(
   const relocate1 = willingToRelocate1?.toLowerCase();
   const relocate2 = willingToRelocate2?.toLowerCase();
 
-  return relocate1 === "yes" || relocate2 === "yes";
+  return relocate1 === "yes" && relocate2 === "yes";
 }
 
 /**

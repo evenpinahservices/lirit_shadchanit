@@ -217,8 +217,15 @@ export function findMatchesWithLevels(
     const sameCity = (c: Client) =>
         compareLocationsEnhanced(client.location || "", c.location || "");
 
-    level1.sort((a, b) => (sameCity(b) ? 1 : 0) - (sameCity(a) ? 1 : 0));
-    level2.sort((a, b) => (sameCity(b) ? 1 : 0) - (sameCity(a) ? 1 : 0));
+    const hasKnownAge = (c: Client) => {
+        const age = calculateAge(c.dob || "");
+        return !isNaN(age) && age >= 0 && age <= 120;
+    };
+
+    const rank = (c: Client) => (sameCity(c) ? 2 : 0) + (hasKnownAge(c) ? 1 : 0);
+
+    level1.sort((a, b) => rank(b) - rank(a));
+    level2.sort((a, b) => rank(b) - rank(a));
 
     return { level1, level2 };
 }

@@ -45,8 +45,8 @@ function pickRandom<T>(pool: T[], n: number): T[] {
 }
 
 function getBestMatch(seed: Client, allClients: Client[]): Client | null {
-    const { level1, level2 } = findMatchesWithLevels(seed, allClients, new Set());
-    return level1[0] ?? level2[0] ?? null;
+    const { level1 } = findMatchesWithLevels(seed, allClients, new Set());
+    return level1[0] ?? null;
 }
 
 function buildFeed(allClients: Client[]): FeedSlot[] {
@@ -169,7 +169,7 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
             </div>
 
             {tierOrder.map(tier => {
-                const tierSlots = slots.filter(s => s.tier === tier);
+                const tierSlots = slots.filter(s => s.tier === tier && s.match !== null);
                 if (tierSlots.length === 0) return null;
                 return (
                     <div key={tier}>
@@ -180,7 +180,7 @@ function DiscoveryFeed({ allClients }: { allClients: Client[] }) {
                             <div className="h-px flex-1 bg-gray-200 dark:bg-gray-800" />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {tierSlots.map(slot => (
+                            {tierSlots.filter(s => s.match !== null).map(slot => (
                                 <FeedCard
                                     key={slot.id}
                                     slot={slot}

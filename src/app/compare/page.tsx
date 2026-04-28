@@ -28,7 +28,7 @@ function Avatar({ client, he }: { client: Client; he: boolean }) {
     const ageLabel = he ? `${age} שנה` : `${age} y/o`;
     return (
         <div className="flex flex-col items-center gap-2">
-            <div className="w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border-2 border-white dark:border-gray-700 shadow-md">
+            <div className="w-28 h-28 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border-2 border-white dark:border-gray-700 shadow-md">
                 {client.photoUrl ? (
                     <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
                 ) : (
