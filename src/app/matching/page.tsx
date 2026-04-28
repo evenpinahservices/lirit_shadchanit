@@ -471,10 +471,14 @@ export default function MatchingPage() {
         if (!selectedClientId || !selectedClient) return;
         setIsLoading(true);
         try {
-            const dismissedList = await getDismissedMatches(selectedClientId);
+            // Fire async DB fetch, then run sync matching while the request is in-flight
+            const dismissedPromise = getDismissedMatches(selectedClientId);
+            const { level1: rawL1, level2: rawL2 } = findMatchesWithLevels(selectedClient, clients, new Set());
+            const dismissedList = await dismissedPromise;
             setDismissed(dismissedList);
             const dismissedIds = new Set(dismissedList.map(d => d.candidateId));
-            const { level1, level2 } = findMatchesWithLevels(selectedClient, clients, dismissedIds);
+            const level1 = rawL1.filter(c => !dismissedIds.has(c.id));
+            const level2 = rawL2.filter(c => !dismissedIds.has(c.id));
 
             setPoolL1(level1);
             setPoolL2(level2);
@@ -663,7 +667,14 @@ export default function MatchingPage() {
 
                         {/* Selector / compact header */}
                         <div className="shrink-0">
-                            {!isResultsView ? (
+                            {!isResultsView && autoRun ? (
+                                <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+                                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600" />
+                                    <p className="text-sm text-gray-500">
+                                        Looking for a good match{selectedClient ? ` for ${selectedClient.fullName}` : ""}…
+                                    </p>
+                                </div>
+                            ) : !isResultsView ? (
                                 <div className="bg-gray-50 dark:bg-gray-900 p-4 shadow-sm flex flex-col">
                                     <h2 className="font-semibold mb-3">Select Client</h2>
                                     <div className="space-y-3">
@@ -710,6 +721,13 @@ export default function MatchingPage() {
                                                 <p className="text-xs text-muted-foreground" dir="ltr">
                                                     {selectedClient?.location ?? <span className="italic">Unknown</span>} · {selectedClient && calculateAge(selectedClient.dob)} y/o
                                                 </p>
+                                                {activeDealBreakers.length > 0 && (
+                                                    <p className="text-xs text-gray-400 mt-0.5">
+                                                        {activeDealBreakers.map((db, i) => (
+                                                            <span key={i}>{i > 0 && " · "}<span className="font-medium text-gray-500">{db.label}:</span> {db.value}</span>
+                                                        ))}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                         <button onClick={handleReset} className="text-sm text-red-600 hover:text-red-700 font-medium px-3 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">

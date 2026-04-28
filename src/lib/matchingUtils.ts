@@ -181,6 +181,77 @@ function checkLevel2(a: Client, b: Client): boolean {
     return true;
 }
 
+// ── Weighted scoring ─────────────────────────────────────────────────────────
+// Max possible score: age(3) + hashkafa(4) + location(4) + ethnicity(2) + knownAge(1) = 14
+// Hard filters (deal breakers) still gate inclusion; scoring only determines order.
+
+// Group 0 = Chareidi, 1 = Dati, 2 = Traditional/BT, 3 = Secular
+const HASHKAFA_GROUP: Record<string, number> = {
+    "Haredi": 0, "Yeshivish American": 0, "Yeshivish Litvish": 0,
+    "Yeshivish Hasidish": 0, "Chabad": 0,
+    "Hardal": 1, "Dati Leumi": 1, "Modern Orthodox": 1,
+    "Baal Teshuva": 2, "Masorti": 2, "Traditional": 2,
+    "Secular": 3,
+};
+
+function hashkafaScore(a: Client, b: Client): number {
+    const aAff = normalizeArr(a.religiousAffiliation);
+    const bAff = normalizeArr(b.religiousAffiliation);
+    if (aAff.length === 0 || bAff.length === 0) return 0;
+    const overlaps = aAff.filter(h => bAff.includes(h)).length;
+    if (overlaps >= 2) return 4;
+    if (overlaps === 1) return 3;
+    // Level-2 pairs may have no exact overlap — score by closest group distance
+    let minDist = Infinity;
+    for (const ah of aAff) {
+        for (const bh of bAff) {
+            const ag = HASHKAFA_GROUP[ah];
+            const bg = HASHKAFA_GROUP[bh];
+            if (ag !== undefined && bg !== undefined) minDist = Math.min(minDist, Math.abs(ag - bg));
+        }
+    }
+    return minDist === 1 ? 1 : 0;
+}
+
+function ageScore(male: Client, female: Client): number {
+    const mAge = calculateAge(male.dob);
+    const fAge = calculateAge(female.dob);
+    if (isNaN(mAge) || isNaN(fAge)) return 0;
+    const gap = Math.abs(mAge - fAge);
+    if (gap <= 1) return 3;
+    if (gap <= 2) return 2;
+    if (gap <= 3) return 1;
+    if (gap <= 5) return 0;
+    return -1;
+}
+
+function locationScore(client: Client, candidate: Client): number {
+    const loc1 = client.locationEnglish || client.location || "";
+    const loc2 = candidate.locationEnglish || candidate.location || "";
+    if (!loc1 || !loc2) return 0;
+    if (compareLocationsEnhanced(loc1, loc2)) return 4; // same city
+    if (areLocationsCompatible(loc1, loc2)) return 1;   // same country
+    return 0;
+}
+
+function ethnicityScore(a: Client, b: Client): number {
+    if (!a.ethnicity || !b.ethnicity) return 0;
+    return sameEthGroup(a.ethnicity, b.ethnicity) ? 2 : 0;
+}
+
+export function scoreMatch(client: Client, candidate: Client): number {
+    const male = client.gender === "Male" ? client : candidate;
+    const female = client.gender === "Female" ? client : candidate;
+    let score = 0;
+    score += ageScore(male, female);
+    score += hashkafaScore(client, candidate);
+    score += locationScore(client, candidate);
+    score += ethnicityScore(client, candidate);
+    const age = calculateAge(candidate.dob || "");
+    if (!isNaN(age) && age >= 0 && age <= 120) score += 1;
+    return score;
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export interface MatchResult {
@@ -198,11 +269,17 @@ export function findMatchesWithLevels(
 
     const clientLang = detectClientLanguage(client);
 
-    for (const candidate of allClients) {
-        if (candidate.id === client.id) continue;
-        if (!candidate.active) continue;
-        if (dismissedIds.has(candidate.id)) continue;
-        if (client.gender === candidate.gender) continue; // opposite gender only
+    // Pre-filter to opposite-gender active non-dismissed candidates before scoring.
+    // Halves the comparison set and avoids per-iteration guard checks.
+    const candidates = allClients.filter(
+        (c) =>
+            c.id !== client.id &&
+            c.active !== false &&
+            !dismissedIds.has(c.id) &&
+            c.gender !== client.gender
+    );
+
+    for (const candidate of candidates) {
 
         // Hebrew ↔ English pairs are never shown on the first pass; they fall to Level 2
         const mixedLanguages = detectClientLanguage(candidate) !== clientLang;
@@ -214,18 +291,8 @@ export function findMatchesWithLevels(
         }
     }
 
-    const sameCity = (c: Client) =>
-        compareLocationsEnhanced(client.location || "", c.location || "");
-
-    const hasKnownAge = (c: Client) => {
-        const age = calculateAge(c.dob || "");
-        return !isNaN(age) && age >= 0 && age <= 120;
-    };
-
-    const rank = (c: Client) => (sameCity(c) ? 2 : 0) + (hasKnownAge(c) ? 1 : 0);
-
-    level1.sort((a, b) => rank(b) - rank(a));
-    level2.sort((a, b) => rank(b) - rank(a));
+    level1.sort((a, b) => scoreMatch(client, b) - scoreMatch(client, a));
+    level2.sort((a, b) => scoreMatch(client, b) - scoreMatch(client, a));
 
     return { level1, level2 };
 }
