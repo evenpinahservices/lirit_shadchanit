@@ -112,7 +112,7 @@ function SignupContent() {
         <div className="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 z-50 overflow-y-auto">
             <div className="w-full max-w-md space-y-6 bg-white dark:bg-gray-950 p-8 rounded-xl shadow-lg my-8">
                 <div className="flex flex-col items-center text-center">
-                    <Heart className="w-10 h-10 text-blue-500 fill-blue-500 mb-3" />
+                    <Heart className="w-10 h-10 text-red-500 fill-red-500 mb-3" />
                     <h2 className="text-2xl font-bold tracking-tight">Create your account</h2>
                     <p className="text-sm text-muted-foreground mt-1">
                         You've been invited to join ShidduchDB

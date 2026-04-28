@@ -70,7 +70,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }, [pathname, router]);
 
     if (isChecking && !PUBLIC_PATHS.includes(pathname) && !PUBLIC_PATH_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
-        return null; // Or a loading spinner
+        return (
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500" />
+            </div>
+        );
     }
 
     return <>{children}</>;
