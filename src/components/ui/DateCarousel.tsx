@@ -25,6 +25,8 @@ const HEBREW_DAYS = [
     "כא", "כב", "כג", "כד", "כה", "כו", "כז", "כח", "כט", "ל"
 ];
 
+const UNKNOWN_YEAR = "__unknown__";
+
 export function DateCarousel({ mode, value, onChange }: DateCarouselProps) {
     // Generate ranges
     const currentYear = new Date().getFullYear();
@@ -71,18 +73,21 @@ export function DateCarousel({ mode, value, onChange }: DateCarouselProps) {
         } else if (mode === "Hebrew") {
             // Expect "Hebrew: <Day> <Month> <Year>"
             const parts = value.replace("Hebrew: ", "").split(" ");
-            if (parts.length === 3) {
+            if (parts.length >= 3) {
                 setDay(parts[0]);
                 setMonth(parts[1]);
-                // Year could be in Hebrew letters or numeric - convert numeric to Hebrew letters
                 const yearPart = parts[2];
-                const numericYear = parseInt(yearPart);
-                if (!isNaN(numericYear) && numericYear >= 1000) {
-                    // Convert numeric year to Hebrew letters
+                // Try numeric parse first, then Hebrew-letter parse (normalizes all quote variants)
+                let numericYear = parseInt(yearPart);
+                if (isNaN(numericYear) || numericYear < 1000) {
+                    numericYear = parseHebrewYearToNumber(yearPart);
+                }
+                if (!isNaN(numericYear) && numericYear >= hebYearStart && numericYear <= hebYearEnd) {
+                    // Canonical form with ״ (U+05F4) so it matches option values exactly
                     setYear(convertHebrewYearToLetters(numericYear));
                 } else {
-                    // Already in Hebrew letters, use as is
-                    setYear(yearPart);
+                    // Out of valid range or unparseable — flag for manual fix
+                    setYear(UNKNOWN_YEAR);
                 }
             }
         }
@@ -98,7 +103,8 @@ export function DateCarousel({ mode, value, onChange }: DateCarouselProps) {
             const paddedDay = d.padStart(2, '0');
             onChange(`${y}-${paddedMonth}-${paddedDay}`);
         } else if (mode === "Hebrew") {
-            onChange(`Hebrew: ${d} ${m} ${y}`);
+            // Preserve day/month but flag year as unknown so calculateAgeFromDob returns ""
+            onChange(y === UNKNOWN_YEAR ? `Hebrew: ${d} ${m} ?` : `Hebrew: ${d} ${m} ${y}`);
         }
     };
 
@@ -170,12 +176,15 @@ export function DateCarousel({ mode, value, onChange }: DateCarouselProps) {
                 <Select
                     value={year}
                     onChange={(val: string) => handleChange("year", val)}
-                    options={hebYears.map(y => {
-                        const hebrewYearLetters = convertHebrewYearToLetters(y);
-                        return { value: hebrewYearLetters, label: hebrewYearLetters };
-                    })}
+                    options={[
+                        { value: UNKNOWN_YEAR, label: "⚠ לא ידוע – מלא ידנית" },
+                        ...hebYears.map(y => {
+                            const hebrewYearLetters = convertHebrewYearToLetters(y);
+                            return { value: hebrewYearLetters, label: hebrewYearLetters };
+                        })
+                    ]}
                     placeholder="שנה"
-                    className="text-right"
+                    className={`text-right${year === UNKNOWN_YEAR ? " ring-2 ring-red-500 rounded-md" : ""}`}
                 />
             </div>
         );
