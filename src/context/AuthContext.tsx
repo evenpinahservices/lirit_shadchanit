@@ -24,6 +24,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
     const sessionCheckRef = useRef<NodeJS.Timeout | null>(null);
+    // Prevents verifySession from logging the user out right after a successful login
+    // when MongoDB is cold and verifySession returns null before the connection warms up
+    const justLoggedInRef = useRef(false);
 
     const logout = useCallback(() => {
         localStorage.removeItem("mock_user");
@@ -54,6 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const serverUser = await verifySession();
             if (!serverUser) {
+                if (justLoggedInRef.current) {
+                    // DB is still warming up after a fresh login — don't kick the user out
+                    console.warn("[checkSession] verifySession returned null but login just succeeded — skipping logout");
+                    return;
+                }
                 console.warn("Server session expired — logging out");
                 logout();
             }
@@ -102,6 +110,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(foundUser);
                 localStorage.setItem("mock_user", JSON.stringify(foundUser));
                 localStorage.setItem("loginBrandHint", foundUser.role === "admin" ? "lirit" : "default");
+                // Grace period: DB may still be warming up, so verifySession could return null
+                // for the first few seconds after a successful login. Block any logout during this window.
+                justLoggedInRef.current = true;
+                setTimeout(() => { justLoggedInRef.current = false; }, 15000);
                 router.push("/");
                 return { ok: true };
             }
