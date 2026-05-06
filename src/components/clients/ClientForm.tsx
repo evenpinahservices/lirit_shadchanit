@@ -58,7 +58,7 @@ const STEP_KEYS = [
     { titleKey: "background", fields: ["ethnicity", "tribalStatus", "maritalStatus", "languages", "familyBackground", "education", "occupationTitle", "occupationDescription"] },
     { titleKey: "religiousDetails", fields: ["religiousAffiliation", "learningStatus", "headCovering", "religiousDetailsFreeText"] },
     { titleKey: "personal", fields: ["hobbies", "personality", "smoking", "medicalHistory", "medicalHistoryDetails"] },
-    { titleKey: "preferences", fields: ["ageGapPreference", "willingToRelocate", "preferredEthnicities", "preferredHashkafos", "preferredLearningStatus", "preferredHeadCovering", "preferencesFreeText"] },
+    { titleKey: "preferences", fields: ["ageGapPreference", "preferredEthnicities", "preferredHashkafos", "preferredLearningStatus", "preferredHeadCovering", "preferencesFreeText"] },
     { titleKey: "admin", fields: ["references", "notes"] },
 ];
 
@@ -102,7 +102,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
         personality: "",
         // lookingFor removed
         ageGapPreference: [], // Changed to array
-        willingToRelocate: "No",
+        willingToRelocate: "",
         medicalHistory: "No",
         smoking: "No",
         references: "",
@@ -1652,16 +1652,6 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                                 />
                                             )}
                                         />
-                                    </FieldWithTooltip>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">{t(lang, "labels.willingToRelocate")}</label>
-                                    <FieldWithTooltip sourceQuote={sourceQuotes.willingToRelocate} fieldName="willingToRelocate">
-                                        <select {...register("willingToRelocate")} style={getFieldStyle("willingToRelocate")} className="w-full p-2 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-900 text-sm">
-                                            {opts("willingToRelocate").map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
                                     </FieldWithTooltip>
                                 </div>
                                 <div className="space-y-2">

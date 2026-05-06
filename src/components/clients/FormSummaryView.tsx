@@ -93,7 +93,6 @@ export function FormSummaryView({ watch, lang }: FormSummaryViewProps) {
                     <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.preferences")}</h4>
                     <div className="space-y-2 text-sm">
                         <div><span className="font-medium">{t(lang, "labels.ageGapPreference")}:</span> {(() => { const gap = watch("ageGapPreference"); return Array.isArray(gap) ? gap.join(", ") || "—" : gap || "—"; })()}</div>
-                        <div><span className="font-medium">{t(lang, "labels.willingToRelocate")}:</span> {watch("willingToRelocate") || "—"}</div>
                         <div><span className="font-medium">{t(lang, "labels.preferredEthnicities")}:</span> {(() => { const ethnicities = watch("preferredEthnicities"); return Array.isArray(ethnicities) ? ethnicities.join(", ") || "—" : ethnicities || "—"; })()}</div>
                         {watch("preferencesFreeText") && (
                             <div><span className="font-medium">{t(lang, "labels.preferencesFreeText")}:</span> {watch("preferencesFreeText") || "—"}</div>

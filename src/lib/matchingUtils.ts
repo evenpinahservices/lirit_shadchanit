@@ -122,7 +122,8 @@ function ageGapExplicitlyAllowed(prefs: string[], actualGap: number): boolean {
 //   • divorced ↔ divorced only
 //   • location compatible
 //   • same ethnicity (never relaxed)
-//   • age gap ≤ 3 years absolute (never relaxed here)
+//   • woman ≤ 1yr older than man (absolute hard limit, never relaxed)
+//   • man ≤ 3yr older than woman (relaxable in Level 2 with explicit prefs)
 //   • same hashkafa group (Chareidi, Dati, Traditional/BT — never cross-group)
 //   • head covering and learning status preferences
 
@@ -144,10 +145,14 @@ function checkLevel1(a: Client, b: Client): boolean {
     // Ethnicity: hard filter — never match different groups
     if (a.ethnicity && b.ethnicity && !sameEthGroup(a.ethnicity, b.ethnicity)) return false;
 
-    // Age gap: absolute max 3 years (symmetric). Skip if either age is unknown.
+    // Age gap: woman may be at most 1yr older than man (hard limit).
+    // Man may be at most 3yr older than woman at baseline.
     const mAge = calculateAge(male.dob);
     const fAge = calculateAge(female.dob);
-    if (!isNaN(mAge) && !isNaN(fAge) && Math.abs(mAge - fAge) > 3) return false;
+    if (!isNaN(mAge) && !isNaN(fAge)) {
+        if (fAge - mAge > 1) return false; // woman too much older — never allowed
+        if (mAge - fAge > 3) return false; // man too much older at baseline
+    }
 
     // Hashkafa: must be in the same group — never pair Chareidi with Dati, Dati with Traditional, etc.
     if (!sameHashkafaGroup(a, b)) return false;
@@ -195,16 +200,18 @@ function checkLevel2(a: Client, b: Client): boolean {
     // Hashkafa: same group required even in broader matching
     if (!sameHashkafaGroup(a, b)) return false;
 
-    // Age gap: ≤3 always passes; >3 only if BOTH sides have explicit preferences allowing it
+    // Age gap: woman >1yr older is always blocked (even in personal expansion).
+    // Man >3yr older only passes if BOTH sides have explicit preferences allowing it.
     const mAge = calculateAge(male.dob);
     const fAge = calculateAge(female.dob);
     if (!isNaN(mAge) && !isNaN(fAge)) {
-        const absGap = Math.abs(mAge - fAge);
-        if (absGap > 3) {
+        if (fAge - mAge > 1) return false; // absolute hard limit — never relaxable
+        const manGap = mAge - fAge;
+        if (manGap > 3) {
             const aGapPrefs = normalizeArr(a.ageGapPreference);
             const bGapPrefs = normalizeArr(b.ageGapPreference);
-            if (!ageGapExplicitlyAllowed(aGapPrefs, absGap)) return false;
-            if (!ageGapExplicitlyAllowed(bGapPrefs, absGap)) return false;
+            if (!ageGapExplicitlyAllowed(aGapPrefs, manGap)) return false;
+            if (!ageGapExplicitlyAllowed(bGapPrefs, manGap)) return false;
         }
     }
 

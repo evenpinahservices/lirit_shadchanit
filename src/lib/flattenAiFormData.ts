@@ -27,7 +27,7 @@ const CLIENT_KEYS = [
     "ethnicity", "tribalStatus", "religiousAffiliation", "learningStatus", "maritalStatus", "children",
     "languages", "familyBackground", "education", "occupationTitle", "occupationDescription", "smoking", "headCovering", "religiousDetailsFreeText",
     "hobbies", "personality", "medicalHistory", "medicalHistoryDetails",
-    "willingToRelocate", "ageGapPreference", "preferredEthnicities", "preferredHashkafos", "preferredLearningStatus", "preferredHeadCovering", "preferencesFreeText",
+    "ageGapPreference", "preferredEthnicities", "preferredHashkafos", "preferredLearningStatus", "preferredHeadCovering", "preferencesFreeText",
     "references", "notes", "resumeRawText", "active", "status", "formLanguage",
 ] as const;
 
