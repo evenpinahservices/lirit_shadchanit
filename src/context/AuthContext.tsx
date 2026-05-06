@@ -61,9 +61,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const serverUser = await verifySession();
             if (!serverUser) {
+                // Ref-based grace period (soft navigation path)
                 if (justLoggedInRef.current) {
-                    // DB is still warming up after a fresh login — don't kick the user out
-                    console.warn("[checkSession] verifySession returned null but login just succeeded — skipping logout");
+                    console.warn("[checkSession] verifySession null — ref grace period active, skipping logout");
+                    return;
+                }
+                // sessionStorage-based grace period (hard navigation path)
+                const loginTs = sessionStorage.getItem("loginJustCompleted");
+                if (loginTs && Date.now() - Number(loginTs) < 20000) {
+                    console.warn("[checkSession] verifySession null — sessionStorage grace period active, skipping logout");
+                    sessionStorage.removeItem("loginJustCompleted");
                     return;
                 }
                 console.warn("Server session expired — logging out");
@@ -118,9 +125,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // for the first few seconds after a successful login. Block any logout during this window.
                 justLoggedInRef.current = true;
                 setTimeout(() => { justLoggedInRef.current = false; }, 15000);
-                console.log("[login] client: pushing to /");
-                router.push("/");
-                console.log("[login] client: router.push() called");
+                // sessionStorage flag survives the hard navigation below
+                sessionStorage.setItem("loginJustCompleted", Date.now().toString());
+                console.log("[login] client: returning ok=true, login page will navigate");
                 return { ok: true };
             }
             return { ok: false, error: "Invalid username or password" };

@@ -51,8 +51,11 @@ export default function LoginPage() {
                 setError(result.error);
                 setIsLoading(false);
                 submittingRef.current = false;
+            } else {
+                // Hard navigation: bypasses Next.js router state issues that prevent
+                // router.push("/") from working reliably after a server action completes
+                window.location.href = "/";
             }
-            // On success: stay in loading state while navigation completes
         } catch (err) {
             clearTimeout(timeoutId);
             console.error("[login] client: unexpected throw:", err);
