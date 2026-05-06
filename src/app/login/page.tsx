@@ -33,13 +33,33 @@ export default function LoginPage() {
             return;
         }
         setIsLoading(true);
-        const result = await login(username, password);
-        if (!result.ok) {
-            setError(result.error);
+
+        // Hard 20-second timeout — if the server action hangs, the user can retry
+        const timeoutId = setTimeout(() => {
+            console.error("[login] client-side 20s timeout hit — server action did not resolve");
+            setError("Login is taking too long — please try again.");
+            setIsLoading(false);
+            submittingRef.current = false;
+        }, 20000);
+
+        try {
+            console.log("[login] client: calling login()");
+            const result = await login(username, password);
+            console.log("[login] client: login() resolved, ok=", result.ok);
+            clearTimeout(timeoutId);
+            if (!result.ok) {
+                setError(result.error);
+                setIsLoading(false);
+                submittingRef.current = false;
+            }
+            // On success: stay in loading state while navigation completes
+        } catch (err) {
+            clearTimeout(timeoutId);
+            console.error("[login] client: unexpected throw:", err);
+            setError("Unexpected error — please try again.");
             setIsLoading(false);
             submittingRef.current = false;
         }
-        // On success: stay in loading state while navigation completes
     };
 
     return (

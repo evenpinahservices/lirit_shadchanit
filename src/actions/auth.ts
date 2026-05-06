@@ -9,15 +9,18 @@ import { signSession } from "@/lib/session";
 import { SESSION_MAX_AGE_SECONDS } from "@/lib/constants";
 
 export async function loginUser(username: string, password?: string): Promise<User | null> {
+    console.log("[login] step 1: start");
     try {
+        console.log("[login] step 2: connecting to DB...");
         await dbConnect();
+        console.log("[login] step 3: DB connected");
     } catch (error) {
-        console.error("Database connection error:", error);
+        console.error("[login] step 2 FAILED: DB connection error:", error);
         // Continue with mock users if DB connection fails
     }
 
     if (!password) {
-        console.log("Login attempt without password");
+        console.log("[login] no password provided");
         return null;
     }
 
@@ -27,11 +30,13 @@ export async function loginUser(username: string, password?: string): Promise<Us
     const escapedUsername = escapeRegex(username);
     let user;
     try {
+        console.log("[login] step 4: querying user...");
         user = await UserModel.findOne({
             username: { $regex: new RegExp(`^${escapedUsername}$`, "i") },
         });
+        console.log("[login] step 5: query done, user found:", !!user);
     } catch (error) {
-        console.error("Error finding user in database:", error);
+        console.error("[login] step 4 FAILED: findOne error:", error);
         // Fall through to mock users
     }
 
@@ -43,9 +48,11 @@ export async function loginUser(username: string, password?: string): Promise<Us
         if (isHashed) {
             // Verify hashed password
             try {
+                console.log("[login] step 6: verifying bcrypt password...");
                 passwordMatches = await verifyPassword(password, user.password);
+                console.log("[login] step 7: bcrypt done, matches:", passwordMatches);
             } catch (error) {
-                console.error("Error verifying password:", error);
+                console.error("[login] step 6 FAILED: bcrypt error:", error);
                 passwordMatches = false;
             }
         } else {
@@ -76,6 +83,7 @@ export async function loginUser(username: string, password?: string): Promise<Us
             
             // Set session cookie for API authentication
             try {
+                console.log("[login] step 8: setting session cookie...");
                 const cookieStore = await cookies();
                 cookieStore.set("auth_session", signSession({ userId: userData.id }), {
                     httpOnly: true,
@@ -83,11 +91,12 @@ export async function loginUser(username: string, password?: string): Promise<Us
                     sameSite: "lax",
                     maxAge: SESSION_MAX_AGE_SECONDS,
                 });
+                console.log("[login] step 9: cookie set OK");
             } catch (error) {
-                console.error("Error setting session cookie:", error);
+                console.error("[login] step 8 FAILED: cookie error:", error);
             }
-            
-            console.log("Login successful for user:", userData.username);
+
+            console.log("[login] step 10: SUCCESS returning user");
             return userData;
         } else {
             console.log("Password mismatch for user:", username);
