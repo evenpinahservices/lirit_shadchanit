@@ -29,6 +29,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const justLoggedInRef = useRef(false);
 
     const logout = useCallback(() => {
+        console.warn("[logout] called — justLoggedIn:", justLoggedInRef.current);
+        console.trace("[logout] call stack");
         localStorage.removeItem("mock_user");
         logoutSession().catch(() => {});
         window.location.replace("/login");
@@ -53,6 +55,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Skip session checks on public pages (login, external forms)
         if (pathname.startsWith("/form/") || pathname === "/login") return;
+
+        console.log("[checkSession] firing — pathname:", pathname, "justLoggedIn:", justLoggedInRef.current);
 
         try {
             const serverUser = await verifySession();
@@ -114,7 +118,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // for the first few seconds after a successful login. Block any logout during this window.
                 justLoggedInRef.current = true;
                 setTimeout(() => { justLoggedInRef.current = false; }, 15000);
+                console.log("[login] client: pushing to /");
                 router.push("/");
+                console.log("[login] client: router.push() called");
                 return { ok: true };
             }
             return { ok: false, error: "Invalid username or password" };
