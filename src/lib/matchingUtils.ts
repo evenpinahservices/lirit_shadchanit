@@ -151,7 +151,7 @@ function checkLevel1(a: Client, b: Client): boolean {
     const mAge = calculateAge(male.dob);
     const fAge = calculateAge(female.dob);
     if (isNaN(mAge) || isNaN(fAge)) return false; // unknown age → don't match
-    if (fAge > mAge) return false;       // girl older — never allowed
+    if (fAge - mAge > 1) return false;   // girl more than 1yr older — never allowed
     if (mAge - fAge > 3) return false;   // man too much older at baseline
 
     // Hashkafa: must be in the same group — never pair Chareidi with Dati, Dati with Traditional, etc.
@@ -206,7 +206,7 @@ function checkLevel2(a: Client, b: Client): boolean {
     const mAge = calculateAge(male.dob);
     const fAge = calculateAge(female.dob);
     if (isNaN(mAge) || isNaN(fAge)) return false; // unknown age → don't match
-    if (fAge > mAge) return false;                 // girl older — never relaxable
+    if (fAge - mAge > 1) return false;             // girl more than 1yr older — never relaxable
     const manGap = mAge - fAge;
     if (manGap > 3) {
         const aGapPrefs = normalizeArr(a.ageGapPreference);
