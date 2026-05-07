@@ -145,14 +145,14 @@ function checkLevel1(a: Client, b: Client): boolean {
     // Ethnicity: hard filter — never match different groups
     if (a.ethnicity && b.ethnicity && !sameEthGroup(a.ethnicity, b.ethnicity)) return false;
 
-    // Age gap: woman may be at most 1yr older than man (hard limit).
+    // Age gap: girl may NEVER be older than the guy (absolute, no exceptions).
     // Man may be at most 3yr older than woman at baseline.
+    // If either age is unknown, skip this pair rather than let it slip through.
     const mAge = calculateAge(male.dob);
     const fAge = calculateAge(female.dob);
-    if (!isNaN(mAge) && !isNaN(fAge)) {
-        if (fAge - mAge > 1) return false; // woman too much older — never allowed
-        if (mAge - fAge > 3) return false; // man too much older at baseline
-    }
+    if (isNaN(mAge) || isNaN(fAge)) return false; // unknown age → don't match
+    if (fAge > mAge) return false;       // girl older — never allowed
+    if (mAge - fAge > 3) return false;   // man too much older at baseline
 
     // Hashkafa: must be in the same group — never pair Chareidi with Dati, Dati with Traditional, etc.
     if (!sameHashkafaGroup(a, b)) return false;
@@ -200,19 +200,19 @@ function checkLevel2(a: Client, b: Client): boolean {
     // Hashkafa: same group required even in broader matching
     if (!sameHashkafaGroup(a, b)) return false;
 
-    // Age gap: woman >1yr older is always blocked (even in personal expansion).
+    // Age gap: girl older is always blocked — even with explicit preferences.
     // Man >3yr older only passes if BOTH sides have explicit preferences allowing it.
+    // Unknown age on either side → don't match.
     const mAge = calculateAge(male.dob);
     const fAge = calculateAge(female.dob);
-    if (!isNaN(mAge) && !isNaN(fAge)) {
-        if (fAge - mAge > 1) return false; // absolute hard limit — never relaxable
-        const manGap = mAge - fAge;
-        if (manGap > 3) {
-            const aGapPrefs = normalizeArr(a.ageGapPreference);
-            const bGapPrefs = normalizeArr(b.ageGapPreference);
-            if (!ageGapExplicitlyAllowed(aGapPrefs, manGap)) return false;
-            if (!ageGapExplicitlyAllowed(bGapPrefs, manGap)) return false;
-        }
+    if (isNaN(mAge) || isNaN(fAge)) return false; // unknown age → don't match
+    if (fAge > mAge) return false;                 // girl older — never relaxable
+    const manGap = mAge - fAge;
+    if (manGap > 3) {
+        const aGapPrefs = normalizeArr(a.ageGapPreference);
+        const bGapPrefs = normalizeArr(b.ageGapPreference);
+        if (!ageGapExplicitlyAllowed(aGapPrefs, manGap)) return false;
+        if (!ageGapExplicitlyAllowed(bGapPrefs, manGap)) return false;
     }
 
     return true;
