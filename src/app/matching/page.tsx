@@ -10,10 +10,11 @@ import { getDismissedMatches, dismissMatch, restoreMatch } from "@/actions/match
 import type { DismissedEntry } from "@/actions/matching";
 import { cn } from "@/lib/utils";
 import {
-    Heart, Sparkles, Search, X, Clock, RefreshCw, Users2, RotateCcw,
+    Heart, Sparkles, Search, X, Clock, RefreshCw, Users2, RotateCcw, FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import { ExportOverlay } from "@/components/export/ExportOverlay";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -322,9 +323,10 @@ interface SearchMatchCardProps {
     selectedClient: Client | undefined;
     isDismissing: boolean;
     onDismiss: (match: DisplayedMatch, permanent: boolean) => void;
+    onExport: (clients: Client[]) => void;
 }
 
-function SearchMatchCard({ match, selectedClient, isDismissing, onDismiss }: SearchMatchCardProps) {
+function SearchMatchCard({ match, selectedClient, isDismissing, onDismiss, onExport }: SearchMatchCardProps) {
     const { client, level } = match;
 
     return (
@@ -363,6 +365,20 @@ function SearchMatchCard({ match, selectedClient, isDismissing, onDismiss }: Sea
             <div className="px-3 py-1.5 text-center">
                 <span className="text-[10px] font-semibold text-red-600">View Comparison →</span>
             </div>
+
+            {/* Export match — opens both profiles in an overlay (pager between them) */}
+            <button
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (selectedClient) onExport([selectedClient, client]);
+                }}
+                disabled={!selectedClient}
+                className="w-full flex items-center justify-center gap-1 px-2 py-2 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors border-t border-gray-100 dark:border-gray-800 disabled:opacity-50"
+            >
+                <FileText className="h-3 w-3" />
+                Export Match
+            </button>
 
             {/* Dismiss actions */}
             <div className="border-t border-gray-100 dark:border-gray-800 flex">
@@ -473,6 +489,7 @@ export default function MatchingPage() {
     const [tab, setTab] = useState<"discover" | "search">(initialClientId ? "search" : "discover");
     const [selectedClientId, setSelectedClientId] = useState(initialClientId);
     const [isResultsView, setIsResultsView] = useState(false);
+    const [exportClients, setExportClients] = useState<Client[] | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
     const [poolL1, setPoolL1] = useState<Client[]>([]);
@@ -806,6 +823,7 @@ export default function MatchingPage() {
                                                     selectedClient={selectedClient}
                                                     isDismissing={dismissingId === match.client.id}
                                                     onDismiss={handleDismiss}
+                                                    onExport={setExportClients}
                                                 />
                                             ))}
                                         </div>
@@ -822,6 +840,9 @@ export default function MatchingPage() {
                         )}
                 </div>
             </div>
+            {exportClients && (
+                <ExportOverlay clients={exportClients} onClose={() => setExportClients(null)} />
+            )}
         </div>
     );
 }

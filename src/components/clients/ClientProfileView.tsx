@@ -5,6 +5,7 @@ import { MapPin, Briefcase, Ruler, Heart, BookOpen, Globe, Users, FileText, User
 import { cn, getTextDirection, detectClientLanguage, parseHebrewYearToNumber } from "@/lib/utils";
 import { ImageGalleryModal } from "./ImageGalleryModal";
 import { FormLanguage, t, valueToLabel, getOptions } from "@/lib/translations";
+import { ExportOverlay } from "@/components/export/ExportOverlay";
 
 interface ClientProfileViewProps {
     client: Client;
@@ -89,6 +90,7 @@ const Field = ({ label, value, lang, optionKey, isRtl }: {
 export function ClientProfileView({ client, onEdit, onDelete, onMatch }: ClientProfileViewProps) {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [showExport, setShowExport] = useState(false);
 
     // Determine language from client formLanguage or detect from content
     const lang: FormLanguage = detectClientLanguage(client);
@@ -433,7 +435,7 @@ export function ClientProfileView({ client, onEdit, onDelete, onMatch }: ClientP
                                     {lang === "he" ? "עריכה" : "Edit"}
                                 </button>
                                 <button
-                                    onClick={() => window.open(`/export/${client.id}?auto=1`, "_blank")}
+                                    onClick={() => setShowExport(true)}
                                     className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-green-600 rounded-md shadow-sm hover:bg-green-700 focus:outline-none"
                                 >
                                     {lang === "he" ? "ייצא PDF" : "Export PDF"}
@@ -448,7 +450,7 @@ export function ClientProfileView({ client, onEdit, onDelete, onMatch }: ClientP
                                     {isRtl ? "עריכה" : "Edit"}
                                 </button>
                                 <button
-                                    onClick={() => window.open(`/export/${client.id}?auto=1`, "_blank")}
+                                    onClick={() => setShowExport(true)}
                                     className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-green-600 rounded-md shadow-sm hover:bg-green-700 focus:outline-none"
                                 >
                                     {isRtl ? "ייצא PDF" : "Export PDF"}
@@ -545,6 +547,10 @@ export function ClientProfileView({ client, onEdit, onDelete, onMatch }: ClientP
                 isOpen={isGalleryOpen}
                 onClose={() => setIsGalleryOpen(false)}
             />
+
+            {showExport && (
+                <ExportOverlay clients={[client]} onClose={() => setShowExport(false)} />
+            )}
         </div>
     );
 }
