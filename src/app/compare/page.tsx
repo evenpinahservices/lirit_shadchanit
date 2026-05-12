@@ -1,14 +1,15 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useClients } from "@/context/ClientContext";
 import { Client } from "@/lib/mockData";
 import { calculateAge } from "@/lib/matchingUtils";
 import { detectClientLanguage } from "@/lib/utils";
 import { valueToLabel } from "@/lib/translations";
 import Link from "next/link";
-import { ArrowLeft, User as UserIcon, MapPin, ExternalLink, Heart } from "lucide-react";
+import { ArrowLeft, User as UserIcon, MapPin, ExternalLink, Heart, FileText } from "lucide-react";
+import { ExportOverlay } from "@/components/export/ExportOverlay";
 
 function normalizeArr(val: string | string[] | undefined | null): string[] {
     if (!val) return [];
@@ -102,6 +103,7 @@ function CompareContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { getClient, isLoading } = useClients();
+    const [showExport, setShowExport] = useState(false);
 
     const aId = searchParams.get("a") || "";
     const bId = searchParams.get("b") || "";
@@ -288,7 +290,20 @@ function CompareContent() {
                         {bothHebrew ? `הפרופיל של ${clientB.fullName.split(" ")[0]}` : `${clientB.fullName.split(" ")[0]}'s Profile`}
                     </Link>
                 </div>
+
+                {/* Export Match — primary action at the bottom */}
+                <button
+                    onClick={() => setShowExport(true)}
+                    className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
+                >
+                    <FileText className="h-4 w-4" />
+                    {bothHebrew ? "ייצא התאמה (PDF)" : "Export Match (PDF)"}
+                </button>
             </div>
+
+            {showExport && (
+                <ExportOverlay clients={[clientA, clientB]} onClose={() => setShowExport(false)} />
+            )}
         </div>
     );
 }

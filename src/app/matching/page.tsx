@@ -339,32 +339,35 @@ function SearchMatchCard({ match, selectedClient, isDismissing, onDismiss, onExp
                 </div>
             )}
 
-            {/* Two-column layout matching FeedCard */}
+            {/* Two-column layout matching FeedCard — entire card up to the
+                "View Comparison" line is one navigation target so all of it
+                opens the compare page. */}
             <Link
                 href={`/compare?a=${selectedClient?.id}&b=${client.id}&back=/matching`}
-                className="grid grid-cols-2 bg-linear-to-b from-red-50/40 to-transparent dark:from-red-900/10 hover:from-red-50/70 transition-colors"
+                className="block bg-linear-to-b from-red-50/40 to-transparent dark:from-red-900/10 hover:from-red-50/70 transition-colors"
             >
-                {/* Selected client (left) */}
-                <div className="flex flex-col items-center gap-1 px-3 py-4 border-r border-gray-100 dark:border-gray-800">
-                    {selectedClient ? (
-                        <MiniAvatar client={selectedClient} />
-                    ) : (
-                        <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                            <Users2 className="h-5 w-5 text-gray-300" />
-                        </div>
-                    )}
-                    <span className="text-[10px] text-gray-400 text-center truncate w-full px-1">{selectedClient?.location || "—"}</span>
+                <div className="grid grid-cols-2">
+                    {/* Selected client (left) */}
+                    <div className="flex flex-col items-center gap-1 px-3 py-4 border-r border-gray-100 dark:border-gray-800">
+                        {selectedClient ? (
+                            <MiniAvatar client={selectedClient} />
+                        ) : (
+                            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                                <Users2 className="h-5 w-5 text-gray-300" />
+                            </div>
+                        )}
+                        <span className="text-[10px] text-gray-400 text-center truncate w-full px-1">{selectedClient?.location || "—"}</span>
+                    </div>
+                    {/* Match candidate (right) */}
+                    <div className="flex flex-col items-center gap-1 px-3 py-4">
+                        <MiniAvatar client={client} />
+                        <span className="text-[10px] text-gray-400 text-center truncate w-full px-1">{client.location || "—"}</span>
+                    </div>
                 </div>
-                {/* Match candidate (right) */}
-                <div className="flex flex-col items-center gap-1 px-3 py-4">
-                    <MiniAvatar client={client} />
-                    <span className="text-[10px] text-gray-400 text-center truncate w-full px-1">{client.location || "—"}</span>
+                <div className="px-3 py-1.5 text-center">
+                    <span className="text-[10px] font-semibold text-red-600">View Comparison →</span>
                 </div>
             </Link>
-
-            <div className="px-3 py-1.5 text-center">
-                <span className="text-[10px] font-semibold text-red-600">View Comparison →</span>
-            </div>
 
             {/* Export match — opens both profiles in an overlay (pager between them) */}
             <button

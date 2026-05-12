@@ -39,17 +39,23 @@ const HEBREW_LABEL_FIXES: Array<[RegExp, string]> = [
     [/\bFamily\s*:/gi, "משפחה:"],
 ];
 // AI extraction sometimes appends a condensed restatement of the same block
-// (a second "אבא:" or "Father:" mid-text). Truncate at the second occurrence
-// so the PDF doesn't read like it's repeating itself.
+// — e.g. detailed Hebrew description followed by a structured "אבא: / אמא:"
+// summary, or vice versa. Truncate at the start of the second mention of a
+// family member so the PDF doesn't read like it's repeating itself.
+// Markers are word-boundary based so "אבא אהרון :" and "אבא:" both count.
 function dedupeRestatement(value: string): string {
-    const markers = [/אבא\s*:/g, /אמא\s*:/g, /\bFather\s*:/gi, /\bMother\s*:/gi];
+    const markers = [/אבא/g, /אמא/g, /\bFather\b/gi, /\bMother\b/gi];
+    let earliestSecond = Infinity;
     for (const re of markers) {
         const matches = [...value.matchAll(re)];
         if (matches.length >= 2 && matches[1].index !== undefined) {
-            return value.slice(0, matches[1].index).trim();
+            earliestSecond = Math.min(earliestSecond, matches[1].index);
         }
     }
-    return value;
+    if (earliestSecond === Infinity) return value;
+    // Don't chop too early — keep at least 40 chars of the original text
+    if (earliestSecond < 40) return value;
+    return value.slice(0, earliestSecond).replace(/[\s,;–\-—]+$/, "").trim();
 }
 function normalizeText(value: string | undefined, lang: FormLanguage): string {
     if (!value) return "";
