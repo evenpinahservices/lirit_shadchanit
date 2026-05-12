@@ -432,6 +432,12 @@ export function ClientProfileView({ client, onEdit, onDelete, onMatch }: ClientP
                                 >
                                     {lang === "he" ? "עריכה" : "Edit"}
                                 </button>
+                                <button
+                                    onClick={() => window.open(`/export/${client.id}?auto=1`, "_blank")}
+                                    className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-green-600 rounded-md shadow-sm hover:bg-green-700 focus:outline-none"
+                                >
+                                    {lang === "he" ? "ייצא PDF" : "Export PDF"}
+                                </button>
                             </>
                         ) : (
                             <>
@@ -440,6 +446,12 @@ export function ClientProfileView({ client, onEdit, onDelete, onMatch }: ClientP
                                     className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300"
                                 >
                                     {isRtl ? "עריכה" : "Edit"}
+                                </button>
+                                <button
+                                    onClick={() => window.open(`/export/${client.id}?auto=1`, "_blank")}
+                                    className="flex-1 sm:flex-none px-3 py-1 text-xs font-medium text-white bg-green-600 rounded-md shadow-sm hover:bg-green-700 focus:outline-none"
+                                >
+                                    {isRtl ? "ייצא PDF" : "Export PDF"}
                                 </button>
                                 <button
                                     onClick={onDelete}
