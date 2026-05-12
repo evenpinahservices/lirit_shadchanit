@@ -38,12 +38,26 @@ const HEBREW_LABEL_FIXES: Array<[RegExp, string]> = [
     [/\bParents?\s*:/gi, "הורים:"],
     [/\bFamily\s*:/gi, "משפחה:"],
 ];
+// AI extraction sometimes appends a condensed restatement of the same block
+// (a second "אבא:" or "Father:" mid-text). Truncate at the second occurrence
+// so the PDF doesn't read like it's repeating itself.
+function dedupeRestatement(value: string): string {
+    const markers = [/אבא\s*:/g, /אמא\s*:/g, /\bFather\s*:/gi, /\bMother\s*:/gi];
+    for (const re of markers) {
+        const matches = [...value.matchAll(re)];
+        if (matches.length >= 2 && matches[1].index !== undefined) {
+            return value.slice(0, matches[1].index).trim();
+        }
+    }
+    return value;
+}
 function normalizeText(value: string | undefined, lang: FormLanguage): string {
     if (!value) return "";
-    if (lang !== "he") return value;
-    let out = value;
-    for (const [pattern, replacement] of HEBREW_LABEL_FIXES) {
-        out = out.replace(pattern, replacement);
+    let out = dedupeRestatement(value);
+    if (lang === "he") {
+        for (const [pattern, replacement] of HEBREW_LABEL_FIXES) {
+            out = out.replace(pattern, replacement);
+        }
     }
     return out;
 }
@@ -100,23 +114,21 @@ export function ProfileExport({ client }: { client: Client }) {
                 <Row label={t(lang, "labels.familyBackground")} value={normalizeText(client.familyBackground, lang) || "—"} isRtl={isRtl} />
                 <Row label={t(lang, "labels.personality")} value={normalizeText(client.personality, lang) || "—"} isRtl={isRtl} />
                 <Row label={t(lang, "labels.hobbies")} value={normalizeText(client.hobbies, lang) || "—"} isRtl={isRtl} />
-                <Row label={lang === "he" ? "מיקום" : "Location"} value={formatValue(client.location, lang)} isRtl={isRtl} />
                 {client.gender === "Male" && (
                     <Row label={lang === "he" ? "סטטוס לימוד" : "Learning Status"} value={formatValue(client.learningStatus, lang, "learningStatus")} isRtl={isRtl} />
                 )}
             </section>
 
-            <section className="mb-5">
-                <h2 className="text-base font-bold mb-2 pb-1 border-b" style={{ color: brand.themeColor, borderColor: brand.themeColor }}>
-                    {t(lang, "steps.preferences")}
-                </h2>
-                {client.preferencesFreeText && (
-                    <Row label={t(lang, "labels.preferencesFreeText")} value={normalizeText(client.preferencesFreeText, lang)} isRtl={isRtl} />
-                )}
-                <Row label={t(lang, "labels.preferredHashkafos")} value={formatValue(client.preferredHashkafos, lang, "religiousAffiliation")} isRtl={isRtl} />
-                <Row label={t(lang, "labels.preferredLearningStatus")} value={formatValue(client.preferredLearningStatus, lang, "learningStatus")} isRtl={isRtl} />
-                <Row label={t(lang, "labels.ageGapPreference")} value={formatValue(client.ageGapPreference, lang)} isRtl={isRtl} />
-            </section>
+            {client.preferencesFreeText && (
+                <section className="mb-5">
+                    <h2 className="text-base font-bold mb-2 pb-1 border-b" style={{ color: brand.themeColor, borderColor: brand.themeColor }}>
+                        {lang === "he" ? "מה מחפש?" : "What are you looking for?"}
+                    </h2>
+                    <p className={cn("text-sm text-gray-900 py-1.5", isRtl ? "text-right" : "text-left")} dir={getTextDirection(client.preferencesFreeText)}>
+                        {normalizeText(client.preferencesFreeText, lang)}
+                    </p>
+                </section>
+            )}
 
             {brand.logoNavbar && (
                 <div

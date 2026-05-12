@@ -57,7 +57,7 @@ export function ExportOverlay({ clients, onClose }: ExportOverlayProps) {
     if (!current) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-gray-100 dark:bg-gray-900 export-overlay-print" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="fixed inset-0 z-100 flex flex-col bg-gray-100 dark:bg-gray-900 export-overlay-print" dir={isRtl ? "rtl" : "ltr"}>
             <style>{PRINT_CSS}</style>
 
             {/* Top action bar — hidden in print */}
@@ -72,12 +72,15 @@ export function ExportOverlay({ clients, onClose }: ExportOverlayProps) {
 
                 {hasMultiple && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
+                        {/* Arrows point in the direction of travel so they read correctly
+                            in both LTR and RTL — in Hebrew, "previous" goes right. */}
                         <button
                             onClick={() => setIndex(i => Math.max(0, i - 1))}
                             disabled={index === 0}
                             className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded disabled:opacity-30"
+                            aria-label={isRtl ? "הקודם" : "Previous"}
                         >
-                            <ChevronLeft className="h-4 w-4" />
+                            {isRtl ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
                         </button>
                         <span className="font-medium">
                             {isRtl
@@ -88,8 +91,9 @@ export function ExportOverlay({ clients, onClose }: ExportOverlayProps) {
                             onClick={() => setIndex(i => Math.min(clients.length - 1, i + 1))}
                             disabled={index >= clients.length - 1}
                             className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded disabled:opacity-30"
+                            aria-label={isRtl ? "הבא" : "Next"}
                         >
-                            <ChevronRight className="h-4 w-4" />
+                            {isRtl ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </button>
                     </div>
                 )}
