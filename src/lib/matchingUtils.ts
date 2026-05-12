@@ -67,6 +67,26 @@ function sameEthGroup(a: string, b: string): boolean {
     return ethGroup(a) === ethGroup(b);
 }
 
+// Hard ethnicity filter — block whenever any signal indicates a cross-group pair.
+//   • Both ethnicities known + different group → block (covers Sephardi/Ashkenazi)
+//   • One side's ethnicity is set but the other side's preferredEthnicities
+//     is explicit (non-empty, non-wildcard) and doesn't include it → block
+// Returns true if the pair is blocked on ethnicity grounds.
+function ethnicityBlocked(a: Client, b: Client): boolean {
+    if (a.ethnicity && b.ethnicity && !sameEthGroup(a.ethnicity, b.ethnicity)) {
+        return true;
+    }
+    const aPrefs = normalizeArr(a.preferredEthnicities);
+    const bPrefs = normalizeArr(b.preferredEthnicities);
+    if (b.ethnicity && aPrefs.length > 0 && !aPrefs.some(isWildcard)) {
+        if (!aPrefs.some(p => sameEthGroup(p, b.ethnicity))) return true;
+    }
+    if (a.ethnicity && bPrefs.length > 0 && !bPrefs.some(isWildcard)) {
+        if (!bPrefs.some(p => sameEthGroup(p, a.ethnicity))) return true;
+    }
+    return false;
+}
+
 // ── Hashkafa groups ───────────────────────────────────────────────────────────
 // Defined early — used by both hard filters and scoring.
 // Groups: 0 = Chareidi, 1 = Dati, 2 = Traditional/BT, 3 = Secular
@@ -142,8 +162,8 @@ function checkLevel1(a: Client, b: Client): boolean {
         a.willingToRelocate, b.willingToRelocate
     )) return false;
 
-    // Ethnicity: hard filter — never match different groups
-    if (a.ethnicity && b.ethnicity && !sameEthGroup(a.ethnicity, b.ethnicity)) return false;
+    // Ethnicity: hard filter — different groups OR conflicting preferredEthnicities
+    if (ethnicityBlocked(a, b)) return false;
 
     // Age gap: girl may NEVER be older than the guy (absolute, no exceptions).
     // Man may be at most 3yr older than woman at baseline.
@@ -194,8 +214,8 @@ function checkLevel2(a: Client, b: Client): boolean {
         a.willingToRelocate, b.willingToRelocate
     )) return false;
 
-    // Ethnicity: always a hard filter — no relaxation in broader matching
-    if (a.ethnicity && b.ethnicity && !sameEthGroup(a.ethnicity, b.ethnicity)) return false;
+    // Ethnicity: always a hard filter — same rule as Level 1, no relaxation
+    if (ethnicityBlocked(a, b)) return false;
 
     // Hashkafa: same group required even in broader matching
     if (!sameHashkafaGroup(a, b)) return false;

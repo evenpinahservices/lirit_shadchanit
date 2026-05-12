@@ -485,11 +485,13 @@ export default function MatchingPage() {
     const clientOptions = clients.map(c => ({ label: `${c.fullName} (${c.gender})`, value: c.id }));
     const selectedClient = clients.find(c => c.id === selectedClientId);
 
-    // Auto-generate matches when arriving from the clients page heart button
-    const autoRanRef = useRef(false);
+    // Auto-generate matches when arriving from the clients page heart button.
+    // Reset the ran-once guard each time the selected client changes so a new
+    // selection still triggers fresh matching (and re-fetches the dismissed list).
+    const autoRanRef = useRef<string | null>(null);
     useEffect(() => {
-        if (autoRun && selectedClient && clients.length > 0 && !autoRanRef.current) {
-            autoRanRef.current = true;
+        if (autoRun && selectedClient && clients.length > 0 && autoRanRef.current !== selectedClient.id) {
+            autoRanRef.current = selectedClient.id;
             handleMatch();
         }
     }, [autoRun, selectedClient, clients.length]);
@@ -557,6 +559,16 @@ export default function MatchingPage() {
             const candidateId = match.client.id;
             setDismissingId(candidateId);
 
+            // Save to server FIRST — if it fails, don't pretend the dismiss succeeded
+            try {
+                await dismissMatch(selectedClientId, candidateId, match.level, permanent);
+            } catch (err) {
+                console.error("Failed to save dismissal:", err);
+                alert("Could not save your action. Please try again — make sure you're still logged in.");
+                setDismissingId(null);
+                return;
+            }
+
             setDisplayed(prev => {
                 const next = prev.filter(m => m.client.id !== candidateId);
                 const shownIds = new Set(next.map(m => m.client.id));
@@ -567,17 +579,11 @@ export default function MatchingPage() {
                 return next;
             });
 
-            // Add to dismissed list immediately so it shows in the snoozed section
             setDismissed(prev => [
                 ...prev.filter(d => d.candidateId !== candidateId),
                 { candidateId, status: permanent ? "rejected" : "snoozed" },
             ]);
-
-            try {
-                await dismissMatch(selectedClientId, candidateId, match.level, permanent);
-            } finally {
-                setDismissingId(null);
-            }
+            setDismissingId(null);
         },
         [poolL1, poolL2, selectedClientId]
     );

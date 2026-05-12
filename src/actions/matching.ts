@@ -18,16 +18,22 @@ export async function getDismissedMatches(clientId: string): Promise<DismissedEn
     const Model = getMatchRecordModel(conn);
 
     const now = new Date();
-    const records = await Model.find({
-        clientId,
+    // Bidirectional: dismissing A→B should also hide A when viewing B's matches
+    const statusFilter = {
         $or: [
             { status: "rejected" },
             { status: "snoozed", resuggestAfter: { $gt: now } },
         ],
+    };
+    const records = await Model.find({
+        $and: [
+            { $or: [{ clientId }, { candidateId: clientId }] },
+            statusFilter,
+        ],
     }).lean();
 
     return records.map((r: any) => ({
-        candidateId: r.candidateId,
+        candidateId: r.clientId === clientId ? r.candidateId : r.clientId,
         status: r.status as "rejected" | "snoozed",
     }));
 }
@@ -39,7 +45,13 @@ export async function restoreMatch(clientId: string, candidateId: string): Promi
     }
     const conn = await dbConnect(user.dbName);
     const Model = getMatchRecordModel(conn);
-    await Model.deleteOne({ clientId, candidateId });
+    // Bidirectional: a restore should clear the record regardless of which side dismissed
+    await Model.deleteOne({
+        $or: [
+            { clientId, candidateId },
+            { clientId: candidateId, candidateId: clientId },
+        ],
+    });
 }
 
 export async function dismissMatch(
