@@ -70,6 +70,13 @@ export function ExportOverlay({ clients, onClose }: ExportOverlayProps) {
             [current.id]: { ...prev[current.id], [field]: "" },
         }));
     };
+    const handleRestore = (field: ProfileFieldKey) => {
+        setOverrides(prev => {
+            const next = { ...prev[current.id] };
+            delete next[field];
+            return { ...prev, [current.id]: next };
+        });
+    };
 
     return (
         <div className="fixed inset-0 z-100 flex flex-col bg-gray-100 dark:bg-gray-900 export-overlay-print" dir={isRtl ? "rtl" : "ltr"}>
@@ -152,6 +159,7 @@ export function ExportOverlay({ clients, onClose }: ExportOverlayProps) {
                     override={currentOverride}
                     onChange={handleChange}
                     onRemove={handleRemove}
+                    onRestore={handleRestore}
                 />
             </div>
         </div>

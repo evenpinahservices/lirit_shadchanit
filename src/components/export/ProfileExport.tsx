@@ -32,6 +32,8 @@ export interface ProfileExportProps {
     override?: ProfileOverride;
     onChange?: (field: ProfileFieldKey, value: string) => void;
     onRemove?: (field: ProfileFieldKey) => void;
+    /** Clear an override entry so the original value is shown again. */
+    onRestore?: (field: ProfileFieldKey) => void;
 }
 
 function formatValue(
@@ -128,25 +130,49 @@ function Row({
     value,
     isRtl,
     editMode,
+    isRemoved,
     fieldKey,
     onChange,
     onRemove,
+    onRestore,
 }: {
     label: string;
     value: string;
     isRtl: boolean;
     editMode?: boolean;
+    isRemoved?: boolean;
     fieldKey: ProfileFieldKey;
     onChange?: (field: ProfileFieldKey, value: string) => void;
     onRemove?: (field: ProfileFieldKey) => void;
+    onRestore?: (field: ProfileFieldKey) => void;
 }) {
+    // When removed: in view mode skip entirely. In edit mode show a faded
+    // placeholder with a "+ restore" button so the admin can bring it back.
+    if (isRemoved && !editMode) return null;
+    if (isRemoved && editMode) {
+        return (
+            <div
+                className="no-print flex gap-3 py-1.5 border-b border-dashed border-gray-200 text-xs text-gray-400 italic"
+                dir={isRtl ? "rtl" : "ltr"}
+            >
+                <span className={cn("min-w-[160px]", isRtl ? "text-right" : "text-left")}>{label}</span>
+                <button
+                    type="button"
+                    onClick={() => onRestore?.(fieldKey)}
+                    className="text-green-600 hover:text-green-700 underline"
+                >
+                    {isRtl ? "+ החזר שורה" : "+ Restore row"}
+                </button>
+            </div>
+        );
+    }
+
     if (value === "—") return null;
     const valueDir = getTextDirection(value);
     return (
         <div
             className="flex gap-3 py-1.5 border-b border-gray-100 text-sm group relative"
             dir={isRtl ? "rtl" : "ltr"}
-            // Force-remount on edit-mode toggle so the contentEditable starts fresh
             key={`${fieldKey}-${editMode ? "edit" : "view"}`}
         >
             <span className={cn("font-semibold text-gray-700 min-w-[160px]", isRtl ? "text-right" : "text-left")}>
@@ -177,17 +203,23 @@ function Row({
     );
 }
 
-export function ProfileExport({ client, editMode = false, override, onChange, onRemove }: ProfileExportProps) {
+export function ProfileExport({ client, editMode = false, override, onChange, onRemove, onRestore }: ProfileExportProps) {
     const brand = getBrand();
     const lang: FormLanguage = (client.formLanguage as FormLanguage) || detectClientLanguage(client) || "en";
     const isRtl = lang === "he";
     const age = calculateAge(client.dob);
     const defaultAgeDisplay = isNaN(age) ? "—" : (lang === "he" ? `${age} שנה` : `${age} y/o`);
 
-    // Resolve display value: override (incl. "" to remove) > derived/raw value
+    // True when the admin removed this field (override holds "" sentinel).
+    const isRemoved = (key: ProfileFieldKey): boolean => !!override && key in override && override[key] === "";
+
+    // Display value with empty-string override resolving to "—" so view-mode
+    // rows disappear completely. Edit-mode handles restoration separately.
     const getDisplay = (key: ProfileFieldKey, fallback: string): string => {
         if (override && key in override) {
-            return override[key] ?? "—";
+            const v = override[key];
+            if (v === "" || v == null) return "—";
+            return v;
         }
         return fallback || "—";
     };
@@ -203,6 +235,11 @@ export function ProfileExport({ client, editMode = false, override, onChange, on
     const displayHobbies = getDisplay("hobbies", normalizeText(client.hobbies, lang));
     const displayLearning = getDisplay("learningStatus", formatValue(client.learningStatus, lang, "learningStatus"));
     const displayPrefs = getDisplay("preferencesFreeText", normalizeText(client.preferencesFreeText, lang));
+
+    const ageRemoved = isRemoved("ageDisplay");
+    const locationRemoved = isRemoved("headerLocation");
+    // Show separator dot only when both age and location are actually displayed
+    const showDot = !ageRemoved && !locationRemoved && displayAge !== "—" && displayLocation !== "—";
 
     return (
         <div
@@ -237,7 +274,7 @@ export function ProfileExport({ client, editMode = false, override, onChange, on
                                 onCommit={v => onChange?.("ageDisplay", v)}
                             />
                         )}
-                        {displayAge !== "—" && displayLocation !== "—" && " · "}
+                        {showDot && " · "}
                         {displayLocation !== "—" && (
                             <Editable
                                 text={displayLocation}
@@ -247,30 +284,46 @@ export function ProfileExport({ client, editMode = false, override, onChange, on
                             />
                         )}
                         {editMode && (
-                            <>
-                                {displayAge !== "—" && (
+                            <span className="no-print">
+                                {displayAge !== "—" ? (
                                     <button
                                         type="button"
                                         onClick={() => onRemove?.("ageDisplay")}
-                                        className="no-print ml-2 text-gray-400 hover:text-red-600"
+                                        className="ml-2 text-gray-400 hover:text-red-600"
                                         aria-label="Remove age"
                                         title="Remove age"
                                     >
                                         ✕ age
                                     </button>
+                                ) : ageRemoved && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onRestore?.("ageDisplay")}
+                                        className="ml-2 text-green-600 hover:text-green-700 underline"
+                                    >
+                                        + add age
+                                    </button>
                                 )}
-                                {displayLocation !== "—" && (
+                                {displayLocation !== "—" ? (
                                     <button
                                         type="button"
                                         onClick={() => onRemove?.("headerLocation")}
-                                        className="no-print ml-2 text-gray-400 hover:text-red-600"
+                                        className="ml-2 text-gray-400 hover:text-red-600"
                                         aria-label="Remove location"
                                         title="Remove location"
                                     >
                                         ✕ location
                                     </button>
+                                ) : locationRemoved && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onRestore?.("headerLocation")}
+                                        className="ml-2 text-green-600 hover:text-green-700 underline"
+                                    >
+                                        + add location
+                                    </button>
                                 )}
-                            </>
+                            </span>
                         )}
                     </p>
                 </div>
@@ -278,24 +331,31 @@ export function ProfileExport({ client, editMode = false, override, onChange, on
 
             <section className="mb-5">
                 <Row label={t(lang, "labels.religiousAffiliation")} value={displayHashkafa} isRtl={isRtl}
-                    editMode={editMode} fieldKey="religiousAffiliation" onChange={onChange} onRemove={onRemove} />
+                    editMode={editMode} isRemoved={isRemoved("religiousAffiliation")} fieldKey="religiousAffiliation"
+                    onChange={onChange} onRemove={onRemove} onRestore={onRestore} />
                 <Row label={t(lang, "labels.occupationTitle")} value={displayOccupationTitle} isRtl={isRtl}
-                    editMode={editMode} fieldKey="occupationTitle" onChange={onChange} onRemove={onRemove} />
+                    editMode={editMode} isRemoved={isRemoved("occupationTitle")} fieldKey="occupationTitle"
+                    onChange={onChange} onRemove={onRemove} onRestore={onRestore} />
                 <Row label={t(lang, "labels.occupationDescription")} value={displayOccupationDescription} isRtl={isRtl}
-                    editMode={editMode} fieldKey="occupationDescription" onChange={onChange} onRemove={onRemove} />
+                    editMode={editMode} isRemoved={isRemoved("occupationDescription")} fieldKey="occupationDescription"
+                    onChange={onChange} onRemove={onRemove} onRestore={onRestore} />
                 <Row label={t(lang, "labels.familyBackground")} value={displayFamily} isRtl={isRtl}
-                    editMode={editMode} fieldKey="familyBackground" onChange={onChange} onRemove={onRemove} />
+                    editMode={editMode} isRemoved={isRemoved("familyBackground")} fieldKey="familyBackground"
+                    onChange={onChange} onRemove={onRemove} onRestore={onRestore} />
                 <Row label={t(lang, "labels.personality")} value={displayPersonality} isRtl={isRtl}
-                    editMode={editMode} fieldKey="personality" onChange={onChange} onRemove={onRemove} />
+                    editMode={editMode} isRemoved={isRemoved("personality")} fieldKey="personality"
+                    onChange={onChange} onRemove={onRemove} onRestore={onRestore} />
                 <Row label={t(lang, "labels.hobbies")} value={displayHobbies} isRtl={isRtl}
-                    editMode={editMode} fieldKey="hobbies" onChange={onChange} onRemove={onRemove} />
+                    editMode={editMode} isRemoved={isRemoved("hobbies")} fieldKey="hobbies"
+                    onChange={onChange} onRemove={onRemove} onRestore={onRestore} />
                 {client.gender === "Male" && (
                     <Row label={lang === "he" ? "סטטוס לימוד" : "Learning Status"} value={displayLearning} isRtl={isRtl}
-                        editMode={editMode} fieldKey="learningStatus" onChange={onChange} onRemove={onRemove} />
+                        editMode={editMode} isRemoved={isRemoved("learningStatus")} fieldKey="learningStatus"
+                        onChange={onChange} onRemove={onRemove} onRestore={onRestore} />
                 )}
             </section>
 
-            {displayPrefs !== "—" && (
+            {displayPrefs !== "—" ? (
                 <section className="mb-5 group relative">
                     <h2 className="text-base font-bold mb-2 pb-1 border-b" style={{ color: brand.themeColor, borderColor: brand.themeColor }}>
                         {lang === "he" ? "מה מחפש?" : "What are you looking for?"}
@@ -324,7 +384,18 @@ export function ProfileExport({ client, editMode = false, override, onChange, on
                         </button>
                     )}
                 </section>
-            )}
+            ) : editMode && isRemoved("preferencesFreeText") ? (
+                <div className="no-print mb-5 py-2 px-3 bg-gray-50 border border-dashed border-gray-300 rounded text-xs text-gray-500 italic flex items-center justify-between">
+                    <span>{lang === "he" ? "מה מחפש (הוסר)" : "What are you looking for? (removed)"}</span>
+                    <button
+                        type="button"
+                        onClick={() => onRestore?.("preferencesFreeText")}
+                        className="text-green-600 hover:text-green-700 underline"
+                    >
+                        {lang === "he" ? "+ החזר סעיף" : "+ Restore section"}
+                    </button>
+                </div>
+            ) : null}
 
             {brand.logoNavbar && (
                 <div
