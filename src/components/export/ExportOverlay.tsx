@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Download, ChevronLeft, ChevronRight, Pencil, Check } from "lucide-react";
+import { X, Download, ChevronLeft, ChevronRight, Pencil, Check, Undo2, Redo2, XCircle } from "lucide-react";
 import { Client } from "@/lib/mockData";
 import { ProfileExport, ProfileFieldKey, ProfileOverride } from "./ProfileExport";
 import { getBrand } from "@/config/branding";
@@ -12,6 +12,8 @@ interface ExportOverlayProps {
     clients: Client[];          // one or two profiles to export
     onClose: () => void;
 }
+
+type OverrideMap = Record<string, ProfileOverride>;
 
 const PRINT_CSS = `
 @media print {
@@ -34,8 +36,12 @@ const PRINT_CSS = `
 export function ExportOverlay({ clients, onClose }: ExportOverlayProps) {
     const [index, setIndex] = useState(0);
     const [editMode, setEditMode] = useState(false);
-    // Per-client field overrides. "" indicates "remove this row".
-    const [overrides, setOverrides] = useState<Record<string, ProfileOverride>>({});
+    const [overrides, setOverrides] = useState<OverrideMap>({});
+
+    // Undo/redo stack. Each entry is a full snapshot of overrides. The first
+    // entry is the snapshot taken when edit mode was entered, used by Cancel.
+    const [history, setHistory] = useState<OverrideMap[]>([{}]);
+    const [historyIndex, setHistoryIndex] = useState(0);
 
     const current = clients[index];
     const lang: FormLanguage = (current?.formLanguage as FormLanguage) || (current ? detectClientLanguage(current) : "en") || "en";
@@ -57,32 +63,91 @@ export function ExportOverlay({ clients, onClose }: ExportOverlayProps) {
     if (!current) return null;
 
     const currentOverride = overrides[current.id];
+    const canUndo = historyIndex > 0;
+    const canRedo = historyIndex < history.length - 1;
+
+    // Push a new overrides snapshot onto the undo stack and make it current.
+    const pushHistory = (next: OverrideMap) => {
+        setHistory(prev => [...prev.slice(0, historyIndex + 1), next]);
+        setHistoryIndex(historyIndex + 1);
+        setOverrides(next);
+    };
 
     const handleChange = (field: ProfileFieldKey, value: string) => {
-        setOverrides(prev => ({
-            ...prev,
-            [current.id]: { ...prev[current.id], [field]: value },
-        }));
+        const next: OverrideMap = {
+            ...overrides,
+            [current.id]: { ...overrides[current.id], [field]: value },
+        };
+        pushHistory(next);
     };
     const handleRemove = (field: ProfileFieldKey) => {
-        setOverrides(prev => ({
-            ...prev,
-            [current.id]: { ...prev[current.id], [field]: "" },
-        }));
+        const next: OverrideMap = {
+            ...overrides,
+            [current.id]: { ...overrides[current.id], [field]: "" },
+        };
+        pushHistory(next);
     };
     const handleRestore = (field: ProfileFieldKey) => {
-        setOverrides(prev => {
-            const next = { ...prev[current.id] };
-            delete next[field];
-            return { ...prev, [current.id]: next };
-        });
+        const nextClient = { ...overrides[current.id] };
+        delete nextClient[field];
+        const next: OverrideMap = { ...overrides, [current.id]: nextClient };
+        pushHistory(next);
     };
+
+    const handleUndo = () => {
+        if (!canUndo) return;
+        const i = historyIndex - 1;
+        setHistoryIndex(i);
+        setOverrides(history[i]);
+    };
+    const handleRedo = () => {
+        if (!canRedo) return;
+        const i = historyIndex + 1;
+        setHistoryIndex(i);
+        setOverrides(history[i]);
+    };
+
+    const enterEditMode = () => {
+        // Snapshot current state as the baseline for Cancel/Undo back to start.
+        setHistory([overrides]);
+        setHistoryIndex(0);
+        setEditMode(true);
+    };
+    const doneEditing = () => {
+        setEditMode(false);
+    };
+    const cancelEditing = () => {
+        // Restore the snapshot taken when edit mode was entered.
+        const baseline = history[0] ?? {};
+        setOverrides(baseline);
+        setHistory([baseline]);
+        setHistoryIndex(0);
+        setEditMode(false);
+    };
+
+    // Keyboard shortcuts in edit mode: Ctrl/Cmd+Z = undo, Ctrl/Cmd+Shift+Z or
+    // Ctrl/Cmd+Y = redo. Avoid hijacking when the user is typing into a
+    // contentEditable (the browser already handles plain undo there).
+    useEffect(() => {
+        if (!editMode) return;
+        const handler = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement | null;
+            if (target?.isContentEditable) return;
+            const meta = e.ctrlKey || e.metaKey;
+            if (!meta) return;
+            const key = e.key.toLowerCase();
+            if (key === "z" && !e.shiftKey) { e.preventDefault(); handleUndo(); }
+            else if ((key === "z" && e.shiftKey) || key === "y") { e.preventDefault(); handleRedo(); }
+        };
+        document.addEventListener("keydown", handler);
+        return () => document.removeEventListener("keydown", handler);
+    });
 
     return (
         <div className="fixed inset-0 z-100 flex flex-col bg-gray-100 dark:bg-gray-900 export-overlay-print" dir={isRtl ? "rtl" : "ltr"}>
             <style>{PRINT_CSS}</style>
 
-            <div className="export-overlay-chrome shrink-0 flex items-center justify-between gap-2 px-4 py-3 border-b bg-white dark:bg-gray-950 shadow-sm">
+            <div className="export-overlay-chrome shrink-0 flex items-center justify-between gap-2 px-4 py-3 border-b bg-white dark:bg-gray-950 shadow-sm flex-wrap">
                 <button
                     onClick={onClose}
                     className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
@@ -118,18 +183,55 @@ export function ExportOverlay({ clients, onClose }: ExportOverlayProps) {
                 )}
 
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setEditMode(m => !m)}
-                        className={
-                            editMode
-                                ? "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm bg-amber-500 text-white hover:bg-amber-600"
-                                : "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm bg-white border text-gray-700 hover:bg-gray-50"
-                        }
-                        title={editMode ? (isRtl ? "סיים עריכה" : "Done editing") : (isRtl ? "ערוך" : "Edit")}
-                    >
-                        {editMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                        {editMode ? (isRtl ? "סיים" : "Done") : (isRtl ? "ערוך" : "Edit")}
-                    </button>
+                    {editMode && (
+                        <>
+                            <button
+                                onClick={handleUndo}
+                                disabled={!canUndo}
+                                className="p-1.5 rounded-md border bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={isRtl ? "בטל (Ctrl+Z)" : "Undo (Ctrl+Z)"}
+                                aria-label={isRtl ? "בטל" : "Undo"}
+                            >
+                                <Undo2 className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={handleRedo}
+                                disabled={!canRedo}
+                                className="p-1.5 rounded-md border bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={isRtl ? "בצע שוב (Ctrl+Y)" : "Redo (Ctrl+Y)"}
+                                aria-label={isRtl ? "בצע שוב" : "Redo"}
+                            >
+                                <Redo2 className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={cancelEditing}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold border border-red-200 bg-white text-red-600 hover:bg-red-50"
+                                title={isRtl ? "בטל את כל השינויים" : "Discard all changes"}
+                            >
+                                <XCircle className="h-4 w-4" />
+                                {isRtl ? "בטל" : "Cancel"}
+                            </button>
+                        </>
+                    )}
+                    {editMode ? (
+                        <button
+                            onClick={doneEditing}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm bg-amber-500 text-white hover:bg-amber-600"
+                            title={isRtl ? "סיים עריכה" : "Done editing"}
+                        >
+                            <Check className="h-4 w-4" />
+                            {isRtl ? "סיים" : "Done"}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={enterEditMode}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm bg-white border text-gray-700 hover:bg-gray-50"
+                            title={isRtl ? "ערוך" : "Edit"}
+                        >
+                            <Pencil className="h-4 w-4" />
+                            {isRtl ? "ערוך" : "Edit"}
+                        </button>
+                    )}
                     <button
                         onClick={() => window.print()}
                         disabled={editMode}
@@ -146,8 +248,8 @@ export function ExportOverlay({ clients, onClose }: ExportOverlayProps) {
             {editMode && (
                 <div className="export-overlay-chrome shrink-0 px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-800">
                     {isRtl
-                        ? "מצב עריכה: לחץ על טקסט כדי לערוך, ✕ כדי למחוק שורה. השינויים זמניים — ההורדה תשקף אותם, הפרופיל המקורי לא ישתנה."
-                        : "Edit mode: click any text to edit, click ✕ to remove a row. Changes are temporary — the download reflects them, the underlying profile is not modified."}
+                        ? "מצב עריכה: לחץ על טקסט כדי לערוך, ✕ כדי למחוק שורה. ניתן לבטל/לבצע שוב פעולות, או לבטל את כולן. השינויים זמניים — הפרופיל המקורי לא ישתנה."
+                        : "Edit mode: click any text to edit, click ✕ to remove a row. Use Undo / Redo to step back and forth, Cancel to discard everything. Changes are temporary — the underlying profile is not modified."}
                 </div>
             )}
 
