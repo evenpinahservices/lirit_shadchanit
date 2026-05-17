@@ -151,32 +151,42 @@ export function AutoFillModal({
             updateProgress(2);
 
             const totalImages = allImages.length;
-            const uploadProgressPerImage = 13 / totalImages; // 13% total for uploads (2% to 15%)
-            console.log(`[AutoFill] uploading ${totalImages} image(s) to Cloudinary…`);
+            console.log(`[AutoFill] uploading ${totalImages} image(s) to Cloudinary in parallel…`);
             const tUploadStart = Date.now();
+            let completedUploads = 0;
 
-            // Upload all images
-            for (let i = 0; i < allImages.length; i++) {
-                if (abortedRef.current) break;
-                const file = allImages[i];
-                updateSubStatus(`Uploading image ${i + 1} of ${allImages.length}...`);
-                const tImg = Date.now();
+            updateSubStatus(`Uploading ${totalImages} image${totalImages > 1 ? "s" : ""} in parallel…`);
 
-                const uploadResult = await imageUpload.uploadWithProgress(file);
-                console.log(`[AutoFill]   image ${i + 1}/${totalImages} uploaded in ${((Date.now() - tImg) / 1000).toFixed(1)}s`);
-                if (uploadResult.url) {
-                    allGalleryUrls.push(uploadResult.url);
+            // Upload all images simultaneously — each call fetches its own
+            // Cloudinary signature, so they are fully independent.
+            const uploadResults = await Promise.all(
+                allImages.map(async (file, i) => {
+                    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+                    console.log(`[AutoFill]   image ${i + 1}/${totalImages} starting — ${sizeMB} MB`);
+                    const tImg = Date.now();
+                    const result = await imageUpload.uploadWithProgress(file);
+                    const elapsed = ((Date.now() - tImg) / 1000).toFixed(1);
+                    console.log(`[AutoFill]   image ${i + 1}/${totalImages} done in ${elapsed}s${result.error ? ` ❌ ${result.error}` : ""}`);
+                    completedUploads++;
+                    updateSubStatus(`Uploading… ${completedUploads}/${totalImages} done`);
+                    updateProgress(2 + (completedUploads / totalImages) * 13);
+                    return { result, index: i };
+                })
+            );
 
-                    // Set selected profile photo (first image if none selected, or the selected one)
-                    if (selectedProfileIndex === i || (selectedProfileIndex === null && i === 0)) {
-                        profilePhotoUrl = uploadResult.url;
+            if (abortedRef.current) throw new DOMException("Cancelled", "AbortError");
+
+            console.log(`[AutoFill] all uploads done in ${((Date.now() - tUploadStart) / 1000).toFixed(1)}s`);
+
+            // Collect URLs preserving original image order (Promise.all keeps order).
+            for (const { result, index } of uploadResults) {
+                if (result.url) {
+                    allGalleryUrls.push(result.url);
+                    if (selectedProfileIndex === index || (selectedProfileIndex === null && index === 0)) {
+                        profilePhotoUrl = result.url;
                     }
                 }
-
-                // Update progress based on upload completion
-                updateProgress(2 + (i + 1) * uploadProgressPerImage);
             }
-            console.log(`[AutoFill] all uploads done in ${((Date.now() - tUploadStart) / 1000).toFixed(1)}s`);
 
             if (abortedRef.current) {
                 throw new DOMException("Cancelled", "AbortError");
