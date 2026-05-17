@@ -519,7 +519,7 @@ export default function SearchPage() {
                                         : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400"
                                 )}
                             >
-                                ♂ Boys ({filteredBoys.length})
+                                Boys ({filteredBoys.length})
                             </button>
                             <button
                                 onClick={() => setMobileResultsTab("female")}
@@ -530,7 +530,7 @@ export default function SearchPage() {
                                         : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400"
                                 )}
                             >
-                                ♀ Girls ({filteredGirls.length})
+                                Girls ({filteredGirls.length})
                             </button>
                         </div>
                     )}
@@ -562,12 +562,22 @@ export default function SearchPage() {
 
                 {/* ── Filter panel ───────────────────────────────────────── */}
                 <div className={cn(
-                    "shrink-0 flex flex-col transition-all duration-300 overflow-hidden",
+                    "shrink-0 flex flex-col transition-all duration-100 overflow-hidden",
                     // Desktop: collapsible via width
                     filterPanelOpen ? "md:w-80 lg:w-96" : "md:w-0",
                     // Mobile: full-screen when viewing filters, hidden when viewing results
                     showResults ? "hidden md:flex" : "flex w-full",
                 )}>
+                    {/* Dual mode entry — always visible at top when in single mode */}
+                    {!dualMode && (
+                        <button
+                            onClick={enterDualMode}
+                            className="shrink-0 w-full flex items-center justify-center gap-1.5 text-xs font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors py-2 border-b border-gray-100 dark:border-gray-800"
+                        >
+                            Search for a boy and a girl at once
+                        </button>
+                    )}
+
                     {/* Dual mode tabs */}
                     {dualMode && (
                         <div className="flex shrink-0 border-b border-gray-200 dark:border-gray-800">
@@ -580,7 +590,7 @@ export default function SearchPage() {
                                         : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                                 )}
                             >
-                                ♂ Boys
+                                Boys
                             </button>
                             <button
                                 onClick={() => setActiveFilterTab("female")}
@@ -591,7 +601,7 @@ export default function SearchPage() {
                                         : "text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                                 )}
                             >
-                                ♀ Girls
+                                Girls
                             </button>
                             {/* Exit dual mode */}
                             <button
@@ -663,16 +673,7 @@ export default function SearchPage() {
                                         </select>
                                     </div>
 
-                                    {/* Dual mode discovery prompt */}
-                                    <div className="pt-1 border-t border-gray-100 dark:border-gray-800">
-                                        <button
-                                            onClick={enterDualMode}
-                                            className="w-full flex items-center justify-center gap-2 text-xs text-gray-500 hover:text-red-600 transition-colors py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                                        >
-                                            <span className="text-base leading-none">⚭</span>
-                                            Search for a boy <em>and</em> a girl at once
-                                        </button>
-                                    </div>
+
                                 </div>
                             )}
                         </div>
@@ -711,7 +712,7 @@ export default function SearchPage() {
                                 mobileResultsTab === "male" ? "flex w-full" : "hidden"
                             )}>
                                 <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-blue-50 dark:bg-blue-950/30">
-                                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">♂ Boys</span>
+                                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">Boys</span>
                                     <span className="text-xs text-gray-500">({filteredBoys.length})</span>
                                 </div>
                                 {filteredBoys.length === 0 ? (
@@ -748,7 +749,7 @@ export default function SearchPage() {
                                 mobileResultsTab === "female" ? "flex w-full" : "hidden"
                             )}>
                                 <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-rose-50 dark:bg-rose-950/30">
-                                    <span className="text-sm font-semibold text-rose-600 dark:text-rose-400">♀ Girls</span>
+                                    <span className="text-sm font-semibold text-rose-600 dark:text-rose-400">Girls</span>
                                     <span className="text-xs text-gray-500">({filteredGirls.length})</span>
                                 </div>
                                 {filteredGirls.length === 0 ? (
