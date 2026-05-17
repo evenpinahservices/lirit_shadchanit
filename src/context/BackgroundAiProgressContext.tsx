@@ -86,12 +86,20 @@ export function BackgroundAiProgressProvider({ children }: { children: React.Rea
             clearInterval(simulatedProgressIntervalRef.current);
         }
         const startTime = Date.now();
+        // After the eased animation reaches its ceiling we enter a slow-creep
+        // mode (0.5 % per 5 s) so the bar never freezes completely.
+        const CREEP_RATE = 0.001; // % per 100 ms tick = 0.6 % per minute
         simulatedProgressIntervalRef.current = setInterval(() => {
             const elapsed = Date.now() - startTime;
-            const ratio = Math.min(elapsed / durationMs, 0.95);
-            const eased = 1 - Math.pow(1 - ratio, 2);
-            const progress = fromPct + eased * (targetPct - fromPct);
-            setState((prev) => ({ ...prev, progress }));
+            const ratio = elapsed / durationMs;
+            if (ratio < 0.95) {
+                const eased = 1 - Math.pow(1 - Math.min(ratio, 0.95), 2);
+                const progress = fromPct + eased * (targetPct - fromPct);
+                setState((prev) => ({ ...prev, progress }));
+            } else {
+                // Slow creep beyond the estimated duration — never reaches 99
+                setState((prev) => ({ ...prev, progress: Math.min(prev.progress + CREEP_RATE, 98.9) }));
+            }
         }, 100);
     }, []);
 

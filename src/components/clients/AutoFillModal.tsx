@@ -130,8 +130,10 @@ export function AutoFillModal({
         });
         updateProgress(0);
         aiProgress?.setProgress(0);
-        startTimeRef.current = Date.now();
-        
+        const t0 = Date.now();
+        startTimeRef.current = t0;
+        console.log("[AutoFill] ▶ started", new Date().toLocaleTimeString());
+
         // Clear any local interval (context manages the simulated progress interval)
         if (progressIntervalRef.current) {
             clearInterval(progressIntervalRef.current);
@@ -147,29 +149,34 @@ export function AutoFillModal({
             updateStatus("Uploading images");
             updateSubStatus("Preparing images for upload...");
             updateProgress(2);
-            
+
             const totalImages = allImages.length;
             const uploadProgressPerImage = 13 / totalImages; // 13% total for uploads (2% to 15%)
-            
+            console.log(`[AutoFill] uploading ${totalImages} image(s) to Cloudinary…`);
+            const tUploadStart = Date.now();
+
             // Upload all images
             for (let i = 0; i < allImages.length; i++) {
                 if (abortedRef.current) break;
                 const file = allImages[i];
                 updateSubStatus(`Uploading image ${i + 1} of ${allImages.length}...`);
-                
+                const tImg = Date.now();
+
                 const uploadResult = await imageUpload.uploadWithProgress(file);
+                console.log(`[AutoFill]   image ${i + 1}/${totalImages} uploaded in ${((Date.now() - tImg) / 1000).toFixed(1)}s`);
                 if (uploadResult.url) {
                     allGalleryUrls.push(uploadResult.url);
-                    
+
                     // Set selected profile photo (first image if none selected, or the selected one)
                     if (selectedProfileIndex === i || (selectedProfileIndex === null && i === 0)) {
                         profilePhotoUrl = uploadResult.url;
                     }
                 }
-                
+
                 // Update progress based on upload completion
                 updateProgress(2 + (i + 1) * uploadProgressPerImage);
             }
+            console.log(`[AutoFill] all uploads done in ${((Date.now() - tUploadStart) / 1000).toFixed(1)}s`);
 
             if (abortedRef.current) {
                 throw new DOMException("Cancelled", "AbortError");
@@ -194,13 +201,22 @@ export function AutoFillModal({
 
             // Delegate the smooth progress animation to the context so it
             // survives if the user minimizes (which unmounts this component).
-            const estimatedAiDuration = 60000;
+            // 120 s estimate; the context enters slow-creep mode past that.
+            const estimatedAiDuration = 120000;
             aiProgress?.startSimulatedProgress(20, 90, estimatedAiDuration);
+
+            // Keep substatus updated with elapsed seconds so the user can see
+            // the AI call is still active even when the progress bar slows down.
+            const tGeminiStart = Date.now();
+            console.log(`[AutoFill] ▶ Gemini API call started (${allGalleryUrls.length} image(s))`);
+            const elapsedInterval = setInterval(() => {
+                const secs = Math.round((Date.now() - tGeminiStart) / 1000);
+                updateSubStatus(`AI is analyzing ${allGalleryUrls.length} image${allGalleryUrls.length > 1 ? "s" : ""}… (${secs}s)`);
+            }, 1000);
+            progressIntervalRef.current = elapsedInterval;
 
             let response: Response;
             try {
-                updateSubStatus(`AI is analyzing ${allGalleryUrls.length} image${allGalleryUrls.length > 1 ? "s" : ""}...`);
-
                 response = await fetch("/api/extract-data", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -209,11 +225,18 @@ export function AutoFillModal({
                     signal: abortController.signal,
                 });
             } catch (fetchError: any) {
+                clearInterval(elapsedInterval);
+                progressIntervalRef.current = null;
                 if (fetchError?.name === "AbortError") throw fetchError;
-                console.error("Fetch error:", fetchError);
+                console.error("[AutoFill] Fetch error:", fetchError);
                 aiProgress?.stopSimulatedProgress();
                 throw new Error(`Network error: ${fetchError.message || "Failed to connect to server"}`);
             }
+
+            clearInterval(elapsedInterval);
+            progressIntervalRef.current = null;
+            const geminiMs = Date.now() - tGeminiStart;
+            console.log(`[AutoFill] ◀ Gemini responded in ${(geminiMs / 1000).toFixed(1)}s — status ${response.status}`);
 
             // Stop the simulated progress animation now that we have a real response.
             aiProgress?.stopSimulatedProgress();
@@ -381,6 +404,7 @@ export function AutoFillModal({
                 }
             }
 
+            console.log(`[AutoFill] ✓ done — total ${((Date.now() - t0) / 1000).toFixed(1)}s`);
             updateStatus("Complete!");
             updateSubStatus(onComplete ? "Creating draft..." : "Form has been populated successfully!");
             updateProgress(100);
