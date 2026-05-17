@@ -244,7 +244,7 @@ function CompactClientCard({
     const cardClass = cn(
         "group w-full flex flex-col items-center text-center p-2 shadow-sm transition-all min-h-32 justify-center gap-2",
         selected
-            ? "bg-green-50 dark:bg-green-950/30 ring-1 ring-green-300 dark:ring-green-700"
+            ? "bg-green-50 dark:bg-green-950/20"
             : "bg-gray-50 dark:bg-gray-900 hover:shadow-md"
     );
 
@@ -329,8 +329,8 @@ export default function SearchPage() {
     );
 
     // ── Dual-mode selection state ─────────────────────────────────────────────
-    const [selectedBoyId, setSelectedBoyId] = useState<string | null>(null);
-    const [selectedGirlId, setSelectedGirlId] = useState<string | null>(null);
+    const [selectedBoyId, setSelectedBoyId] = useState<string | null>(savedState?.selectedBoyId ?? null);
+    const [selectedGirlId, setSelectedGirlId] = useState<string | null>(savedState?.selectedGirlId ?? null);
 
     // ── Single-mode filter state ──────────────────────────────────────────────
     const [singleFilters, setSingleFilters] = useState<FilterSet>(
@@ -493,7 +493,18 @@ export default function SearchPage() {
         singleFilters, gender, currentPage, itemsPerPage,
         dualMode, activeFilterTab, filterPanelOpen,
         boyFilters, girlFilters, currentPageBoys, currentPageGirls,
+        selectedBoyId, selectedGirlId,
     });
+
+    const navigateToCompare = () => {
+        sessionStorage.setItem("searchState", JSON.stringify(buildSaveState()));
+        if (selectedBoyId && selectedGirlId) {
+            router.push(`/compare?a=${selectedBoyId}&b=${selectedGirlId}&back=/search`);
+        } else {
+            const id = selectedBoyId ?? selectedGirlId;
+            router.push(`/clients/${id}?source=search`);
+        }
+    };
 
     // ── Swipe (single mode only) ──────────────────────────────────────────────
     const swipeRef = useSwipeNavigation({
@@ -747,25 +758,6 @@ export default function SearchPage() {
                         /* ── Dual mode: compare bar + two columns ────────────── */
                         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
 
-                            {/* Action strip — only visible when something is selected */}
-                            {(selectedBoyId || selectedGirlId) && (
-                                <div className="shrink-0 flex items-center justify-end gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950/30 border-b border-green-200 dark:border-green-800">
-                                    <button
-                                        onClick={() => {
-                                            if (selectedBoyId && selectedGirlId) {
-                                                router.push(`/compare?a=${selectedBoyId}&b=${selectedGirlId}&back=/search`);
-                                            } else {
-                                                const id = selectedBoyId ?? selectedGirlId;
-                                                router.push(`/clients/${id}?source=search`);
-                                            }
-                                        }}
-                                        className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition-colors"
-                                    >
-                                        {selectedBoyId && selectedGirlId ? "Compare" : "View Profile"}
-                                        <ArrowRight className="h-3 w-3" />
-                                    </button>
-                                </div>
-                            )}
 
                             {/* Two columns */}
                             <div className="flex-1 min-h-0 flex overflow-hidden">
@@ -924,6 +916,17 @@ export default function SearchPage() {
                         Show Results — Boys ({filteredBoys.length}) · Girls ({filteredGirls.length})
                     </button>
                 </div>
+            )}
+
+            {/* Floating action button — appears when a card is selected in dual mode */}
+            {dualMode && (selectedBoyId || selectedGirlId) && (
+                <button
+                    onClick={navigateToCompare}
+                    className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom)+0.75rem)] right-4 z-50 flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-full shadow-lg hover:bg-red-700 active:bg-red-800 transition-colors"
+                >
+                    {selectedBoyId && selectedGirlId ? "Compare" : "View Profile"}
+                    <ArrowRight className="h-4 w-4" />
+                </button>
             )}
         </div>
     );
