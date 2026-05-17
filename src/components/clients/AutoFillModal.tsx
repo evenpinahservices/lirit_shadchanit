@@ -70,11 +70,13 @@ export function AutoFillModal({
     
     const imageUpload = useUploadWithProgress();
 
-    // Cleanup interval on unmount - MUST be before any early returns
+    // Stop simulated progress on unmount only if processing is no longer active.
+    // When the user minimizes, the context keeps the interval alive intentionally.
     useEffect(() => {
         return () => {
             if (progressIntervalRef.current) {
                 clearInterval(progressIntervalRef.current);
+                progressIntervalRef.current = null;
             }
         };
     }, []);
@@ -130,11 +132,12 @@ export function AutoFillModal({
         aiProgress?.setProgress(0);
         startTimeRef.current = Date.now();
         
-        // Clear any existing interval
+        // Clear any local interval (context manages the simulated progress interval)
         if (progressIntervalRef.current) {
             clearInterval(progressIntervalRef.current);
             progressIntervalRef.current = null;
         }
+        aiProgress?.stopSimulatedProgress();
         
         try {
             const allGalleryUrls: string[] = [];
@@ -189,17 +192,10 @@ export function AutoFillModal({
             updateSubStatus("Querying Gemini AI...");
             await new Promise(resolve => setTimeout(resolve, 200));
 
-            const aiStartTime = Date.now();
+            // Delegate the smooth progress animation to the context so it
+            // survives if the user minimizes (which unmounts this component).
             const estimatedAiDuration = 60000;
-            let aiProgressInterval: NodeJS.Timeout | null = null;
-            aiProgressInterval = setInterval(() => {
-                const elapsed = Date.now() - aiStartTime;
-                const progressRatio = Math.min(elapsed / estimatedAiDuration, 0.95);
-                const easedProgress = 1 - Math.pow(1 - progressRatio, 2);
-                const progress = 20 + easedProgress * 70;
-                updateProgress(progress);
-            }, 100);
-            progressIntervalRef.current = aiProgressInterval;
+            aiProgress?.startSimulatedProgress(20, 90, estimatedAiDuration);
 
             let response: Response;
             try {
@@ -215,15 +211,12 @@ export function AutoFillModal({
             } catch (fetchError: any) {
                 if (fetchError?.name === "AbortError") throw fetchError;
                 console.error("Fetch error:", fetchError);
-                if (aiProgressInterval) clearInterval(aiProgressInterval);
+                aiProgress?.stopSimulatedProgress();
                 throw new Error(`Network error: ${fetchError.message || "Failed to connect to server"}`);
             }
-            
-            // Clear the AI progress interval once we get the response
-            if (aiProgressInterval) {
-                clearInterval(aiProgressInterval);
-                aiProgressInterval = null;
-            }
+
+            // Stop the simulated progress animation now that we have a real response.
+            aiProgress?.stopSimulatedProgress();
             
             updateProgress(90);
             updateSubStatus("Received AI response, processing...");

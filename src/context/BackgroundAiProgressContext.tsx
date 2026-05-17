@@ -21,6 +21,10 @@ interface BackgroundAiProgressContextValue extends BackgroundAiProgressState {
     cancelUpload: () => void;
     minimize: () => void;
     restoreOverlay: () => void;
+    /** Start a smooth eased animation from fromPct toward targetPct over durationMs.
+     *  Survives component unmounts (minimize). Call stopSimulatedProgress to stop early. */
+    startSimulatedProgress: (fromPct: number, targetPct: number, durationMs: number) => void;
+    stopSimulatedProgress: () => void;
 }
 
 const initialState: BackgroundAiProgressState = {
@@ -42,6 +46,7 @@ export function BackgroundAiProgressProvider({ children }: { children: React.Rea
     const router = useRouter();
     const [state, setState] = useState<BackgroundAiProgressState>(initialState);
     const cancelCallbackRef = useRef<(() => void) | null>(null);
+    const simulatedProgressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const setCancelCallback = useCallback((fn: (() => void) | null) => {
         cancelCallbackRef.current = fn;
@@ -65,11 +70,36 @@ export function BackgroundAiProgressProvider({ children }: { children: React.Rea
     }, []);
 
     const setProcessing = useCallback((isProcessing: boolean) => {
+        if (!isProcessing && simulatedProgressIntervalRef.current) {
+            clearInterval(simulatedProgressIntervalRef.current);
+            simulatedProgressIntervalRef.current = null;
+        }
         setState((prev) => ({
             ...prev,
             isProcessing,
             ...(isProcessing ? { isOverlayOpen: true } : { isOverlayOpen: false, progress: 0, status: "", subStatus: "" }),
         }));
+    }, []);
+
+    const startSimulatedProgress = useCallback((fromPct: number, targetPct: number, durationMs: number) => {
+        if (simulatedProgressIntervalRef.current) {
+            clearInterval(simulatedProgressIntervalRef.current);
+        }
+        const startTime = Date.now();
+        simulatedProgressIntervalRef.current = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const ratio = Math.min(elapsed / durationMs, 0.95);
+            const eased = 1 - Math.pow(1 - ratio, 2);
+            const progress = fromPct + eased * (targetPct - fromPct);
+            setState((prev) => ({ ...prev, progress }));
+        }, 100);
+    }, []);
+
+    const stopSimulatedProgress = useCallback(() => {
+        if (simulatedProgressIntervalRef.current) {
+            clearInterval(simulatedProgressIntervalRef.current);
+            simulatedProgressIntervalRef.current = null;
+        }
     }, []);
 
     const minimize = useCallback(() => {
@@ -91,6 +121,8 @@ export function BackgroundAiProgressProvider({ children }: { children: React.Rea
         cancelUpload,
         minimize,
         restoreOverlay,
+        startSimulatedProgress,
+        stopSimulatedProgress,
     };
 
     return (
