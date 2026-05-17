@@ -188,6 +188,7 @@ export async function POST(request: NextRequest) {
 
         const contentType = request.headers.get("content-type") || "";
         let imageParts: Array<{ mimeType: string; data: string }> = [];
+        let imageFetchTimings: { index: number; ms: number; kb: number }[] = [];
 
         if (contentType.includes("application/json")) {
             const body = await request.json();
@@ -209,7 +210,6 @@ export async function POST(request: NextRequest) {
 
             const { IMAGE_MAX_BYTES, IMAGE_TOTAL_MAX_BYTES } = await import("@/lib/constants");
             let totalBytes = 0;
-            const imageFetchTimings: { index: number; ms: number; kb: number }[] = [];
             for (let i = 0; i < urls.length; i++) {
                 const tFetch = Date.now();
                 const base64Image = await imageUrlToBase64(urls[i], { maxBytes: IMAGE_MAX_BYTES });
