@@ -71,8 +71,8 @@ export function FormSummaryView({ watch, lang }: FormSummaryViewProps) {
                     <h4 className="font-semibold text-lg border-b pb-2">{t(lang, "steps.religiousDetails")}</h4>
                     <div className="space-y-2 text-sm">
                         <div><span className="font-medium">{t(lang, "labels.religiousAffiliation")}:</span> {(() => { const aff = watch("religiousAffiliation"); return Array.isArray(aff) ? aff.join(", ") || "—" : aff || "—"; })()}</div>
-                        <div><span className="font-medium">{t(lang, "labels.learningStatus")}:</span> {watch("learningStatus") || "—"}</div>
-                        <div><span className="font-medium">{t(lang, "labels.headCovering")}:</span> {watch("headCovering") || "—"}</div>
+                        {watch("gender") === "Male" && <div><span className="font-medium">{t(lang, "labels.learningStatus")}:</span> {watch("learningStatus") || "—"}</div>}
+                        {watch("gender") === "Female" && <div><span className="font-medium">{t(lang, "labels.headCovering")}:</span> {watch("headCovering") || "—"}</div>}
                         <div><span className="font-medium">{t(lang, "labels.religiousDetailsFreeText")}:</span> {watch("religiousDetailsFreeText") || "—"}</div>
                     </div>
                 </div>

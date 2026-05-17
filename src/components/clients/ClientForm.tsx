@@ -1546,6 +1546,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         />
                                     </FieldWithTooltip>
                                 </div>
+                                {watchedGender === "Male" && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.learningStatus")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.learningStatus} fieldName="learningStatus">
@@ -1556,6 +1557,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         </select>
                                     </FieldWithTooltip>
                                 </div>
+                                )}
+                                {watchedGender === "Female" && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.headCovering")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.headCovering} fieldName="headCovering">
@@ -1566,6 +1569,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         </select>
                                     </FieldWithTooltip>
                                 </div>
+                                )}
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.religiousDetailsFreeText")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.religiousDetailsFreeText} fieldName="religiousDetailsFreeText">
@@ -1694,6 +1698,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         />
                                     </FieldWithTooltip>
                                 </div>
+                                {watchedGender === "Female" && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.preferredLearningStatus")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.preferredLearningStatus} fieldName="preferredLearningStatus">
@@ -1714,6 +1719,8 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         />
                                     </FieldWithTooltip>
                                 </div>
+                                )}
+                                {watchedGender === "Male" && (
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.preferredHeadCovering")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.preferredHeadCovering} fieldName="preferredHeadCovering">
@@ -1734,6 +1741,7 @@ export function ClientForm({ client, isEditing = false, onCancel, language = "en
                                         />
                                     </FieldWithTooltip>
                                 </div>
+                                )}
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">{t(lang, "labels.preferencesFreeText")}</label>
                                     <FieldWithTooltip sourceQuote={sourceQuotes.preferencesFreeText} fieldName="preferencesFreeText">
