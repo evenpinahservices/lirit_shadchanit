@@ -180,8 +180,9 @@ function FilterFields({
     );
 }
 
-// ─── Sub-component: results list ──────────────────────────────────────────────
+// ─── Sub-components: result cards ────────────────────────────────────────────
 
+// Full card — used in single-mode results
 function ClientCard({
     client,
     calculateAge,
@@ -224,6 +225,45 @@ function ClientCard({
     );
 }
 
+// Compact card — used in dual-mode columns (narrow on mobile)
+function CompactClientCard({
+    client,
+    calculateAge,
+    onSaveState,
+}: {
+    client: Client;
+    calculateAge: (dob: string) => number | null;
+    onSaveState: () => void;
+}) {
+    const age = calculateAge(client.dob);
+    return (
+        <Link
+            href={`/clients/${client.id}?source=search`}
+            onClick={onSaveState}
+            className="group flex flex-col items-center text-center bg-gray-50 dark:bg-gray-900 p-2 shadow-sm hover:shadow-md transition-all min-h-32 justify-center gap-2"
+        >
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                {client.photoUrl ? (
+                    <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
+                ) : (
+                    <UserIcon className="h-5 w-5 text-gray-400" />
+                )}
+            </div>
+            <div className="w-full min-w-0 space-y-0.5">
+                <p className="text-xs font-semibold group-hover:text-red-600 transition-colors leading-tight line-clamp-2">
+                    {client.fullName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                    {age !== null ? `${age} y/o` : "—"}
+                </p>
+                {client.location && (
+                    <p className="text-xs text-muted-foreground truncate">{client.location}</p>
+                )}
+            </div>
+        </Link>
+    );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function SearchPage() {
@@ -261,7 +301,6 @@ export default function SearchPage() {
     const [activeFilterTab, setActiveFilterTab] = useState<"male" | "female">(
         savedState?.activeFilterTab ?? "male"
     );
-    const [mobileResultsTab, setMobileResultsTab] = useState<"male" | "female">("male");
 
     // ── Single-mode filter state ──────────────────────────────────────────────
     const [singleFilters, setSingleFilters] = useState<FilterSet>(
@@ -506,55 +545,16 @@ export default function SearchPage() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    {/* Mobile: dual mode result tab switcher */}
-                    {dualMode && showResults && (
-                        <div className="md:hidden flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 text-xs font-medium">
-                            <button
-                                onClick={() => setMobileResultsTab("male")}
-                                className={cn(
-                                    "px-3 py-1.5 transition-colors",
-                                    mobileResultsTab === "male"
-                                        ? "bg-blue-600 text-white"
-                                        : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400"
-                                )}
-                            >
-                                Boys ({filteredBoys.length})
-                            </button>
-                            <button
-                                onClick={() => setMobileResultsTab("female")}
-                                className={cn(
-                                    "px-3 py-1.5 transition-colors",
-                                    mobileResultsTab === "female"
-                                        ? "bg-rose-500 text-white"
-                                        : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400"
-                                )}
-                            >
-                                Girls ({filteredGirls.length})
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Mobile: refine / filter buttons */}
-                    {showResults && !dualMode && (
-                        <button
-                            onClick={() => { setShowResults(false); router.push("/search"); }}
-                            className="md:hidden text-sm font-medium text-red-600 flex items-center gap-1"
-                        >
-                            <Filter className="h-4 w-4" />
-                            Refine
-                        </button>
-                    )}
-                    {dualMode && (
-                        <button
-                            onClick={() => { setShowResults(!showResults); }}
-                            className="md:hidden text-sm font-medium text-red-600 flex items-center gap-1"
-                        >
-                            <Filter className="h-4 w-4" />
-                            {showResults ? "Filters" : "Results"}
-                        </button>
-                    )}
-                </div>
+                {/* Mobile: single Filters button, always consistent */}
+                {showResults && (
+                    <button
+                        onClick={() => { setShowResults(false); if (!dualMode) router.push("/search"); }}
+                        className="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 active:bg-gray-200"
+                    >
+                        <Filter className="h-4 w-4" />
+                        Filters
+                    </button>
+                )}
             </div>
 
             {/* ── Body ────────────────────────────────────────────────────── */}
@@ -612,6 +612,13 @@ export default function SearchPage() {
                                 <X className="h-4 w-4" />
                             </button>
                         </div>
+                    )}
+
+                    {/* Dual mode hint */}
+                    {dualMode && (
+                        <p className="shrink-0 text-xs text-center text-gray-400 dark:text-gray-500 px-3 py-1.5 border-b border-gray-100 dark:border-gray-800">
+                            Set criteria for each gender separately
+                        </p>
                     )}
 
                     {/* Scrollable filter content */}
@@ -703,27 +710,23 @@ export default function SearchPage() {
                     !showResults && "hidden md:flex"
                 )}>
                     {dualMode ? (
-                        /* ── Dual mode: two columns ───────────────────────── */
+                        /* ── Dual mode: two columns, always side by side ─────── */
                         <div className="flex-1 min-h-0 flex overflow-hidden">
-                            {/* Boys column — mobile: visible when mobileResultsTab=male; desktop: always half */}
-                            <div className={cn(
-                                "flex flex-col min-h-0 border-r border-gray-200 dark:border-gray-800",
-                                "md:flex md:w-1/2",
-                                mobileResultsTab === "male" ? "flex w-full" : "hidden"
-                            )}>
-                                <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-blue-50 dark:bg-blue-950/30">
-                                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">Boys</span>
-                                    <span className="text-xs text-gray-500">({filteredBoys.length})</span>
+                            {/* Boys column */}
+                            <div className="flex flex-col min-h-0 w-1/2 border-r border-gray-200 dark:border-gray-800">
+                                <div className="flex items-center gap-2 px-2 py-2 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-blue-50 dark:bg-blue-950/30">
+                                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">Boys</span>
+                                    <span className="text-xs text-gray-400">({filteredBoys.length})</span>
                                 </div>
                                 {filteredBoys.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center flex-1 text-gray-400 text-sm gap-2 p-6 text-center">
-                                        <Search className="h-8 w-8 text-gray-300" />
-                                        <span>No boys match these criteria.</span>
+                                    <div className="flex flex-col items-center justify-center flex-1 text-gray-400 text-xs gap-2 p-4 text-center">
+                                        <Search className="h-6 w-6 text-gray-300" />
+                                        <span>No matches</span>
                                     </div>
                                 ) : (
-                                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1.5 space-y-1.5">
                                         {paginatedBoys.map((client) => (
-                                            <ClientCard
+                                            <CompactClientCard
                                                 key={client.id}
                                                 client={client}
                                                 calculateAge={calculateAge}
@@ -742,25 +745,21 @@ export default function SearchPage() {
                                 )}
                             </div>
 
-                            {/* Girls column — mobile: visible when mobileResultsTab=female; desktop: always half */}
-                            <div className={cn(
-                                "flex flex-col min-h-0",
-                                "md:flex md:w-1/2",
-                                mobileResultsTab === "female" ? "flex w-full" : "hidden"
-                            )}>
-                                <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-rose-50 dark:bg-rose-950/30">
-                                    <span className="text-sm font-semibold text-rose-600 dark:text-rose-400">Girls</span>
-                                    <span className="text-xs text-gray-500">({filteredGirls.length})</span>
+                            {/* Girls column */}
+                            <div className="flex flex-col min-h-0 w-1/2">
+                                <div className="flex items-center gap-2 px-2 py-2 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-rose-50 dark:bg-rose-950/30">
+                                    <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Girls</span>
+                                    <span className="text-xs text-gray-400">({filteredGirls.length})</span>
                                 </div>
                                 {filteredGirls.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center flex-1 text-gray-400 text-sm gap-2 p-6 text-center">
-                                        <Search className="h-8 w-8 text-gray-300" />
-                                        <span>No girls match these criteria.</span>
+                                    <div className="flex flex-col items-center justify-center flex-1 text-gray-400 text-xs gap-2 p-4 text-center">
+                                        <Search className="h-6 w-6 text-gray-300" />
+                                        <span>No matches</span>
                                     </div>
                                 ) : (
-                                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1.5 space-y-1.5">
                                         {paginatedGirls.map((client) => (
-                                            <ClientCard
+                                            <CompactClientCard
                                                 key={client.id}
                                                 client={client}
                                                 calculateAge={calculateAge}
