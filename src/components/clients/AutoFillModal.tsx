@@ -12,6 +12,38 @@ import { getFriendlyError } from "@/lib/errorMessages";
 import type { FriendlyError } from "@/lib/errorMessages";
 import Image from "next/image";
 
+/** Resize + re-encode to JPEG on the client before upload.
+ *  Keeps images ≤ maxDimension px on the longest side and ≤ ~1 MB.
+ *  Falls back to the original file if canvas is unavailable. */
+async function compressImage(file: File, maxDimension = 1600, quality = 0.82): Promise<File> {
+    return new Promise((resolve) => {
+        const img = new window.Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            const scale = Math.min(1, maxDimension / Math.max(img.naturalWidth, img.naturalHeight));
+            const w = Math.round(img.naturalWidth * scale);
+            const h = Math.round(img.naturalHeight * scale);
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) { resolve(file); return; }
+            ctx.drawImage(img, 0, 0, w, h);
+            canvas.toBlob(
+                (blob) => {
+                    if (!blob) { resolve(file); return; }
+                    resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+                },
+                "image/jpeg",
+                quality,
+            );
+        };
+        img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+        img.src = objectUrl;
+    });
+}
+
 export interface AutoFillCompletePayload {
     formData: any;
     galleryUrls: string[];
@@ -151,6 +183,16 @@ export function AutoFillModal({
             updateProgress(2);
 
             const totalImages = allImages.length;
+            console.log(`[AutoFill] compressing ${totalImages} image(s)…`);
+            updateSubStatus(`Compressing ${totalImages} image${totalImages > 1 ? "s" : ""}…`);
+            const compressed = await Promise.all(allImages.map(async (file, i) => {
+                const before = (file.size / 1024 / 1024).toFixed(1);
+                const out = await compressImage(file);
+                const after = (out.size / 1024 / 1024).toFixed(1);
+                console.log(`[AutoFill]   image ${i + 1} ${before}MB → ${after}MB`);
+                return out;
+            }));
+
             console.log(`[AutoFill] uploading ${totalImages} image(s) to Cloudinary in parallel…`);
             const tUploadStart = Date.now();
             let completedUploads = 0;
@@ -160,9 +202,9 @@ export function AutoFillModal({
             // Upload all images simultaneously — each call fetches its own
             // Cloudinary signature, so they are fully independent.
             const uploadResults = await Promise.all(
-                allImages.map(async (file, i) => {
+                compressed.map(async (file, i) => {
                     const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-                    console.log(`[AutoFill]   image ${i + 1}/${totalImages} starting — ${sizeMB} MB`);
+                    console.log(`[AutoFill]   image ${i + 1}/${totalImages} uploading — ${sizeMB} MB`);
                     const tImg = Date.now();
                     const result = await imageUpload.uploadWithProgress(file);
                     const elapsed = ((Date.now() - tImg) / 1000).toFixed(1);
