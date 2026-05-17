@@ -22,8 +22,9 @@ interface BackgroundAiProgressContextValue extends BackgroundAiProgressState {
     minimize: () => void;
     restoreOverlay: () => void;
     /** Start a smooth eased animation from fromPct toward targetPct over durationMs.
-     *  Survives component unmounts (minimize). Call stopSimulatedProgress to stop early. */
-    startSimulatedProgress: (fromPct: number, targetPct: number, durationMs: number) => void;
+     *  Survives component unmounts (minimize). Call stopSimulatedProgress to stop early.
+     *  Optional subStatusTemplate: include "{s}" which is replaced with elapsed seconds. */
+    startSimulatedProgress: (fromPct: number, targetPct: number, durationMs: number, subStatusTemplate?: string) => void;
     stopSimulatedProgress: () => void;
 }
 
@@ -81,24 +82,32 @@ export function BackgroundAiProgressProvider({ children }: { children: React.Rea
         }));
     }, []);
 
-    const startSimulatedProgress = useCallback((fromPct: number, targetPct: number, durationMs: number) => {
+    const startSimulatedProgress = useCallback((
+        fromPct: number,
+        targetPct: number,
+        durationMs: number,
+        subStatusTemplate?: string,
+    ) => {
         if (simulatedProgressIntervalRef.current) {
             clearInterval(simulatedProgressIntervalRef.current);
         }
         const startTime = Date.now();
-        // After the eased animation reaches its ceiling we enter a slow-creep
-        // mode (0.5 % per 5 s) so the bar never freezes completely.
-        const CREEP_RATE = 0.001; // % per 100 ms tick = 0.6 % per minute
+        const CREEP_RATE = 0.001; // % per 100 ms tick ≈ 0.6 % per minute
         simulatedProgressIntervalRef.current = setInterval(() => {
             const elapsed = Date.now() - startTime;
             const ratio = elapsed / durationMs;
+            const secs = Math.round(elapsed / 1000);
+            const sub = subStatusTemplate ? subStatusTemplate.replace("{s}", String(secs)) : undefined;
             if (ratio < 0.95) {
                 const eased = 1 - Math.pow(1 - Math.min(ratio, 0.95), 2);
                 const progress = fromPct + eased * (targetPct - fromPct);
-                setState((prev) => ({ ...prev, progress }));
+                setState((prev) => ({ ...prev, progress, ...(sub !== undefined ? { subStatus: sub } : {}) }));
             } else {
-                // Slow creep beyond the estimated duration — never reaches 99
-                setState((prev) => ({ ...prev, progress: Math.min(prev.progress + CREEP_RATE, 98.9) }));
+                setState((prev) => ({
+                    ...prev,
+                    progress: Math.min(prev.progress + CREEP_RATE, 98.9),
+                    ...(sub !== undefined ? { subStatus: sub } : {}),
+                }));
             }
         }, 100);
     }, []);

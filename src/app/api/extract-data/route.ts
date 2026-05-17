@@ -209,8 +209,14 @@ export async function POST(request: NextRequest) {
 
             const { IMAGE_MAX_BYTES, IMAGE_TOTAL_MAX_BYTES } = await import("@/lib/constants");
             let totalBytes = 0;
-            for (const url of urls) {
-                const base64Image = await imageUrlToBase64(url, { maxBytes: IMAGE_MAX_BYTES });
+            const imageFetchTimings: { index: number; ms: number; kb: number }[] = [];
+            for (let i = 0; i < urls.length; i++) {
+                const tFetch = Date.now();
+                const base64Image = await imageUrlToBase64(urls[i], { maxBytes: IMAGE_MAX_BYTES });
+                const fetchMs = Date.now() - tFetch;
+                const kb = Math.round(base64Image.data.length * 0.75 / 1024);
+                imageFetchTimings.push({ index: i + 1, ms: fetchMs, kb });
+                console.log(`[extract-data] image ${i + 1}/${urls.length} fetched in ${(fetchMs / 1000).toFixed(2)}s — ${kb} KB`);
                 totalBytes += base64Image.data.length * 0.75; // base64 → raw byte estimate
                 if (totalBytes > IMAGE_TOTAL_MAX_BYTES) {
                     return NextResponse.json(
@@ -372,10 +378,10 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            data: processedData, // Keep nested structure for confidence extraction
+            data: processedData,
             language: detectedLanguage,
-            raw_response: responseText.substring(0, 1000), // First 1000 chars for debugging
-            // DEBUG: Inspect in DevTools → Network → extract-data → Response to see what AI returned for age/dob
+            raw_response: responseText.substring(0, 1000),
+            _imageFetchTimings: imageFetchTimings,
             _debugAgeDob: {
                 dob: rawDob,
                 dobValue: typeof rawDob === "object" && rawDob?.value != null ? rawDob.value : rawDob,

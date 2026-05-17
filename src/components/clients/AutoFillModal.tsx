@@ -251,21 +251,15 @@ export function AutoFillModal({
             updateSubStatus("Querying Gemini AI...");
             await new Promise(resolve => setTimeout(resolve, 200));
 
-            // Delegate the smooth progress animation to the context so it
-            // survives if the user minimizes (which unmounts this component).
-            // 120 s estimate; the context enters slow-creep mode past that.
+            // Delegate both the progress animation AND the elapsed-seconds
+            // substatus to the context so both survive a minimize (component unmount).
             const estimatedAiDuration = 120000;
-            aiProgress?.startSimulatedProgress(20, 90, estimatedAiDuration);
+            const imageCount = allGalleryUrls.length;
+            const subTemplate = `AI is analyzing ${imageCount} image${imageCount > 1 ? "s" : ""}… ({s}s)`;
+            aiProgress?.startSimulatedProgress(20, 90, estimatedAiDuration, subTemplate);
 
-            // Keep substatus updated with elapsed seconds so the user can see
-            // the AI call is still active even when the progress bar slows down.
             const tGeminiStart = Date.now();
-            console.log(`[AutoFill] ▶ Gemini API call started (${allGalleryUrls.length} image(s))`);
-            const elapsedInterval = setInterval(() => {
-                const secs = Math.round((Date.now() - tGeminiStart) / 1000);
-                updateSubStatus(`AI is analyzing ${allGalleryUrls.length} image${allGalleryUrls.length > 1 ? "s" : ""}… (${secs}s)`);
-            }, 1000);
-            progressIntervalRef.current = elapsedInterval;
+            console.log(`[AutoFill] ▶ Gemini API call started (${imageCount} image(s))`);
 
             let response: Response;
             try {
@@ -277,18 +271,25 @@ export function AutoFillModal({
                     signal: abortController.signal,
                 });
             } catch (fetchError: any) {
-                clearInterval(elapsedInterval);
-                progressIntervalRef.current = null;
                 if (fetchError?.name === "AbortError") throw fetchError;
                 console.error("[AutoFill] Fetch error:", fetchError);
                 aiProgress?.stopSimulatedProgress();
                 throw new Error(`Network error: ${fetchError.message || "Failed to connect to server"}`);
             }
 
-            clearInterval(elapsedInterval);
-            progressIntervalRef.current = null;
             const geminiMs = Date.now() - tGeminiStart;
             console.log(`[AutoFill] ◀ Gemini responded in ${(geminiMs / 1000).toFixed(1)}s — status ${response.status}`);
+
+            // Log server-side per-image fetch timings returned in the response body
+            const responseClone = response.clone();
+            responseClone.json().then((r) => {
+                if (Array.isArray(r._imageFetchTimings)) {
+                    console.log("[AutoFill] server-side image fetch timings (Cloudinary → server):");
+                    r._imageFetchTimings.forEach(({ index, ms, kb }: { index: number; ms: number; kb: number }) => {
+                        console.log(`[AutoFill]   image ${index}: ${(ms / 1000).toFixed(2)}s — ${kb} KB`);
+                    });
+                }
+            }).catch(() => {});
 
             // Stop the simulated progress animation now that we have a real response.
             aiProgress?.stopSimulatedProgress();
