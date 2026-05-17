@@ -230,27 +230,47 @@ function CompactClientCard({
     client,
     calculateAge,
     onSaveState,
+    selected = false,
+    onSelect,
+    accentColor = "blue",
 }: {
     client: Client;
     calculateAge: (dob: string) => number | null;
     onSaveState: () => void;
+    selected?: boolean;
+    onSelect?: () => void;
+    accentColor?: "blue" | "rose";
 }) {
     const age = calculateAge(client.dob);
-    return (
-        <Link
-            href={`/clients/${client.id}?source=search`}
-            onClick={onSaveState}
-            className="group flex flex-col items-center text-center bg-gray-50 dark:bg-gray-900 p-2 shadow-sm hover:shadow-md transition-all min-h-32 justify-center gap-2"
-        >
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+
+    const ringClass = selected
+        ? accentColor === "blue"
+            ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950/40"
+            : "ring-2 ring-rose-500 bg-rose-50 dark:bg-rose-950/40"
+        : "bg-gray-50 dark:bg-gray-900 hover:shadow-md";
+
+    const inner = (
+        <>
+            <div className="relative w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden shrink-0">
                 {client.photoUrl ? (
                     <img src={client.photoUrl} alt={client.fullName} className="w-full h-full object-cover" />
                 ) : (
                     <UserIcon className="h-5 w-5 text-gray-400" />
                 )}
+                {selected && (
+                    <div className={cn(
+                        "absolute inset-0 flex items-center justify-center rounded-full text-white text-sm font-bold",
+                        accentColor === "blue" ? "bg-blue-500/80" : "bg-rose-500/80"
+                    )}>✓</div>
+                )}
             </div>
             <div className="w-full min-w-0 space-y-0.5">
-                <p className="text-xs font-semibold group-hover:text-red-600 transition-colors leading-tight line-clamp-2">
+                <p className={cn(
+                    "text-xs font-semibold leading-tight line-clamp-2",
+                    selected
+                        ? accentColor === "blue" ? "text-blue-700 dark:text-blue-300" : "text-rose-700 dark:text-rose-300"
+                        : "group-hover:text-red-600"
+                )}>
                     {client.fullName}
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -260,6 +280,33 @@ function CompactClientCard({
                     <p className="text-xs text-muted-foreground truncate">{client.location}</p>
                 )}
             </div>
+        </>
+    );
+
+    if (onSelect) {
+        return (
+            <button
+                onClick={onSelect}
+                className={cn(
+                    "group w-full flex flex-col items-center text-center p-2 shadow-sm transition-all min-h-32 justify-center gap-2",
+                    ringClass
+                )}
+            >
+                {inner}
+            </button>
+        );
+    }
+
+    return (
+        <Link
+            href={`/clients/${client.id}?source=search`}
+            onClick={onSaveState}
+            className={cn(
+                "group flex flex-col items-center text-center p-2 shadow-sm transition-all min-h-32 justify-center gap-2",
+                ringClass
+            )}
+        >
+            {inner}
         </Link>
     );
 }
@@ -301,6 +348,10 @@ export default function SearchPage() {
     const [activeFilterTab, setActiveFilterTab] = useState<"male" | "female">(
         savedState?.activeFilterTab ?? "male"
     );
+
+    // ── Dual-mode selection state ─────────────────────────────────────────────
+    const [selectedBoyId, setSelectedBoyId] = useState<string | null>(null);
+    const [selectedGirlId, setSelectedGirlId] = useState<string | null>(null);
 
     // ── Single-mode filter state ──────────────────────────────────────────────
     const [singleFilters, setSingleFilters] = useState<FilterSet>(
@@ -454,6 +505,8 @@ export default function SearchPage() {
     const exitDualMode = () => {
         setDualMode(false);
         setFilterPanelOpen(true);
+        setSelectedBoyId(null);
+        setSelectedGirlId(null);
     };
 
     // ── Session state save ────────────────────────────────────────────────────
@@ -712,72 +765,116 @@ export default function SearchPage() {
                     !showResults && "hidden md:flex"
                 )}>
                     {dualMode ? (
-                        /* ── Dual mode: two columns, always side by side ─────── */
-                        <div className="flex-1 min-h-0 flex overflow-hidden">
-                            {/* Boys column */}
-                            <div className="flex flex-col min-h-0 w-1/2 border-r border-gray-200 dark:border-gray-800">
-                                <div className="flex items-center gap-2 px-2 py-2 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-blue-50 dark:bg-blue-950/30">
-                                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">Boys</span>
-                                    <span className="text-xs text-gray-400">({filteredBoys.length})</span>
+                        /* ── Dual mode: compare bar + two columns ────────────── */
+                        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+
+                            {/* Compare bar — always visible, activates when both selected */}
+                            <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
+                                <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                                    <span className={cn(
+                                        "text-xs px-2 py-1 rounded-md truncate max-w-[40%]",
+                                        selectedBoyId
+                                            ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium"
+                                            : "bg-gray-100 dark:bg-gray-800 text-gray-400 italic"
+                                    )}>
+                                        {selectedBoyId
+                                            ? (clients?.find(c => c.id === selectedBoyId)?.fullName ?? "Boy")
+                                            : "Select a boy"}
+                                    </span>
+                                    <span className="text-gray-400 text-xs shrink-0">+</span>
+                                    <span className={cn(
+                                        "text-xs px-2 py-1 rounded-md truncate max-w-[40%]",
+                                        selectedGirlId
+                                            ? "bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-300 font-medium"
+                                            : "bg-gray-100 dark:bg-gray-800 text-gray-400 italic"
+                                    )}>
+                                        {selectedGirlId
+                                            ? (clients?.find(c => c.id === selectedGirlId)?.fullName ?? "Girl")
+                                            : "Select a girl"}
+                                    </span>
                                 </div>
-                                {filteredBoys.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center flex-1 text-gray-400 text-xs gap-2 p-4 text-center">
-                                        <Search className="h-6 w-6 text-gray-300" />
-                                        <span>No matches</span>
-                                    </div>
-                                ) : (
-                                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1.5 space-y-1.5">
-                                        {paginatedBoys.map((client) => (
-                                            <CompactClientCard
-                                                key={client.id}
-                                                client={client}
-                                                calculateAge={calculateAge}
-                                                onSaveState={() => sessionStorage.setItem("searchState", JSON.stringify(buildSaveState()))}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                                {filteredBoys.length > 0 && (
-                                    <PaginationBar
-                                        page={currentPageBoys}
-                                        total={totalPagesBoys}
-                                        onChange={setCurrentPageBoys}
-                                        showIPP={true}
-                                    />
-                                )}
+                                <button
+                                    disabled={!selectedBoyId || !selectedGirlId}
+                                    onClick={() => router.push(`/compare?a=${selectedBoyId}&b=${selectedGirlId}&back=/search`)}
+                                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-200 disabled:text-gray-400 dark:disabled:bg-gray-800 dark:disabled:text-gray-500"
+                                >
+                                    View Profiles
+                                </button>
                             </div>
 
-                            {/* Girls column */}
-                            <div className="flex flex-col min-h-0 w-1/2">
-                                <div className="flex items-center gap-2 px-2 py-2 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-rose-50 dark:bg-rose-950/30">
-                                    <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Girls</span>
-                                    <span className="text-xs text-gray-400">({filteredGirls.length})</span>
+                            {/* Two columns */}
+                            <div className="flex-1 min-h-0 flex overflow-hidden">
+                                {/* Boys column */}
+                                <div className="flex flex-col min-h-0 w-1/2 border-r border-gray-200 dark:border-gray-800">
+                                    <div className="flex items-center gap-2 px-2 py-2 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-blue-50 dark:bg-blue-950/30">
+                                        <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">Boys</span>
+                                        <span className="text-xs text-gray-400">({filteredBoys.length})</span>
+                                    </div>
+                                    {filteredBoys.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center flex-1 text-gray-400 text-xs gap-2 p-4 text-center">
+                                            <Search className="h-6 w-6 text-gray-300" />
+                                            <span>No matches</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1.5 space-y-1.5">
+                                            {paginatedBoys.map((client) => (
+                                                <CompactClientCard
+                                                    key={client.id}
+                                                    client={client}
+                                                    calculateAge={calculateAge}
+                                                    onSaveState={() => sessionStorage.setItem("searchState", JSON.stringify(buildSaveState()))}
+                                                    selected={selectedBoyId === client.id}
+                                                    onSelect={() => setSelectedBoyId(prev => prev === client.id ? null : client.id)}
+                                                    accentColor="blue"
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                    {filteredBoys.length > 0 && (
+                                        <PaginationBar
+                                            page={currentPageBoys}
+                                            total={totalPagesBoys}
+                                            onChange={setCurrentPageBoys}
+                                            showIPP={true}
+                                        />
+                                    )}
                                 </div>
-                                {filteredGirls.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center flex-1 text-gray-400 text-xs gap-2 p-4 text-center">
-                                        <Search className="h-6 w-6 text-gray-300" />
-                                        <span>No matches</span>
+
+                                {/* Girls column */}
+                                <div className="flex flex-col min-h-0 w-1/2">
+                                    <div className="flex items-center gap-2 px-2 py-2 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-rose-50 dark:bg-rose-950/30">
+                                        <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Girls</span>
+                                        <span className="text-xs text-gray-400">({filteredGirls.length})</span>
                                     </div>
-                                ) : (
-                                    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1.5 space-y-1.5">
-                                        {paginatedGirls.map((client) => (
-                                            <CompactClientCard
-                                                key={client.id}
-                                                client={client}
-                                                calculateAge={calculateAge}
-                                                onSaveState={() => sessionStorage.setItem("searchState", JSON.stringify(buildSaveState()))}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                                {filteredGirls.length > 0 && (
-                                    <PaginationBar
-                                        page={currentPageGirls}
-                                        total={totalPagesGirls}
-                                        onChange={setCurrentPageGirls}
-                                        showIPP={false}
-                                    />
-                                )}
+                                    {filteredGirls.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center flex-1 text-gray-400 text-xs gap-2 p-4 text-center">
+                                            <Search className="h-6 w-6 text-gray-300" />
+                                            <span>No matches</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1.5 space-y-1.5">
+                                            {paginatedGirls.map((client) => (
+                                                <CompactClientCard
+                                                    key={client.id}
+                                                    client={client}
+                                                    calculateAge={calculateAge}
+                                                    onSaveState={() => sessionStorage.setItem("searchState", JSON.stringify(buildSaveState()))}
+                                                    selected={selectedGirlId === client.id}
+                                                    onSelect={() => setSelectedGirlId(prev => prev === client.id ? null : client.id)}
+                                                    accentColor="rose"
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                    {filteredGirls.length > 0 && (
+                                        <PaginationBar
+                                            page={currentPageGirls}
+                                            total={totalPagesGirls}
+                                            onChange={setCurrentPageGirls}
+                                            showIPP={false}
+                                        />
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ) : (
