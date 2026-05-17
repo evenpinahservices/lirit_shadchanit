@@ -445,7 +445,7 @@ export default function SearchPage() {
         if (gender === "Female" || gender === "All") setGirlFilters({ ...singleFilters });
         setDualMode(true);
         setActiveFilterTab("male");
-        setFilterPanelOpen(false); // collapse to give results more space
+        setFilterPanelOpen(true);
         setShowResults(true);
     };
 
@@ -572,9 +572,17 @@ export default function SearchPage() {
                     {!dualMode && (
                         <button
                             onClick={enterDualMode}
-                            className="shrink-0 w-full flex items-center justify-center gap-1.5 text-xs font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors py-2 border-b border-gray-100 dark:border-gray-800"
+                            className="shrink-0 mx-3 my-2 flex items-stretch rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow text-xs font-semibold"
                         >
-                            Search for a boy and a girl at once
+                            <span className="flex-1 flex items-center justify-center py-2 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300">
+                                Boys
+                            </span>
+                            <span className="flex items-center justify-center px-2 py-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs font-normal">
+                                Dual Search
+                            </span>
+                            <span className="flex-1 flex items-center justify-center py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300">
+                                Girls
+                            </span>
                         </button>
                     )}
 
