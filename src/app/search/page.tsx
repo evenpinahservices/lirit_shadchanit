@@ -446,7 +446,9 @@ export default function SearchPage() {
         setDualMode(true);
         setActiveFilterTab("male");
         setFilterPanelOpen(true);
-        setShowResults(true);
+        // On mobile show filters first; on desktop show results immediately
+        const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+        setShowResults(!isMobile);
     };
 
     const exitDualMode = () => {
