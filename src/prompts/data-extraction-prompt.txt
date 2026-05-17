@@ -135,7 +135,7 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "value": "string - STRICT FORMAT ONLY. See allowed formats below.",
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
-    "_note": "STRICT RULES FOR DOB — follow exactly:\n  1. Gregorian full date: output as 'YYYY-MM-DD' (e.g. '1998-03-15').\n  2. Gregorian year only: output as 4-digit year string (e.g. '1998').\n  3. Hebrew date: output EXACTLY as 'Hebrew: [day] [month] [hebrewYear]' where day is Hebrew letter(s) (e.g. כה), month is the Hebrew month name (e.g. אדר), and hebrewYear is Hebrew letters (e.g. תשנ\"ה). Example: 'Hebrew: כה אדר תשנ\"ה'. DO NOT output a raw Hebrew year number like 5755.\n  4. If only age is stated (no DOB), leave dob null and fill the age field instead.\n  5. NEVER copy raw unformatted text. NEVER output a Hebrew year as a plain 4-digit number (e.g. do NOT output '5785' — that would be mistaken for a Gregorian year)."
+    "_note": "STRICT RULES FOR DOB — follow exactly:\n  1. Gregorian full date: output as 'YYYY-MM-DD' (e.g. '1998-03-15').\n  2. Gregorian year only: output as 4-digit year string (e.g. '1998').\n  3. Hebrew date: output EXACTLY as 'Hebrew: [day] [month] [hebrewYear]' where day is Hebrew letter(s) (e.g. כה), month is the Hebrew month name (e.g. אדר), and hebrewYear is Hebrew letters (e.g. תשנ\"ה). Example: 'Hebrew: כה אדר תשנ\"ה'. DO NOT output a raw Hebrew year number like 5755.\n  4. If only age is stated (no DOB), leave dob null and fill the age field instead.\n  5. NEVER copy raw unformatted text. NEVER output a Hebrew year as a plain 4-digit number (e.g. do NOT output '5785' — that would be mistaken for a Gregorian year).\n  6. CRITICAL — DOCUMENT DATE vs. BIRTH DATE: Hebrew resumes and letters often begin with a Hebrew date in the top corner (e.g. 'ד' אב תשפ\"ד') — this is the DATE THE DOCUMENT WAS WRITTEN, NOT the person's date of birth. NEVER use a date that appears as a document/letter header as the dob. The person's DOB will be explicitly labeled with words like 'תאריך לידה', 'ת. לידה', 'Date of Birth', 'DOB', 'נולד/נולדה', 'גיל' (which gives age, not DOB), or will appear next to their name in a structured field. If no clearly labeled DOB exists, set dob to null and use the age field instead."
   },
   "age": {
     "value": "integer between 18 and 60, or null",
@@ -332,14 +332,14 @@ You are an expert Data Extraction and Verification Agent. Your task is to analyz
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
     "_preferredLearningStatus_options": ["I don't mind", "Full Time", "Half Time", "Koveah Itim", "Learn then Work", "Working - Not Learning", "N/A"],
-    "_note": "CRITICAL: Only fill if confidence >= 0.9. Otherwise set to null or []"
+    "_note": "CRITICAL: Only fill if confidence >= 0.9. Otherwise set to null or []. This field is only relevant for FEMALE candidates (what learning status they want in a husband). For MALE candidates, set to null."
   },
   "preferredHeadCovering": {
     "value": ["Selection (Multiple Allowed)"] | null,
     "confidence": 0.0-1.0,
     "sourceQuote": "string or null",
     "_preferredHeadCovering_options": ["I don't mind", "N/A", "None", "Wig", "Tichel", "Hat", "Scarf", "Flexible"],
-    "_note": "CRITICAL: Only fill if confidence >= 0.9. Otherwise set to null or []"
+    "_note": "CRITICAL: Only fill if confidence >= 0.9. Otherwise set to null or []. This field is only relevant for MALE candidates (what head covering they want their wife to have). For FEMALE candidates, set to null."
   },
   "preferencesFreeText": {
     "value": "string - OPEN TEXT" | null,
